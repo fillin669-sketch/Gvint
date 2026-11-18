@@ -34,6 +34,7 @@ def main():
         thumb = ROOT / 'img' / 'cards' / 'thumbs' / p.name
         art[f'img/cards/thumbs/{p.name}'] = data_uri(thumb if thumb.exists() else p, THUMB_SIZE, THUMB_Q)
 
+    art['img/icon.png'] = 'data:image/png;base64,' + base64.b64encode((ROOT / 'img' / 'icon.png').read_bytes()).decode()
     html = (ROOT / 'index.html').read_text(encoding='utf8')
     css = (ROOT / 'css' / 'style.css').read_text(encoding='utf8')
     css = re.sub(r'url\(\.\./fonts/([^)]+)\)', lambda m: 'url(data:font/woff2;base64,' +

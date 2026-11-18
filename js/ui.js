@@ -9,8 +9,7 @@ const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (ch) => ({ '&':
 
 const App = {
   s: null,
-  myHero: 'wife',
-  oppHero: 'random',
+  myField: 'zags',
   extra: true,
   sel: null,            // {kind:'card'|'bc'|'power'|'minion', uid, pos}
   targets: new Set(),
@@ -68,7 +67,7 @@ function show(id) {
 /* ---------------------- HTML карт ---------------------- */
 function clsName(c) {
   if (c.cls === 'shared' || c.cls === 'extra') return 'Общая карта';
-  return HEROES[c.cls] ? 'Карта героини: ' + HEROES[c.cls].short : '';
+  return '';
 }
 
 function artHTML(c, full) {
@@ -119,19 +118,21 @@ function minionHTML(s, m, o) {
     <div class="m-hp ${m.hp < m.maxHp ? 'hurt' : m.maxHp > (def ? def.hp : m.maxHp) ? 'up' : ''}">${m.hp}</div></div>`;
 }
 
+const HERO_IMG = ARTPATH('img/icon.png');
+const heroName = (i) => (i === 0 ? 'Вы' : 'Противник');
+
 function heroHTML(s, i, extra) {
   const P = s.players[i];
-  const H = HEROES[P.hero];
-  return `<div class="hero ${extra || ''}" data-t="h${i}">
-    <div class="h-art"><img src="${esc(H.thumb || H.img)}" alt=""></div>
+  return `<div class="hero side${i} ${extra || ''}" data-t="h${i}">
+    <div class="h-art"><img src="${esc(HERO_IMG)}" alt=""></div>
     ${P.armor ? `<div class="h-armor">${P.armor}</div>` : ''}
     <div class="h-hp ${P.hp < P.maxHp ? 'hurt' : ''}">${P.hp}</div>
-    <div class="h-name">${esc(H.name)}</div></div>`;
+    <div class="h-name">${heroName(i)}</div></div>`;
 }
 
 function powerHTML(s, i, extra) {
   const P = s.players[i];
-  const pw = HEROES[P.hero].power;
+  const pw = PLAYER_HERO.power;
   const cls = ['power'];
   if (P.powerUsed) cls.push('used');
   else if (i === 0 && canAct() && canPower(s, 0)) cls.push('ready');
@@ -145,11 +146,12 @@ function previewHTML(c, live) {
     return `<div class="pv-empty">Нажмите на карту или существо,<br>чтобы рассмотреть его.<br><br>
       Карта в руке → место на поле или цель.<br>Своё существо → кого атаковать.<br>Круглая кнопка у героини — её сила.</div>`;
   }
-  if (c.power && c.field) {   // героиня
-    return `<img class="pv-img" src="${esc(c.img)}" alt=""><h3>${esc(c.name)}</h3>
-      <div class="pv-meta">Героиня · поле «${esc(c.fieldName)}» · ${HERO_HP} здоровья</div>
-      <div class="pv-ab"><b>${c.power.icon} Сила «${esc(c.power.name)}» (${c.power.cost} маны).</b> ${esc(c.power.desc)}</div>
-      <div class="pv-ab">${esc(c.desc)}</div><div class="pv-quote">${esc(c.quote)}</div>`;
+  if (c === PLAYER_HERO) {
+    const pw = c.power;
+    return `<img class="pv-img" src="${esc(HERO_IMG)}" alt=""><h3>${esc(c.name)}</h3>
+      <div class="pv-meta">Герой · ${HERO_HP} здоровья</div>
+      <div class="pv-ab"><b>${pw.icon} Сила «${esc(pw.name)}» (${pw.cost} маны).</b> ${esc(pw.desc)} Один раз за ход.</div>
+      <div class="pv-ab">Опустите здоровье вражеского претендента до нуля — и трон ваш.</div>`;
   }
   const src = artOf(c, true);
   const img = src ? `<img class="pv-img" src="${esc(src)}" alt="">` : `<div class="pv-glyph">${c.icon || '✦'}</div>`;
@@ -180,16 +182,15 @@ function previewFromEl(el) {
     const id = el.dataset.t[0] === 'h' ? el.dataset.t : +el.dataset.t;
     const ch = findChar(s, id);
     if (!ch) return null;
-    if (ch.kind === 'hero') return { c: HEROES[ch.p.hero] };
+    if (ch.kind === 'hero') return { c: PLAYER_HERO };
     return { c: ch.m, live: ch.m };
   }
   if (el.dataset.h && s) {
     const c = s.players[0].hand.find((x) => x.uid === +el.dataset.h);
     return c ? { c } : null;
   }
-  if (el.dataset.power != null && s) return { c: HEROES[s.players[+el.dataset.power].hero] };
+  if (el.dataset.power != null && s) return { c: PLAYER_HERO };
   if (el.dataset.gid) return { c: defOf(el.dataset.gid) };
-  if (el.dataset.hero) return { c: HEROES[el.dataset.hero] };
   return null;
 }
 
@@ -246,7 +247,7 @@ function computeTargets() {
     hint = 'Цель боевого клича (или нажмите мимо — без цели)';
   } else if (sel.kind === 'power') {
     (powerTargets(s, 0) || []).forEach((x) => out.add(x));
-    hint = 'Выберите цель силы героини';
+    hint = 'Выберите цель силы героя';
   } else if (sel.kind === 'minion') {
     const m = s.players[0].board.find((x) => x.uid === sel.uid);
     if (m && canAttack(s, m)) attackTargets(s, m).forEach((x) => out.add(x)); else App.sel = null;
@@ -264,7 +265,7 @@ function hasMoves(s) {
 
 /* ---------------------- окружение ---------------------- */
 function makeProps(s) {
-  return [0, 1].map((side) => FIELD_PROPS[HEROES[s.players[side].hero].field].map(([icon, name]) => ({ icon, name, hp: PROP_HP })));
+  return [0, 1].map((side) => FIELD_PROPS[s.players[side].field].map(([icon, name]) => ({ icon, name, hp: PROP_HP })));
 }
 
 function propHTML(side, i) {
@@ -323,10 +324,10 @@ function render() {
 
   // поля героинь
   [['#field-op', 1], ['#field-me', 0]].forEach(([sel, i]) => {
-    const H = HEROES[s.players[i].hero];
+    const F = s.players[i].field;
     const el = $(sel);
-    el.className = 'field field-' + H.field;
-    el.dataset.emblem = H.icon;
+    el.className = 'field field-' + F;
+    el.dataset.emblem = FIELDS[F].icon;
   });
 
   // героини и их силы
@@ -383,10 +384,10 @@ function render() {
   // панели
   const crystals = (P) => Array.from({ length: 10 }, (_, k) => `<span class="crystal ${k < P.mana ? 'full' : k < P.maxMana ? 'spent' : ''}"></span>`).join('');
   const op = s.players[1];
-  $('#op-info').innerHTML = `<div class="i-row"><span class="i-name">${esc(HEROES[op.hero].short)}</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
+  $('#op-info').innerHTML = `<div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
     <div class="crystals">${crystals(op)}</div>
     <div class="i-row"><span>🂠 Рука: ${opN}</span><span>📚 Колода: ${op.deck.length}</span></div>`;
-  $('#me-info').innerHTML = `<div class="i-row"><span class="i-name">${esc(HEROES[me.hero].short)}</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
+  $('#me-info').innerHTML = `<div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
     <div class="crystals">${crystals(me)}</div>
     <div class="i-row"><span>📚 Колода: ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
 
@@ -730,10 +731,9 @@ function mulliganModal() {
 
 /* ---------------------- начало и конец партии ---------------------- */
 async function startGame() {
-  const keys = Object.keys(HEROES);
-  const opp = App.oppHero === 'random' ? pickRandom(keys.filter((k) => k !== App.myHero)) : App.oppHero;
+  const opp = pickRandom(Object.keys(FIELDS).filter((k) => k !== App.myField));
   const first = rnd(2);
-  const s = createGame(App.myHero, opp, App.extra, first);
+  const s = createGame(App.myField, opp, App.extra, first);
   App.s = s;
   App.sel = null;
   App.busy = true;
@@ -745,13 +745,13 @@ async function startGame() {
   App.logLines = [];
   App.props = makeProps(s);
   FX.clearAll();
-  Sound.setLocation(HEROES[App.myHero].field);
+  Sound.setLocation(App.myField);
   show('game');
-  addLog(`${HEROES[App.myHero].name} против ${HEROES[opp].name}`);
+  addLog(`Битва за Трон. Поле: ${FIELDS[App.myField].name}`);
   render();
   FX.setZones([$('#field-op'), $('#field-me')]);
   showPreview(null);
-  await banner(`${HEROES[App.myHero].short} ⚔ ${HEROES[opp].short}`, `Поле: ${HEROES[App.myHero].fieldName}`, 1600);
+  await banner('Битва за Трон', `Поле: ${FIELDS[App.myField].name}`, 1600);
   if (s !== App.s) return;
   await mulliganModal();
   if (s !== App.s) return;
@@ -771,12 +771,11 @@ function gameOver() {
     FX.quake();
   }
   Sound.play(s.winner === 0 ? 'win' : 'lose');
-  const H = HEROES[s.players[s.winner === 1 ? 1 : 0].hero];
   const title = s.winner === 0 ? '🏆 Победа!' : s.winner === 1 ? 'Поражение' : 'Ничья';
   setTimeout(() => {
     if (s !== App.s) return;
-    modal(`<h2>${title}</h2><img class="result-hero" src="${esc(H.thumb)}" alt="">
-      <p>${s.winner === 0 ? 'Трон ваш.' : s.winner === 1 ? `Трон достаётся: ${esc(H.name)}.` : 'Обе героини пали.'} Ходов сыграно: ${s.turn}.</p>
+    modal(`<h2>${title}</h2><img class="result-hero ${s.winner === 1 ? 'side1' : ''}" src="${esc(HERO_IMG)}" alt="">
+      <p>${s.winner === 0 ? 'Трон ваш.' : s.winner === 1 ? 'Трон достаётся противнику.' : 'Оба претендента пали.'} Ходов сыграно: ${s.turn}.</p>
       <div class="mbtns"><button class="btn btn-gold" data-v="again">Ещё партию</button><button class="btn" data-v="menu">В меню</button></div>`)
       .then((v) => { if (v === 'again') startGame(); else goMenu(); });
   }, 1100);
@@ -795,31 +794,26 @@ async function leaveToMenu() {
 }
 
 /* ---------------------- меню ---------------------- */
-function heroTileHTML(k, sel) {
-  const H = HEROES[k];
-  return `<div class="hero-tile ${sel ? 'sel' : ''}" data-hero="${k}"><img src="${esc(H.thumb)}" alt="">
-    <div class="ht-body"><h4>${esc(H.name)}</h4><p>${esc(H.desc)}</p>
-    <p class="pw">${H.power.icon} <b>${esc(H.power.name)}</b> (${H.power.cost}): ${esc(H.power.desc)}</p>
-    <p class="loc">🗺️ Поле: ${esc(H.fieldName)}</p></div></div>`;
+function fieldTileHTML(k, sel) {
+  const F = FIELDS[k];
+  return `<div class="hero-tile field-tile field-${k} ${sel ? 'sel' : ''}" data-field="${k}">
+    <div class="ft-icon">${F.icon}</div><div class="ht-body"><h4>${esc(F.name)}</h4><p>${esc(F.desc)}</p></div></div>`;
 }
 
 function renderMenu() {
-  $('#hero-list').innerHTML = Object.keys(HEROES).map((k) => heroTileHTML(k, App.myHero === k)).join('');
-  $('#opp-select').innerHTML = '<option value="random">Случайная героиня</option>' +
-    Object.keys(HEROES).map((k) => `<option value="${k}">${esc(HEROES[k].name)}</option>`).join('');
-  $('#opp-select').value = App.oppHero;
+  $('#hero-list').innerHTML = Object.keys(FIELDS).map((k) => fieldTileHTML(k, App.myField === k)).join('');
 }
 
 function showRules() {
   const kws = Object.values(KEYWORDS).map((k) => `<li><b>${k.icon} ${k.name}</b> — ${k.desc}</li>`).join('');
   modal(`<h2>Правила</h2>
-    <h3>Цель</h3><p>Опустите здоровье вражеской героини с ${HERO_HP} до нуля.</p>
+    <h3>Цель</h3><p>Опустите здоровье вражеского претендента на трон с ${HERO_HP} до нуля.</p>
     <h3>Ход</h3><ul>
       <li>Каждый ход вы получаете +1 кристалл маны (максимум 10) и берёте карту. Мана полностью восстанавливается в начале хода.</li>
       <li>Карты стоят ману (синий кристалл в углу карты). Существа выходят на поле, заклинания срабатывают сразу.</li>
       <li>Существа атакуют со следующего хода (кроме тех, у кого Рывок). Каждое — один раз за ход.</li>
-      <li>При атаке существа наносят урон друг другу одновременно. Героиню можно бить напрямую, если нет Провокации.</li>
-      <li>Сила героини (круглая кнопка) — раз в ход за 2 маны.</li>
+      <li>При атаке существа наносят урон друг другу одновременно. Вражеского героя можно бить напрямую, если нет Провокации.</li>
+      <li>Сила героя «Удар по столу» (круглая кнопка) — 1 урон любому персонажу, раз в ход за 2 маны.</li>
       <li>Кто ходит вторым, получает «Медяк» — +1 мана на один ход.</li>
       <li>На поле не больше 7 существ, в руке не больше 10 карт. Пустая колода — урон «усталостью».</li>
     </ul>
@@ -837,13 +831,10 @@ function showRules() {
 
 /* ---------------------- коллекция ---------------------- */
 function renderGallery() {
-  const tabs = [['shared', 'Ваши карты'], ['extra', 'Без картинок']]
-    .concat(Object.keys(HEROES).map((k) => [k, 'Карты: ' + HEROES[k].short])).concat([['heroes', 'Героини']]);
+  const tabs = [['shared', 'Ваши карты'], ['extra', 'Без картинок']];
   $('#gal-tabs').innerHTML = tabs.map(([k, n]) => `<button class="btn ${App.galTab === k ? 'sel' : ''}" data-tab="${k}">${esc(n)}</button>`).join('');
-  if (App.galTab === 'heroes') {
-    $('#gal-grid').innerHTML = Object.keys(HEROES).map((k) => heroTileHTML(k, false)).join('');
-  } else {
-    const defs = App.galTab === 'shared' ? SHARED_CARDS : App.galTab === 'extra' ? EXTRA_CARDS : HEROES[App.galTab].cards;
+  {
+    const defs = App.galTab === 'extra' ? EXTRA_CARDS : SHARED_CARDS;
     $('#gal-grid').innerHTML = defs.slice().sort((a, b) => a.cost - b.cost).map((d) =>
       `<div class="gcard">${hcardHTML(d)}<div class="gid">${esc(d.id)}${d.count > 1 && d.rarity !== 'legendary' ? ' ×' + d.count : ''}</div></div>`).join('');
   }
@@ -873,12 +864,13 @@ function init() {
   }, { capture: true });
 
   $('#hero-list').addEventListener('click', (e) => {
-    const t = e.target.closest('[data-hero]');
+    const t = e.target.closest('[data-field]');
     if (!t) return;
-    App.myHero = t.dataset.hero;
+    App.myField = t.dataset.field;
+    Sound.init();
+    Sound.setLocation(App.myField);
     renderMenu();
   });
-  $('#opp-select').addEventListener('change', (e) => { App.oppHero = e.target.value; });
   $('#extra-toggle').addEventListener('change', (e) => { App.extra = e.target.checked; });
   $('#btn-start').addEventListener('click', startGame);
   $('#btn-rules').addEventListener('click', showRules);
@@ -889,7 +881,7 @@ function init() {
     if (t) { App.galTab = t.dataset.tab; renderGallery(); }
   });
   $('#gal-grid').addEventListener('click', (e) => {
-    const el = e.target.closest('.hcard, [data-hero]');
+    const el = e.target.closest('.hcard');
     const pv = el && previewFromEl(el);
     if (pv) $('#gal-preview').innerHTML = previewHTML(pv.c);
   });
@@ -902,7 +894,7 @@ function init() {
 
   // предпросмотр при наведении (компьютер)
   $('#stage').addEventListener('mouseover', (e) => {
-    const el = e.target.closest('[data-t], .hcard, [data-power], [data-hero]');
+    const el = e.target.closest('[data-t], .hcard, [data-power]');
     if (!el || e.target.closest('#modal')) return;
     const pv = previewFromEl(el);
     if (!pv) return;

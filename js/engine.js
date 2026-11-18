@@ -50,9 +50,7 @@ function tokenDef(key) {
 }
 
 /* ---------------------- колода ---------------------- */
-function buildDeck(hk, owner, extra) {
-  const deck = [];
-  HEROES[hk].cards.forEach((d) => { for (let i = 0; i < (d.count || 1); i++) deck.push(d); });
+function buildDeck(owner, extra) {
   const pool = [];
   [...SHARED_CARDS, ...(extra ? EXTRA_CARDS : [])].forEach((d) => {
     const n = d.rarity === 'legendary' ? 1 : (d.count || 1);
@@ -62,8 +60,7 @@ function buildDeck(hk, owner, extra) {
   const bucket = (c) => Math.min(7, Math.max(1, c));
   const want = { 1: 4, 2: 6, 3: 6, 4: 5, 5: 3, 6: 3, 7: 3 };
   const have = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
-  deck.forEach((d) => { have[bucket(d.cost)]++; });
-  const rest = [];
+  const deck = [], rest = [];
   for (const { d } of pool) {
     if (deck.length >= DECK_SIZE) break;
     const b = bucket(d.cost);
@@ -73,13 +70,13 @@ function buildDeck(hk, owner, extra) {
   return shuffle(deck.map((d) => inst(d, owner)));
 }
 
-function newPlayer(idx, hk, isAI, extra) {
+function newPlayer(idx, field, isAI, extra) {
   return {
-    idx, hero: hk, isAI,
+    idx, field, isAI,
     name: isAI ? 'Противник' : 'Вы',
     hp: HERO_HP, maxHp: HERO_HP, armor: 0,
     mana: 0, maxMana: 0, powerUsed: false,
-    deck: buildDeck(hk, idx, extra), hand: [], board: [], dead: [], fatigue: 0,
+    deck: buildDeck(idx, extra), hand: [], board: [], dead: [], fatigue: 0,
   };
 }
 
@@ -206,7 +203,7 @@ function canPlay(s, pIdx, c) {
   return !t || t.length > 0;
 }
 
-function powerOf(s, pIdx) { return HEROES[s.players[pIdx].hero].power; }
+function powerOf() { return PLAYER_HERO.power; }
 
 function powerTargets(s, pIdx) {
   const f = powerOf(s, pIdx).fx.find((x) => x.t);

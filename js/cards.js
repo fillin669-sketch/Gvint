@@ -252,57 +252,53 @@ const EXTRA_CARDS = [
 ];
 
 /* =====================================================================
-   ГЕРОИНИ — у каждой своя сила, своё поле и свои карты
+   ГЕРОИНИ — теперь это легендарные существа-карты
    ===================================================================== */
-const HEROES = {
-  wife: {
-    name: 'Кредитная Жена №1', short: 'Жена', ...IMG('wife'), icon: '💳', field: 'zags', fieldName: 'ЗАГС',
-    desc: 'Женит врагов друг на друге: супруги слабеют, а смерть одного бьёт по другому.',
-    power: { name: 'Брак', cost: 2, icon: '💍', fx: [{ e: 'marryRandom' }],
-      desc: 'Два случайных вражеских существа женятся: оба −2 атаки. Если врагов меньше двух — 2 урона вражескому герою.' },
-    quote: '«Любовь — это тоже контракт. А контракт у меня всегда с процентами!»',
-    cards: [
-      Sp('w_dogovor', 'Брачный договор', 3, [{ e: 'steal', t: 'enemyMinion', maxAtk: 3 }], { icon: '📃', rarity: 'epic', quote: '«Подпиши здесь, здесь и вот тут — навсегда.»' }),
-      Sp('w_kreditka', 'Кредитка с драконом', 1, [{ e: 'mana', n: 1 }, { e: 'draw', n: 1 }], { icon: '💳', count: 2, quote: '«Лимит? Не слышала.»' }),
-      M('w_svidetel', 'Свидетельница на свадьбе', 3, 2, 4, { female: true, icon: '💐', rarity: 'rare', count: 2, bc: [{ e: 'marryRandom' }], quote: '«Горько! Горько!»' }),
-    ],
-  },
-  realtor: {
-    name: 'Риелторша Вечного Займа', short: 'Риелторша', ...IMG('realtor'), icon: '🏠', field: 'office', fieldName: 'Агентство недвижимости',
-    desc: 'Вешает на врагов ипотеку и прячется за бронёй.',
-    power: { name: 'Ипотека', cost: 2, icon: '🏠', fx: [{ e: 'armor', n: 2 }, { e: 'debtRandom', n: 1 }],
-      desc: 'Получите 2 брони. Случайное вражеское существо получает «Долг»: −1 атака в начале каждого его хода.' },
-    quote: '«Любовь, семья, дети, ипотека — всё включено, котик… подписывай, пока горячая ставка!»',
-    cards: [
-      Sp('r_klyuchi', 'Ключи от квартиры', 2, [{ e: 'armor', n: 5 }], { icon: '🔑', count: 2, quote: '«Дом, милый займ.»' }),
-      M('r_kollektor', 'Коллектор', 4, 4, 4, { icon: '📇', rarity: 'rare', count: 2, bc: [{ e: 'debt', n: 2, t: 'enemyMinion' }], quote: '«Мы просто поговорим.»' }),
-      M('r_novostroyka', 'Новостройка', 5, 2, 8, { icon: '🏢', rarity: 'epic', kw: ['taunt'], quote: '«Сдача — в следующем квартале. Какого года — не уточняем.»' }),
-    ],
-  },
-  cheetah: {
-    name: 'Бегущая Мать-Гепард', short: 'Мать-Гепард', ...IMG('cheetah'), icon: '🍼', field: 'night', fieldName: 'Ночной забег',
-    desc: 'Делает врагов «беременными» — и забирает рождённых детей себе.',
-    power: { name: 'Спид-беременность', cost: 2, icon: '🤰', fx: [{ e: 'pregnantRandom' }],
-      desc: 'Случайное вражеское существо «беременеет»: −2 атаки; через 2 ваших хода у вас рождается «Ребёнок» 2/2. Если врагов нет — «Ребёнок» рождается сразу.' },
-    quote: '«Пробежалась мимо — и ты уже отец, муж и ипотечный раб!»',
-    cards: [
-      M('c_aist', 'Аист с доставкой', 2, 2, 2, { icon: '🕊️', count: 2, kw: ['flying'], dr: [{ e: 'summon', token: 'baby', n: 1 }], quote: '«Распишитесь в получении.»' }),
-      Sp('c_test', 'Тест на две полоски', 1, [{ e: 'pregnant', t: 'enemyMinion' }, { e: 'draw', n: 1 }], { icon: '🧪', rarity: 'rare', quote: '«Ну всё, поздравляю.»' }),
-      Sp('c_matkapital', 'Маткапитал', 3, [{ e: 'summon', token: 'baby', n: 2 }], { icon: '💰', rarity: 'rare', quote: '«Государство поможет. Наверное.»' }),
-    ],
-  },
-  granny: {
-    name: 'Бабка-Репродукторша', short: 'Бабка', ...IMG('granny'), icon: '⏳', field: 'nursery', fieldName: 'Декретная лаборатория',
-    desc: 'Лечит своих зельями и отправляет врагов «в декрет».',
-    power: { name: 'Бабкино зелье', cost: 2, icon: '🧪', fx: [{ e: 'heal', n: 2, t: 'any' }],
-      desc: 'Восстановите 2 здоровья любому персонажу.' },
-    quote: '«Щас я тебе быстренько семью, ипотеку и троих подгоню!»',
-    cards: [
-      Sp('g_dekret', 'Декретный таймер', 3, [{ e: 'pregnantRandom' }, { e: 'pregnantRandom' }], { icon: '⏰', rarity: 'epic', quote: '«Тик-так, касатик.»' }),
-      M('g_vnuk', 'Любимый внук', 3, 3, 3, { icon: '🧒', count: 2, bc: [{ e: 'healHero', n: 3 }], quote: '«Ба, я ненадолго!»' }),
-      Sp('g_noski', 'Вязаные носки', 2, [{ e: 'buff', a: 2, h: 2, t: 'friendlyMinion', kw: 'taunt' }], { icon: '🧦', rarity: 'rare', quote: '«Надень, а то простудишься.»' }),
-    ],
-  },
+const HEROINE_CARDS = [
+  M('wife', 'Кредитная Жена №1', 8, 6, 8, { ...IMG('wife'), rarity: 'legendary', icon: '💳', female: true,
+    bc: [{ e: 'marryRandom' }], end: [{ e: 'debtRandom', n: 1 }],
+    quote: '«Любовь — это тоже контракт. А контракт у меня всегда с процентами!»' }),
+  M('realtor', 'Риелторша Вечного Займа', 7, 5, 8, { ...IMG('realtor'), rarity: 'legendary', icon: '🏠', female: true, kw: ['taunt'],
+    bc: [{ e: 'armor', n: 5 }, { e: 'debt', n: 2, t: 'enemyMinion' }], end: [{ e: 'healHero', n: 3 }],
+    quote: '«Любовь, семья, дети, ипотека — всё включено, котик… подписывай, пока горячая ставка!»' }),
+  M('cheetah', 'Бегущая Мать-Гепард', 7, 6, 6, { ...IMG('cheetah'), rarity: 'legendary', icon: '🍼', female: true, kw: ['charge'],
+    bc: [{ e: 'pregnant', t: 'enemyMinion' }], dr: [{ e: 'summon', token: 'baby', n: 2 }],
+    quote: '«Пробежалась мимо — и ты уже отец, муж и ипотечный раб!»' }),
+  M('granny', 'Бабка-Репродукторша', 6, 4, 8, { ...IMG('granny'), rarity: 'legendary', icon: '⏳', female: true,
+    bc: [{ e: 'pregnant', t: 'enemyMinion' }], end: [{ e: 'healAll', n: 2 }],
+    quote: '«Щас я тебе быстренько семью, ипотеку и троих подгоню!»' }),
+];
+
+/* Карты, которые раньше принадлежали героиням (без картинок) */
+EXTRA_CARDS.push(
+  Sp('w_dogovor', 'Брачный договор', 3, [{ e: 'steal', t: 'enemyMinion', maxAtk: 3 }], { ...ART('w_dogovor'), icon: '📃', rarity: 'epic', quote: '«Подпиши здесь, здесь и вот тут — навсегда.»' }),
+  Sp('w_kreditka', 'Кредитка с драконом', 1, [{ e: 'mana', n: 1 }, { e: 'draw', n: 1 }], { ...ART('w_kreditka'), icon: '💳', quote: '«Лимит? Не слышала.»' }),
+  M('w_svidetel', 'Свидетельница на свадьбе', 3, 2, 4, { ...ART('w_svidetel'), female: true, icon: '💐', rarity: 'rare', bc: [{ e: 'marryRandom' }], quote: '«Горько! Горько!»' }),
+  Sp('r_klyuchi', 'Ключи от квартиры', 2, [{ e: 'armor', n: 5 }], { ...ART('r_klyuchi'), icon: '🔑', quote: '«Дом, милый займ.»' }),
+  M('r_kollektor', 'Коллектор', 4, 4, 4, { ...ART('r_kollektor'), icon: '📇', rarity: 'rare', bc: [{ e: 'debt', n: 2, t: 'enemyMinion' }], quote: '«Мы просто поговорим.»' }),
+  M('r_novostroyka', 'Новостройка', 5, 2, 8, { ...ART('r_novostroyka'), icon: '🏢', rarity: 'epic', kw: ['taunt'], quote: '«Сдача — в следующем квартале. Какого года — не уточняем.»' }),
+  M('c_aist', 'Аист с доставкой', 2, 2, 2, { ...ART('c_aist'), icon: '🕊️', kw: ['flying'], dr: [{ e: 'summon', token: 'baby', n: 1 }], quote: '«Распишитесь в получении.»' }),
+  Sp('c_test', 'Тест на две полоски', 1, [{ e: 'pregnant', t: 'enemyMinion' }, { e: 'draw', n: 1 }], { ...ART('c_test'), icon: '🧪', rarity: 'rare', quote: '«Ну всё, поздравляю.»' }),
+  Sp('c_matkapital', 'Маткапитал', 3, [{ e: 'summon', token: 'baby', n: 2 }], { ...ART('c_matkapital'), icon: '💰', rarity: 'rare', quote: '«Государство поможет. Наверное.»' }),
+  Sp('g_dekret', 'Декретный таймер', 3, [{ e: 'pregnantRandom' }, { e: 'pregnantRandom' }], { ...ART('g_dekret'), icon: '⏰', rarity: 'epic', quote: '«Тик-так, касатик.»' }),
+  M('g_vnuk', 'Любимый внук', 3, 3, 3, { ...ART('g_vnuk'), icon: '🧒', bc: [{ e: 'healHero', n: 3 }], quote: '«Ба, я ненадолго!»' }),
+  Sp('g_noski', 'Вязаные носки', 2, [{ e: 'buff', a: 2, h: 2, t: 'friendlyMinion', kw: 'taunt' }], { ...ART('g_noski'), icon: '🧦', rarity: 'rare', quote: '«Надень, а то простудишься.»' }),
+);
+
+/* =====================================================================
+   ИГРОКИ, СИЛА ГЕРОЯ И ПОЛЯ
+   ===================================================================== */
+const PLAYER_HERO = {
+  name: 'Претендент на Трон', icon: '👑',
+  power: { name: 'Удар по столу', cost: 2, icon: '✊', fx: [{ e: 'dmg', n: 1, t: 'any' }],
+    desc: 'Нанесите 1 урон любому персонажу.' },
+};
+
+const FIELDS = {
+  zags:    { name: 'ЗАГС', icon: '💒', desc: 'Розовый мрамор, кольца и звон колоколов.' },
+  office:  { name: 'Агентство недвижимости', icon: '🏢', desc: 'Договоры, часы и стук печатной машинки.' },
+  night:   { name: 'Ночной забег', icon: '🌃', desc: 'Ночная улица, ветер и стук сердца.' },
+  nursery: { name: 'Декретная лаборатория', icon: '🧪', desc: 'Бурлящий котёл и музыкальная шкатулка.' },
 };
 
 // «Медяк» — бонус второму игроку
@@ -310,15 +306,14 @@ const COIN = Sp('coin', 'Медяк', 0, [{ e: 'mana', n: 1 }], { icon: '🪙', 
 
 /* ---------------- служебное ---------------- */
 (function () {
+  SHARED_CARDS.push(...HEROINE_CARDS);
   SHARED_CARDS.forEach((c) => { c.cls = 'shared'; });
   EXTRA_CARDS.forEach((c) => { c.cls = 'extra'; });
-  for (const k in HEROES) { HEROES[k].key = k; HEROES[k].cards.forEach((c) => { c.cls = k; }); }
   COIN.cls = 'shared';
 })();
 
 function allCardDefs() {
   const out = [...SHARED_CARDS, ...EXTRA_CARDS, COIN];
-  for (const k in HEROES) out.push(...HEROES[k].cards);
   return out;
 }
 
