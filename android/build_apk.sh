@@ -3,12 +3,12 @@
 # Нужны пакеты (Ubuntu/Debian):
 #   sudo apt-get install android-sdk-platform-23 aapt apksigner zipalign dalvik-exchange default-jdk
 # Запуск из любой папки:  bash android/build_apk.sh
-# Результат:              dist/tavern-duel.apk
+# Результат:              dist/tron.apk
 set -euo pipefail
 
 cd "$(dirname "$0")"
 ANDROID_JAR="${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}"
-OUT=../dist/tavern-duel.apk
+OUT=../dist/tron.apk
 
 rm -rf build
 mkdir -p build/assets/game build/classes ../dist
@@ -40,4 +40,4 @@ apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:androi
   --ks-key-alias tavernduel --out "$OUT" build/aligned.apk
 apksigner verify "$OUT"
 
-echo "Готово: dist/tavern-duel.apk ($(du -h "$OUT" | cut -f1))"
+echo "Готово: dist/tron.apk ($(du -h "$OUT" | cut -f1))"

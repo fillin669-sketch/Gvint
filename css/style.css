@@ -64,9 +64,10 @@ button { font-family: inherit; }
 .btn-small { padding: 8px 14px; font-size: 18px; }
 
 /* ---------------- меню ---------------- */
-.menu-inner { width: 1200px; margin: 50px auto 0; text-align: center; }
+.menu-inner { width: 1200px; margin: 22px auto 0; text-align: center; }
+.logo { width: 120px; height: 120px; border-radius: 22px; display: block; margin: 0 auto 6px; box-shadow: 0 0 30px rgba(200,40,30,.45), 0 6px 20px #000; }
 .title {
-  font-size: 84px; margin: 0; letter-spacing: 2px;
+  font-size: 84px; margin: 0; letter-spacing: 14px;
   color: var(--gold); text-shadow: 0 4px 0 #3b260b, 0 0 40px rgba(217,180,90,.35);
 }
 .subtitle { color: var(--ink-dim); font-size: 22px; margin: 6px 0 30px; }

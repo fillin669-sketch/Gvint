@@ -2,7 +2,7 @@
 """Собирает игру в один HTML-файл со встроенными картинками.
 
 Запуск из корня проекта:  python3 tools/build_single.py
-Результат:                dist/tavern-duel.html
+Результат:                dist/tron.html
 Нужна библиотека Pillow (pip install pillow).
 """
 import base64
@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'dist' / 'tavern-duel.html'
+OUT = ROOT / 'dist' / 'tron.html'
 FULL_SIZE, FULL_Q = 640, 72     # картинка в окне просмотра
 THUMB_SIZE, THUMB_Q = 220, 70   # картинка на поле и в руке
 
@@ -39,6 +39,9 @@ def main():
     css = re.sub(r'url\(\.\./fonts/([^)]+)\)', lambda m: 'url(data:font/woff2;base64,' +
                  base64.b64encode((ROOT / 'fonts' / m.group(1)).read_bytes()).decode() + ')', css)
     html = html.replace('<link rel="stylesheet" href="css/style.css">', f'<style>\n{css}\n</style>')
+
+    icon = 'data:image/png;base64,' + base64.b64encode((ROOT / 'img' / 'icon.png').read_bytes()).decode()
+    html = html.replace('"img/icon.png"', '"' + icon + '"')
 
     embed = '<script>window.EMBED_ART = ' + json.dumps(art) + ';</script>'
 

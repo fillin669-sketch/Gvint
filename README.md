@@ -1,13 +1,13 @@
-# Трактирная Дуэль
+# ТРОН
 
 Карточная игра на трёх рядах против компьютера: два выигранных раунда из трёх — победа.
 
 ## Как запустить
 
-**На Android:** установите `dist/tavern-duel.apk`. Телефон попросит разрешить установку
+**На Android:** установите `dist/tron.apk`. Телефон попросит разрешить установку
 из неизвестного источника — это нормально для приложений не из Google Play.
 
-Самое простое — файл `dist/tavern-duel.html`: в нём вся игра вместе с картинками.
+Самое простое — файл `dist/tron.html`: в нём вся игра вместе с картинками.
 Скачайте его на телефон или компьютер и откройте в браузере. Интернет не нужен.
 
 Можно открыть и `index.html` в папке проекта.
@@ -58,7 +58,7 @@ S('my_spell', 'damage', 'Моё заклинание', '🔥', { ...IMG('my_spel
 
 ```bash
 sudo apt-get install android-sdk-platform-23 aapt apksigner zipalign dalvik-exchange default-jdk
-bash android/build_apk.sh        # → dist/tavern-duel.apk
+bash android/build_apk.sh        # → dist/tron.apk
 ```
 
 APK подписывается ключом `android/debug.keystore` (пароль `android`). Ключ лежит в репозитории
