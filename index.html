@@ -17,20 +17,16 @@
       <div class="menu-inner">
         <img class="logo" src="img/icon.png" alt="">
         <h1 class="title">ТРОН</h1>
-        <p class="subtitle">Карточная игра на трёх рядах: два выигранных раунда из трёх — победа</p>
-
-        <h3 class="menu-h">Выберите фракцию</h3>
-        <div id="faction-list" class="faction-list"></div>
-
+        <p class="subtitle">Дуэль героинь: 30 здоровья, мана растёт каждый ход, существа бьются насмерть</p>
+        <div id="hero-list" class="hero-list"></div>
         <div class="opp-pick">
           <span>Противник:</span>
           <select id="opp-select"></select>
-          <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Новые карты в колоде</label>
+          <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок в колоде</label>
         </div>
-
         <div class="menu-buttons">
           <button class="btn btn-gold" id="btn-start">⚔ В бой</button>
-          <button class="btn" id="btn-gallery">🃏 Коллекция карт</button>
+          <button class="btn" id="btn-gallery">🃏 Коллекция</button>
           <button class="btn" id="btn-rules">📜 Правила</button>
           <button class="btn btn-sound" title="Звук">🔊</button>
         </div>
@@ -39,26 +35,35 @@
 
     <!-- ================= ИГРА ================= -->
     <section id="game" class="screen hidden">
+      <div id="field-op" class="field"></div>
+      <div id="field-me" class="field"></div>
+
       <div id="left">
-        <div class="pinfo" id="pinfo1"></div>
-        <div id="weather" class="weather"></div>
-        <div class="pinfo" id="pinfo0"></div>
+        <div id="preview" class="preview"></div>
         <div id="log" class="log"></div>
       </div>
 
-      <div id="board"></div>
-      <div id="hand"></div>
+      <div id="arena">
+        <div id="op-hand"></div>
+        <div id="op-zone" class="hero-zone"></div>
+        <div id="op-board" class="lane" data-side="1"></div>
+        <div class="divider"><span class="torch l">🔥</span><div id="hint"></div><span class="torch r">🔥</span></div>
+        <div id="me-board" class="lane" data-side="0"></div>
+        <div id="me-zone" class="hero-zone"></div>
+      </div>
 
       <div id="right">
-        <div class="piles" id="piles1"></div>
-        <div id="preview" class="preview"></div>
+        <div id="op-info" class="info"></div>
+        <button class="btn btn-end" id="btn-end">Конец хода</button>
+        <div id="me-info" class="info"></div>
         <div class="right-buttons">
-          <button class="btn btn-pass" id="btn-pass">Пас</button>
           <button class="btn btn-small btn-sound" title="Звук">🔊</button>
           <button class="btn btn-small" id="btn-menu" title="В меню">☰</button>
         </div>
-        <div class="piles" id="piles0"></div>
       </div>
+
+      <div id="hand"></div>
+      <div id="played"></div>
 
       <div id="light"><div class="l-me"></div><div class="l-op"></div><div class="l-flicker"></div></div>
       <canvas id="fx-canvas" width="1600" height="900"></canvas>

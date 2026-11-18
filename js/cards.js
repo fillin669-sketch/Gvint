@@ -1,370 +1,420 @@
 'use strict';
 /* =====================================================================
-   БАЗА КАРТ
+   ТРОН — база карт
    ---------------------------------------------------------------------
-   Как добавить свою карту:
-     1. Положите картинку в img/cards/<id>.jpg
-        (и, по желанию, уменьшенную копию в img/cards/thumbs/<id>.jpg).
-     2. Добавьте строку в массив SHARED_CARDS (общие карты, есть у всех)
-        или в cards нужной фракции (FACTIONS.<ключ>.cards).
-
-   Поля карты:
-     id      — уникальный идентификатор (латиница)
-     name    — название
-     type    — 'unit' (отряд) или 'special' (особая карта)
-     power   — сила отряда
-     row     — 'melee' | 'ranged' | 'siege' | 'agile' (ближний ИЛИ дальний)
-     abil    — список способностей отряда (см. ABILITIES)
-     kind    — тип особой карты (см. SPECIAL_KINDS)
-     value   — число для способностей с уроном
-     img     — путь к картинке; без него рисуется значок icon
-     rarity  — 'legendary' | 'epic' | 'rare' | 'common' (цвет рамки)
-     count   — сколько копий в колоде (по умолчанию 1)
+   M(id, имя, мана, атака, здоровье, опции) — существо
+   Sp(id, имя, мана, [эффекты], опции)     — заклинание
+   Опции: kw (ключевые слова), bc (боевой клич), dr (предсмертный хрип),
+          end (в конце вашего хода), aura, enrage, spellDiscount,
+          cantAttack, noSteal, rarity, quote, count, icon, img
+   Картинка: img/cards/<id>.jpg и img/cards/thumbs/<id>.jpg
    ===================================================================== */
 
-const ROWS = ['melee', 'ranged', 'siege'];
-const ROW_NAMES = {
-  melee: 'Ближний бой',
-  ranged: 'Дальний бой',
-  siege: 'Осада',
-  agile: 'Ближний или дальний бой',
-};
-const ROW_ICONS = { melee: '⚔️', ranged: '🏹', siege: '🏰', agile: '⇄' };
-
-// Способности отрядов
-const ABILITIES = {
-  hero:      { name: 'Легенда',        icon: '★',  desc: 'Неуязвим: на него не действуют погода, урон, проклятия, рога и уничтожение.' },
-  spy:       { name: 'Лазутчик',       icon: '👁', desc: 'Выставляется на сторону противника (его сила идёт противнику). Вы берёте 2 карты.' },
-  medic:     { name: 'Целитель',       icon: '✚',  desc: 'Возвращает выбранный отряд (не легенду) из вашего сброса прямо на поле.' },
-  bond:      { name: 'Братство',       icon: '🔗', desc: 'Сила умножается на число одноимённых карт в этом ряду.' },
-  morale:    { name: 'Воодушевление',  icon: '⬆',  desc: '+1 к силе всех остальных отрядов в этом ряду.' },
-  muster:    { name: 'Зов стаи',       icon: '👥', desc: 'Сразу выставляет из колоды все карты той же группы.' },
-  horn:      { name: 'Горнист',        icon: '📯', desc: 'Удваивает силу остальных отрядов в ряду (рога не складываются).' },
-  scorch:    { name: 'Выжигание',      icon: '🔥', desc: 'Если сила того же ряда противника 10 и больше — уничтожает его сильнейший отряд(ы).' },
-  shoot:     { name: 'Выстрел',        icon: '🎯', desc: 'При розыгрыше наносит урон (число на карте) сильнейшему вражескому отряду.' },
-  convert:   { name: 'Обольщение',     icon: '💘', desc: 'При розыгрыше переманивает слабейший вражеский отряд (не легенду) на вашу сторону.' },
-  reinforce: { name: 'Подкрепление',   icon: '🃏', desc: 'При розыгрыше выставляет на поле 2 случайных отряда (не легенды) из вашей колоды.' },
-  summon:    { name: 'Призыв',         icon: '🐾', desc: 'При розыгрыше призывает на поле дополнительных существ.' },
-  dispel:    { name: 'Ярость',         icon: '💢', desc: 'При розыгрыше снимает с противника все рога и усиления рядов.' },
-  draw:      { name: 'Доход',          icon: '💰', desc: 'При розыгрыше вы берёте 1 карту из колоды.' },
-  income:    { name: 'Торговец',       icon: '⚖️', desc: 'Если в конце раунда стоит на поле — вы берёте 1 карту.' },
-  cover:     { name: 'Прикрытие',      icon: '🛡️', desc: 'При розыгрыше ставит щит на свой ряд: он примет на себя следующую атаку врага по этому ряду.' },
-  stealth:   { name: 'Скрытность',     icon: '🥷', desc: 'Его нельзя выбрать целью: не действуют удары, выстрелы, вербовка и обольщение (кроме карты «Тоби Пизда»).' },
-  fetch:     { name: 'А вот был случай…', icon: '📜', desc: 'С вероятностью 95% достаёт из колоды в руку карту «Одна история охуительнее другой».' },
-};
-
-// Типы особых карт
-const SPECIAL_KINDS = {
-  weather:  { name: 'Погода',        desc: (c) => `Сила всех отрядов в ряду «${ROW_NAMES[c.wrow]}» у ОБОИХ игроков становится 1 (кроме легенд).` },
-  clear:    { name: 'Очищение',      desc: (c) => 'Убирает всю погоду с поля и снимает проклятия с ваших рядов.' + (c.buff ? ` Все ваши отряды получают +${c.buff} к силе.` : '') },
-  horn:     { name: 'Рог',           desc: () => 'Удваивает силу всех отрядов в выбранном вашем ряду.' },
-  decoy:    { name: 'Подмена',       desc: () => 'Заменяет выбранный ваш отряд (не легенду) этой картой — отряд возвращается в руку.' },
-  scorch:   { name: 'Пожар',         desc: () => 'Уничтожает сильнейший отряд(ы) на всём поле — у обоих игроков (кроме легенд).' },
-  damage:   { name: 'Удар',          desc: (c) => `Наносит ${c.value} урона выбранному вражескому отряду. При силе 0 он погибает.` },
-  aoe:      { name: 'Буря',          desc: (c) => `Наносит ${c.value} урона КАЖДОМУ вражескому отряду (кроме легенд).` },
-  rowdmg:   { name: 'Зараза',        desc: (c) => `Наносит ${c.value} урона каждому отряду в выбранном ряду противника.` },
-  kill2:    { name: 'Гибель',        desc: () => 'Уничтожает 2 сильнейших вражеских отряда (кроме легенд).' },
-  charm:    { name: 'Вербовка',      desc: () => 'Выбранный вражеский отряд (не легенда) переходит на вашу сторону.' },
-  curse:    { name: 'Проклятие',     desc: () => 'Проклинает выбранный ряд противника: сила отрядов в нём уменьшается вдвое, рог в этом ряду сгорает.' },
-  discard:  { name: 'Насмешка',      desc: () => 'Противник сбрасывает 1 случайную карту из руки.' },
-  draw2:    { name: 'Сделка',        desc: () => 'Вы берёте 2 карты из колоды.' },
-  shop:     { name: 'Торговля',      desc: () => 'Посмотрите 3 случайные карты своей колоды и заберите одну в руку.' },
-  revive:   { name: 'Воскрешение',   desc: () => 'Верните на поле выбранный отряд (не легенду) из вашего сброса.' },
-  shield:   { name: 'Укрытие',       desc: () => 'Поставьте щит на свой ряд: он поглотит следующую атаку врага по этому ряду. НЕ тратит ход.' },
-  heal:     { name: 'Массовое лечение', desc: () => 'Все ваши отряды восстанавливают силу после урона и получают +1.' },
-  healOne:  { name: 'Лечение',       desc: (c) => `Выбранный ваш отряд восстанавливает силу после урона и получает +${c.value}.` + (c.cleanse ? ' Снимает проклятие с его ряда.' : '') },
-  tax:      { name: 'Изъятие',       desc: () => 'Заберите себе в руку случайную карту из руки противника.' },
-  reflect:  { name: 'Обратка',       desc: () => 'Все проклятия с ваших рядов перелетают на ряды противника. Каждый вражеский отряд получает 1 урона.' },
-  fort:     { name: 'Укрепление',    desc: () => 'Ставится на ваш ряд: каждый отряд в нём получает +2 к силе. Сгорает от пожара.' },
-  story:    { name: 'Ступор',        desc: () => 'Отряды в выбранном ряду противника получают по 2 урона, все ваши отряды — +1 к силе.' },
+const KEYWORDS = {
+  taunt:     { name: 'Провокация',   icon: '🛡️', desc: 'Враги обязаны сначала атаковать это существо.' },
+  charge:    { name: 'Рывок',        icon: '⚡', desc: 'Может атаковать сразу после розыгрыша.' },
+  shield:    { name: 'Щит',          icon: '🔰', desc: 'Первый полученный урон полностью поглощается.' },
+  stealth:   { name: 'Скрытность',   icon: '🥷', desc: 'Нельзя выбрать целью, пока само не атакует.' },
+  poison:    { name: 'Яд',           icon: '☠️', desc: 'Убивает любое существо, которому нанесёт урон.' },
+  windfury:  { name: 'Двойной удар', icon: '⚔️', desc: 'Может атаковать дважды за ход.' },
+  lifesteal: { name: 'Вампиризм',    icon: '🩸', desc: 'Нанесённый урон лечит вашего героя.' },
+  flying:    { name: 'Полёт',        icon: '🪽', desc: 'Атакует, не обращая внимания на Провокацию.' },
 };
 
 const RARITY_NAMES = { legendary: 'Легендарная', epic: 'Эпическая', rare: 'Редкая', common: 'Обычная' };
 
-// ---------- конструкторы ----------
-function U(id, name, power, row, abil, icon, extra) {
-  return Object.assign({ id, name, type: 'unit', power, row, abil: abil || [], icon: icon || '❔', rarity: 'common' }, extra || {});
-}
-function S(id, kind, name, icon, extra) {
-  return Object.assign({ id, name, type: 'special', kind, power: 0, abil: [], icon: icon || '✦', rarity: 'common' }, extra || {});
-}
-// В собранной однофайловой версии картинки встроены в window.EMBED_ART
+// В однофайловой версии картинки встроены в window.EMBED_ART
 const ARTPATH = (p) => (typeof window !== 'undefined' && window.EMBED_ART && window.EMBED_ART[p]) || p;
 const IMG = (id) => ({ img: ARTPATH(`img/cards/${id}.jpg`), thumb: ARTPATH(`img/cards/thumbs/${id}.jpg`) });
+const ART = (id) => ({ ...IMG(id), optionalArt: true });   // картинки может не быть
+
+function M(id, name, cost, atk, hp, o) {
+  return Object.assign({ id, name, type: 'minion', cost, atk, hp, kw: [], icon: '❔', rarity: 'common' }, o || {});
+}
+function Sp(id, name, cost, fx, o) {
+  return Object.assign({ id, name, type: 'spell', cost, fx, kw: [], icon: '✦', rarity: 'common' }, o || {});
+}
+
+/* ---------------- жетоны (призываемые существа) ---------------- */
+const TOKENS = {
+  recruit: { name: 'Новобранец', atk: 1, hp: 1, icon: '🪖' },
+  kitten:  { name: 'Котёнок-рыцарь', atk: 1, hp: 1, icon: '🐱', img: 'umilenie' },
+  boba:    { name: 'Боба', atk: 2, hp: 2, icon: '💪', img: 'biba_boba' },
+  teen:    { name: 'Малолетка', atk: 1, hp: 1, icon: '🍺', img: 'maloletki' },
+  muzhik:  { name: 'Мужик из гаража', atk: 2, hp: 2, icon: '🔧' },
+  garage:  { name: 'Гараж', atk: 0, hp: 5, icon: '🏚️', kw: ['taunt'], cantAttack: true },
+  bone:    { name: 'Костяк', atk: 1, hp: 1, icon: '💀' },
+  baby:    { name: 'Ребёнок', atk: 2, hp: 2, icon: '👶' },
+  bugaichik: { name: 'Бугайчик', atk: 2, hp: 2, icon: '👹', img: 'bugai' },
+};
 
 /* =====================================================================
-   ОБЩИЕ КАРТЫ (ваши карточки) — попадают в колоду любой фракции
+   ВАШИ КАРТЫ (с картинками)
    ===================================================================== */
 const SHARED_CARDS = [
-  // ---- Легенды ----
-  U('gigaslav', 'Гигаслав', 12, 'melee', ['hero'], '👑', { ...IMG('gigaslav'), rarity: 'legendary',
+  // ---- новые легенды ----
+  M('bard', 'Блядский Бард на Жабе', 9, 6, 8, { ...IMG('bard'), rarity: 'legendary', icon: '🪕',
+    bc: [{ e: 'stunAllEnemy' }, { e: 'debuffAll', a: 2 }], aura: { atk: 1 },
+    quote: '«Он не герой, не мудрец и даже не человек. Он просто еблан с лютней, жабой и армией пьяных шлюх.»' }),
+  M('shaman', 'Сраный Шаман-Говномант', 8, 5, 6, { ...IMG('shaman'), rarity: 'legendary', icon: '💩',
+    bc: [{ e: 'silenceElite', minAtk: 5 }, { e: 'debuffAll', a: 3 }],
+    quote: '«Очисть поле, блядь, естественным путём!»' }),
+  M('govnomet', 'Говномёт-3000', 8, 2, 8, { ...IMG('govnomet'), rarity: 'legendary', icon: '🛞', cantAttack: true,
+    end: [{ e: 'aoe', n: 2, who: 'enemyMinions' }],
+    quote: '«Срать на врагов — это не метафора, а тактика!»' }),
+  M('mantikora', 'Бухой Мантикора-Таксист', 9, 7, 7, { ...IMG('mantikora'), rarity: 'legendary', icon: '🚕', kw: ['charge'],
+    bc: [{ e: 'bounceRandomEnemy', n: 2 }],
+    quote: '«Куда едем, блять? В пизду, говоришь? Поехали!»' }),
+  M('dragon_ass', 'Жопный Дракон', 10, 8, 8, { ...IMG('dragon_ass'), rarity: 'legendary', icon: '🐉', noSteal: true,
+    bc: [{ e: 'aoe', n: 4, who: 'enemyMinions' }], end: [{ e: 'dmgRandomEnemy', n: 2 }],
+    quote: '«Садись ближе, пидор, щас дам дыхнуть могуществом!»' }),
+  M('gus', 'Гусь-Ебанатор', 9, 6, 6, { ...IMG('gus'), rarity: 'legendary', icon: '🪿',
+    bc: [{ e: 'aoe', n: 3, who: 'enemyMinions' }, { e: 'debuffAll', a: 2 }],
+    quote: '«Га-га, сука, встаньте на колени!»' }),
+  M('enot', 'Пиздокрылый Енот-Наркоман', 7, 5, 5, { ...IMG('enot'), rarity: 'legendary', icon: '🦝', kw: ['flying'],
+    bc: [{ e: 'dmg', n: 5, t: 'enemyMinion' }], end: [{ e: 'chance', p: 0.5, fx: [{ e: 'dmgRandomEnemy', n: 3 }] }],
+    quote: '«Ебанутый, но летает. А это уже, сука, уважение.»' }),
+  M('kreditor', 'Пиздодракон Кредитор', 9, 6, 7, { ...IMG('kreditor'), rarity: 'legendary', icon: '📜',
+    bc: [{ e: 'dmgStrongestEnemy', n: 6, debt: 2 }],
+    quote: '«Долги надо отдавать, пидор. Даже в аду.»' }),
+  M('baba_snaryad', 'Баба-Снаряд', 8, 6, 6, { ...IMG('baba_snaryad'), rarity: 'legendary', icon: '🍺', kw: ['charge'],
+    bc: [{ e: 'aoe', n: 2, who: 'enemyMinions' }, { e: 'stunAllEnemy' }],
+    quote: '«Летит, орёт, давит — и ещё просит добавки!»' }),
+
+  // ---- легенды ----
+  M('gigaslav', 'Гигаслав', 7, 6, 7, { ...IMG('gigaslav'), rarity: 'legendary', icon: '👑', kw: ['taunt', 'shield'], resist: true,
     quote: '«Блудные женщины — испытание для слабых. Я не слабый.»' }),
-  U('magnat', 'Денежный Магнат', 9, 'siege', ['hero', 'draw'], '💶', { ...IMG('magnat'), rarity: 'legendary',
+  M('magnat', 'Денежный Магнат', 6, 4, 6, { ...IMG('magnat'), rarity: 'legendary', icon: '💶', end: [{ e: 'draw', n: 1 }],
     quote: '«В этой войне побеждает не только клинок, но и кошелёк.»' }),
-  U('boroda', 'Шикарная Борода', 9, 'melee', ['hero'], '🧔', { ...IMG('boroda'), rarity: 'legendary',
+  M('boroda', 'Шикарная Борода', 5, 4, 6, { ...IMG('boroda'), rarity: 'legendary', icon: '🧔', kw: ['taunt'], bc: [{ e: 'armor', n: 4 }],
     quote: '«На НАХУЙ отлетела шваль!»' }),
-  U('pisyunchik_zol', 'Писюнчик зол и готов рвать тузы!', 10, 'ranged', ['hero'], '🐱', { ...IMG('pisyunchik_zol'), rarity: 'legendary',
+  M('pisyunchik_zol', 'Писюнчик зол и готов рвать тузы!', 6, 7, 4, { ...IMG('pisyunchik_zol'), rarity: 'legendary', icon: '🐱', kw: ['charge'],
     quote: '«Писюнчик зол и готов рвать тузы!»' }),
-
-  // ---- Отряды ----
-  U('bolno', 'Я делать твоя больно', 7, 'melee', ['shoot'], '🪓', { ...IMG('bolno'), rarity: 'legendary', value: 5,
-    quote: '«Твоя жизнь сломлена!»' }),
-  U('ohota', 'Охота на Нелюдей', 6, 'melee', ['scorch'], '🐺', { ...IMG('ohota'), rarity: 'epic',
-    quote: '«Здесь людям место, а не всякой нечисти!»' }),
-  U('berserk', 'Ярость Берсерка', 8, 'melee', ['dispel'], '💢', { ...IMG('berserk'), rarity: 'epic',
-    quote: '«Иди сюда, мармышка!»' }),
-  U('bugai', 'Призыв: Бугай', 7, 'melee', ['morale'], '👹', { ...IMG('bugai'), rarity: 'epic',
-    quote: '«Вот теперь можно и повеселиться!»' }),
-  U('szadi', 'Появление Сзади', 5, 'melee', ['spy'], '🕵️', { ...IMG('szadi'), rarity: 'epic',
-    quote: '«Тихо… не убегай. Будет интересно…»' }),
-  U('biba_boba', 'Биба и Боба', 4, 'melee', ['bond', 'fetch'], '💪', { ...IMG('biba_boba'), rarity: 'epic', count: 2, fetch: 'istoriya',
-    quote: '«Главное прийти, а приключения всегда найдутся»' }),
-  U('umilenie', 'Умиление', 3, 'ranged', ['summon'], '🐾', { ...IMG('umilenie'), rarity: 'epic',
-    summon: { name: 'Котёнок-рыцарь', power: 2, row: 'melee', count: 3, icon: '🐱' },
-    quote: '«Котята, вперёд! Покажите ему, что милота — тоже сила!»' }),
-  U('ubezhdenie', 'Убеждение: Перерождение Веры', 3, 'ranged', ['horn'], '☀️', { ...IMG('ubezhdenie'), rarity: 'epic',
-    quote: '«Вера в тебя — это лишь вопрос правильных слов…»' }),
-  U('ohotniki', 'Охотники, но не любовники', 5, 'ranged', ['morale'], '🦌', { ...IMG('ohotniki'), rarity: 'legendary',
+  M('ohotniki', 'Охотники, но не любовники', 4, 3, 4, { ...IMG('ohotniki'), rarity: 'legendary', icon: '🦌', aura: { atk: 1 },
     quote: '«Охотники, но не любовники!»' }),
-  U('pricha', 'Соблазнительная Прича', 4, 'ranged', ['convert'], '💘', { ...IMG('pricha'), rarity: 'epic',
+  M('bolno', 'Я делать твоя больно', 5, 5, 4, { ...IMG('bolno'), rarity: 'legendary', icon: '🪓', bc: [{ e: 'dmg', n: 3, t: 'any' }],
+    quote: '«Твоя жизнь сломлена!»' }),
+
+  // ---- эпические и редкие существа ----
+  M('ohota', 'Охота на Нелюдей', 5, 3, 4, { ...IMG('ohota'), rarity: 'epic', icon: '🐺', bc: [{ e: 'aoe', n: 2, who: 'enemyMinions' }],
+    quote: '«Здесь людям место, а не всякой нечисти!»' }),
+  M('berserk', 'Ярость Берсерка', 4, 3, 5, { ...IMG('berserk'), rarity: 'epic', icon: '💢', enrage: { atk: 2 },
+    quote: '«Иди сюда, мармышка!»' }),
+  M('bugai', 'Призыв: Бугай', 5, 4, 5, { ...IMG('bugai'), rarity: 'epic', icon: '👹', kw: ['taunt'], dr: [{ e: 'summon', token: 'bugaichik', n: 1 }],
+    quote: '«Вот теперь можно и повеселиться!»' }),
+  M('szadi', 'Появление Сзади', 3, 4, 2, { ...IMG('szadi'), rarity: 'epic', icon: '🕵️', kw: ['stealth'],
+    quote: '«Тихо… не убегай. Будет интересно…»' }),
+  M('biba_boba', 'Биба и Боба', 3, 2, 2, { ...IMG('biba_boba'), rarity: 'epic', icon: '💪', count: 2,
+    bc: [{ e: 'summon', token: 'boba', n: 1 }, { e: 'fetch', id: 'istoriya', chance: 0.95 }],
+    quote: '«Главное прийти, а приключения всегда найдутся»' }),
+  M('umilenie', 'Умиление', 4, 2, 3, { ...IMG('umilenie'), rarity: 'epic', icon: '🐾', bc: [{ e: 'summon', token: 'kitten', n: 3 }],
+    quote: '«Котята, вперёд! Покажите ему, что милота — тоже сила!»' }),
+  M('ubezhdenie', 'Убеждение: Перерождение Веры', 5, 3, 4, { ...IMG('ubezhdenie'), rarity: 'epic', icon: '☀️',
+    bc: [{ e: 'steal', t: 'enemyMinion', maxAtk: 2 }],
+    quote: '«Вера в тебя — это лишь вопрос правильных слов…»' }),
+  M('pricha', 'Соблазнительная Прича', 4, 3, 4, { ...IMG('pricha'), rarity: 'epic', icon: '💘', kw: ['lifesteal'],
+    bc: [{ e: 'stun', t: 'enemyMinion' }],
     quote: '«Сопротивление? Милая… ты уже проиграла.»' }),
-  U('stvol', 'Носил с собою ствол', 5, 'ranged', ['shoot'], '🔫', { ...IMG('stvol'), rarity: 'epic', value: 5,
+  M('stvol', 'Носил с собою ствол', 3, 3, 2, { ...IMG('stvol'), rarity: 'epic', icon: '🔫', bc: [{ e: 'dmg', n: 2, t: 'any' }],
     quote: '«Носил с собою ствол… носил патрон в стволе.»' }),
-  U('magaslav', 'МагаСлав', 3, 'siege', ['reinforce'], '🦁', { ...IMG('magaslav'), rarity: 'epic',
+  M('magaslav', 'МагаСлав', 6, 4, 4, { ...IMG('magaslav'), rarity: 'epic', icon: '🦁', bc: [{ e: 'summonFromDeck', n: 2, maxCost: 3 }],
     quote: '«Приходи один, мы тоже одни будем»' }),
-  U('poilo', 'Великолепное пойло', 4, 'siege', ['medic'], '🍾', { ...IMG('poilo'), rarity: 'epic',
+  M('poilo', 'Великолепное пойло', 3, 2, 4, { ...IMG('poilo'), rarity: 'epic', icon: '🍾', bc: [{ e: 'buffAll', a: 1, h: 0, others: true }],
     quote: '«Один глоток дарует силу льва, но забирает твёрдость шага…»' }),
-  U('bol', 'Анальная Боль', 5, 'siege', ['shoot'], '🔧', { ...IMG('bol'), rarity: 'epic', value: 4,
+  M('bol', 'Анальная Боль', 4, 4, 3, { ...IMG('bol'), rarity: 'epic', icon: '🔧', kw: ['poison'],
     quote: '«Тут не про милосердие — тут про крики!»' }),
-
-  // ---- Особые карты ----
-  S('gibel', 'kill2', 'Гибель', '💀', { ...IMG('gibel'), rarity: 'legendary',
-    quote: '«Сова на скакалке!»' }),
-  S('kaka', 'scorch', 'Моя делать кака — твой дом гореть!', '🔥', { ...IMG('kaka'), rarity: 'legendary',
-    quote: '«Моя делать кака… твой дом гореть!»' }),
-  S('pisyunchik_zametil', 'aoe', 'Писюнчик вас заметил!', '🐾', { ...IMG('pisyunchik_zametil'), rarity: 'legendary', value: 2,
-    quote: '«Вам не избежать проблем!»' }),
-  S('tobi', 'damage', 'Тоби Пизда', '🔥', { ...IMG('tobi'), rarity: 'legendary', value: 8, antiTobi: true,
-    note: 'Если цель — Тоби, он уничтожается сразу (скрытность не спасает).',
-    quote: '«Тоби? Ну тут тебе пизда.»' }),
-  S('udostoverenie', 'damage', 'Удостоверение «Умелый Пенис»', '📜', { ...IMG('udostoverenie'), rarity: 'epic', value: 6,
-    quote: '«Не просто титул — доказанный навык.»' }),
-  S('spid', 'rowdmg', 'Спид', '☣️', { ...IMG('spid'), rarity: 'legendary', value: 3,
-    quote: '«Это не просто болезнь… это стиль жизни!»' }),
-  S('mihail', 'curse', 'Твою змею укротил Михаил', '🐍', { ...IMG('mihail'), rarity: 'legendary',
-    quote: '«Твою змею укротил Михаил!»' }),
-  S('verbovka', 'charm', 'Вербовка', '🤝', { ...IMG('verbovka'), rarity: 'epic',
-    quote: '«Иногда врага не нужно уничтожать — достаточно предложить ему лучшую сторону.»' }),
-  S('nasmeshka', 'discard', 'Насмешка', '🃏', { ...IMG('nasmeshka'), rarity: 'rare',
-    quote: '«Ну серьёзно… ебать ты чмоня!»' }),
-  S('delishki', 'draw2', 'Обсудим делишки насущные', '🪙', { ...IMG('delishki'), rarity: 'rare',
-    quote: '«Деньги любят тишину… Но мы с ними поговорим.»' }),
-  S('torgovlya', 'shop', 'Торговая Точка', '🛒', { ...IMG('torgovlya'), rarity: 'epic',
-    quote: '«Тапки БибуДаст — ходи с комфортом!»' }),
-  S('hrabrost', 'horn', 'Храбрость и Сила', '🍺', { ...IMG('hrabrost'), rarity: 'rare',
-    quote: '«У вас будет похмелье — смотри не сдохни!»' }),
-  S('pidozra', 'decoy', 'У меня Пидозра', '⚖️', { ...IMG('pidozra'), rarity: 'epic',
-    quote: '«Я чувствую… здесь что-то не чисто.»' }),
-  S('srachka', 'weather', 'Жёсткая Срачка', '💩', { ...IMG('srachka'), rarity: 'legendary', wrow: 'melee',
-    quote: '«Даже величайшие герои склоняются перед силой кишечника.»' }),
-  S('karlik', 'weather', 'Горбатый Карлик', '🐴', { ...IMG('karlik'), rarity: 'rare', wrow: 'ranged',
-    quote: '«Сначала себя в порядок приведи, карлик…»' }),
-  S('maloletki', 'weather', 'Малолетки', '🍻', { ...IMG('maloletki'), rarity: 'epic', wrow: 'siege',
-    quote: '«Ща будет бухалово»' }),
-  S('yager', 'clear', 'Ягермейстер', '🦌', { ...IMG('yager'), rarity: 'legendary', buff: 1,
-    quote: '«Ну мёд, ну мёд по телу!!!!»' }),
-
-  // ---- Вторая партия карт ----
-  U('tobi_ninja', 'Тоби', 6, 'agile', ['stealth'], '🥷', { ...IMG('tobi_ninja'), rarity: 'epic',
+  M('tobi_ninja', 'Тоби', 3, 3, 2, { ...IMG('tobi_ninja'), rarity: 'epic', icon: '🥷', kw: ['stealth', 'windfury'],
     quote: '«Ты бьёшь по воздуху, приятель.»' }),
-  U('baryga', 'Барыга', 3, 'siege', ['income'], '⚖️', { ...IMG('baryga'), rarity: 'rare',
+  M('karlik', 'Горбатый Карлик', 2, 2, 3, { ...IMG('karlik'), rarity: 'rare', icon: '🐴', bc: [{ e: 'debuff', a: 2, h: 0, t: 'enemyMinion' }],
+    quote: '«Сначала себя в порядок приведи, карлик…»' }),
+  M('baryga', 'Барыга', 3, 2, 3, { ...IMG('baryga'), rarity: 'rare', icon: '⚖️', spellDiscount: 1,
     quote: '«Не обманешь — не продашь!»' }),
-  U('kent', 'Кент на Подхвате', 3, 'melee', ['cover'], '🛡️', { ...IMG('kent'), rarity: 'common',
+  M('kent', 'Кент на Подхвате', 2, 2, 3, { ...IMG('kent'), rarity: 'common', icon: '🛡️', kw: ['taunt'], count: 2,
     quote: '«Один в поле не воин, а вдвоём уже банда.»' }),
-  U('semki', 'Семки у Подъезда', 2, 'melee', ['draw'], '🌻', { ...IMG('semki'), rarity: 'common', count: 2,
+  M('semki', 'Семки у Подъезда', 2, 1, 2, { ...IMG('semki'), rarity: 'common', icon: '🌻', bc: [{ e: 'draw', n: 1 }], count: 2,
     quote: '«Сидим, никого не трогаем, примус починяем.»' }),
-  S('istoriya', 'story', 'Одна история охуительнее другой', '📜', { ...IMG('istoriya'), rarity: 'epic',
+
+  // ---- заклинания ----
+  Sp('gibel', 'Гибель', 7, [{ e: 'destroyRandomEnemy', n: 2 }], { ...IMG('gibel'), rarity: 'legendary', icon: '💀',
+    quote: '«Сова на скакалке!»' }),
+  Sp('kaka', 'Моя делать кака — твой дом гореть!', 6, [{ e: 'aoe', n: 4, who: 'allMinions' }], { ...IMG('kaka'), rarity: 'legendary', icon: '🔥', storm: 'toxic',
+    quote: '«Моя делать кака… твой дом гореть!»' }),
+  Sp('pisyunchik_zametil', 'Писюнчик вас заметил!', 4, [{ e: 'aoe', n: 2, who: 'enemyMinions' }], { ...IMG('pisyunchik_zametil'), rarity: 'legendary', icon: '🐾',
+    quote: '«Вам не избежать проблем!»' }),
+  Sp('tobi', 'Тоби Пизда', 4, [{ e: 'dmg', n: 6, t: 'any' }], { ...IMG('tobi'), rarity: 'legendary', icon: '🔥', antiTobi: true,
+    note: 'Может поразить Тоби даже в Скрытности — и тогда уничтожает его.', quote: '«Тоби? Ну тут тебе пизда.»' }),
+  Sp('udostoverenie', 'Удостоверение «Умелый Пенис»', 3, [{ e: 'buff', a: 3, h: 3, t: 'friendlyMinion' }], { ...IMG('udostoverenie'), rarity: 'epic', icon: '📜',
+    quote: '«Не просто титул — доказанный навык.»' }),
+  Sp('spid', 'Спид', 5, [{ e: 'aoe', n: 3, who: 'enemyMinions' }], { ...IMG('spid'), rarity: 'legendary', icon: '☣️', storm: 'haze',
+    quote: '«Это не просто болезнь… это стиль жизни!»' }),
+  Sp('mihail', 'Твою змею укротил Михаил', 2, [{ e: 'setAtk', n: 1, t: 'enemyMinion' }], { ...IMG('mihail'), rarity: 'legendary', icon: '🐍',
+    quote: '«Твою змею укротил Михаил!»' }),
+  Sp('verbovka', 'Вербовка', 8, [{ e: 'steal', t: 'enemyMinion' }], { ...IMG('verbovka'), rarity: 'epic', icon: '🤝',
+    quote: '«Иногда врага не нужно уничтожать — достаточно предложить ему лучшую сторону.»' }),
+  Sp('nasmeshka', 'Насмешка', 1, [{ e: 'silence', t: 'enemyMinion' }], { ...IMG('nasmeshka'), rarity: 'rare', icon: '🃏',
+    quote: '«Ну серьёзно… ебать ты чмоня!»' }),
+  Sp('delishki', 'Обсудим делишки насущные', 3, [{ e: 'draw', n: 2 }], { ...IMG('delishki'), rarity: 'rare', icon: '🪙',
+    quote: '«Деньги любят тишину… Но мы с ними поговорим.»' }),
+  Sp('torgovlya', 'Торговая Точка', 2, [{ e: 'discover' }], { ...IMG('torgovlya'), rarity: 'epic', icon: '🛒',
+    quote: '«Тапки БибуДаст — ходи с комфортом!»' }),
+  Sp('hrabrost', 'Храбрость и Сила', 2, [{ e: 'buffAll', a: 2, h: 0, temp: true }], { ...IMG('hrabrost'), rarity: 'rare', icon: '🍺',
+    quote: '«У вас будет похмелье — смотри не сдохни!»' }),
+  Sp('pidozra', 'У меня Пидозра', 2, [{ e: 'reveal' }, { e: 'draw', n: 1 }], { ...IMG('pidozra'), rarity: 'epic', icon: '⚖️',
+    quote: '«Я чувствую… здесь что-то не чисто.»' }),
+  Sp('srachka', 'Жёсткая Срачка', 3, [{ e: 'aoe', n: 2, who: 'allMinions' }], { ...IMG('srachka'), rarity: 'legendary', icon: '💩', storm: 'toxic',
+    quote: '«Даже величайшие герои склоняются перед силой кишечника.»' }),
+  Sp('maloletki', 'Малолетки', 3, [{ e: 'summon', token: 'teen', n: 3 }], { ...IMG('maloletki'), rarity: 'epic', icon: '🍻', storm: 'haze',
+    quote: '«Ща будет бухалово»' }),
+  Sp('yager', 'Ягермейстер', 4, [{ e: 'buffAll', a: 1, h: 1 }, { e: 'healHero', n: 4 }], { ...IMG('yager'), rarity: 'legendary', icon: '🦌', storm: 'gold',
+    quote: '«Ну мёд, ну мёд по телу!!!!»' }),
+  Sp('istoriya', 'Одна история охуительнее другой', 3, [{ e: 'stunRandomEnemy', n: 2 }, { e: 'buffAll', a: 1, h: 0 }], { ...IMG('istoriya'), rarity: 'epic', icon: '📜',
     quote: '«Не перебивай, там дальше вообще пиздец!»' }),
-  S('obrez', 'damage', 'Огнестрел: Обрез', '💥', { ...IMG('obrez'), rarity: 'rare', value: 5,
+  Sp('obrez', 'Огнестрел: Обрез', 3, [{ e: 'dmg', n: 4, t: 'minion' }], { ...IMG('obrez'), rarity: 'rare', icon: '💥',
     quote: '«Аргумент, против которого не попрёшь.»' }),
-  S('podzatylnik', 'damage', 'Пацанский Подзатыльник', '✋', { ...IMG('podzatylnik'), rarity: 'common', value: 3, count: 2,
+  Sp('podzatylnik', 'Пацанский Подзатыльник', 1, [{ e: 'dmg', n: 1, t: 'enemyMinion', stun: true }], { ...IMG('podzatylnik'), rarity: 'common', icon: '✋', count: 2,
     quote: '«Для профилактики и ясности ума.»' }),
-  S('nalog', 'tax', 'Налоговая Проверка', '📕', { ...IMG('nalog'), rarity: 'rare',
+  Sp('nalog', 'Налоговая Проверка', 3, [{ e: 'stealCard' }], { ...IMG('nalog'), rarity: 'rare', icon: '📕',
     quote: '«Заплати налоги и спи спокойно… в канаве.»' }),
-  S('obratka', 'reflect', 'Обратка', '🪞', { ...IMG('obratka'), rarity: 'epic',
+  Sp('obratka', 'Обратка', 3, [{ e: 'faceDmgHand' }], { ...IMG('obratka'), rarity: 'epic', icon: '🪞',
     quote: '«Свой яд пей сам, братишка.»' }),
-  S('lager', 'fort', 'Укреплённый Лагерь', '🏰', { ...IMG('lager'), rarity: 'rare',
+  Sp('lager', 'Укреплённый Лагерь', 3, [{ e: 'buffAll', a: 0, h: 2 }], { ...IMG('lager'), rarity: 'rare', icon: '🏰',
     quote: '«Пока стоят стены — враг не пройдёт.»' }),
-  S('korobka', 'shield', 'Картонная Коробка', '📦', { ...IMG('korobka'), rarity: 'common', free: true,
+  Sp('korobka', 'Картонная Коробка', 0, [{ e: 'armor', n: 3 }], { ...IMG('korobka'), rarity: 'common', icon: '📦',
     quote: '«Гениальная маскировка всех времён.»' }),
-  S('rassol', 'revive', 'Рассол с Утра', '🥒', { ...IMG('rassol'), rarity: 'common',
+  Sp('rassol', 'Рассол с Утра', 3, [{ e: 'resurrect' }], { ...IMG('rassol'), rarity: 'common', icon: '🥒',
     quote: '«Эликсир, перед которым бессильна даже смерть.»' }),
-  S('kompot', 'heal', 'Бабушкин Компот', '🍒', { ...IMG('kompot'), rarity: 'rare',
+  Sp('kompot', 'Бабушкин Компот', 3, [{ e: 'healAll', n: 4 }], { ...IMG('kompot'), rarity: 'rare', icon: '🍒',
     quote: '«Закрыто с любовью — открыто к победе!»' }),
-  S('doshirak', 'healOne', 'Живительный Доширак', '🍜', { ...IMG('doshirak'), rarity: 'rare', value: 4, cleanse: true,
+  Sp('doshirak', 'Живительный Доширак', 2, [{ e: 'heal', n: 6, t: 'friendly', cleanse: true }], { ...IMG('doshirak'), rarity: 'rare', icon: '🍜',
     quote: '«Заварил кипяточком — и снова в строй!»' }),
-  S('podorozhnik', 'healOne', 'Подорожник', '🌿', { ...IMG('podorozhnik'), rarity: 'common', value: 2,
+  Sp('podorozhnik', 'Подорожник', 1, [{ e: 'heal', n: 3, t: 'any' }], { ...IMG('podorozhnik'), rarity: 'common', icon: '🌿',
     quote: '«Лучшая медицина со времён динозавров.»' }),
-  S('ugol', 'clear', 'Активированный Уголь', '⚫', { ...IMG('ugol'), rarity: 'common',
+  Sp('ugol', 'Активированный Уголь', 1, [{ e: 'healHero', n: 2 }, { e: 'draw', n: 1 }], { ...IMG('ugol'), rarity: 'common', icon: '⚫',
     quote: '«Десять таблеток — и ты снова человек.»' }),
 ];
 
 /* =====================================================================
-   ФРАКЦИИ — у каждой свой лидер, бонус и несколько своих отрядов
+   НОВЫЕ КАРТЫ (пока без картинок — рисуется значок)
    ===================================================================== */
-const FACTIONS = {
-  iron: {
-    name: 'Железный Легион', emblem: '🛡️',
-    desc: 'Дисциплина, осадные машины и сплочённые отряды.',
-    perk: 'Победив в раунде, берёт 1 карту из колоды.',
-    leader: { id: 'iron_leader', name: 'Маршал Брандт', icon: '🎖️', ability: 'hornSiege',
-      desc: 'Удваивает силу вашего осадного ряда (если там ещё нет рога).' },
+const EXTRA_CARDS = [
+  M('tescha', 'Тёща', 8, 6, 9, { ...ART('tescha'), rarity: 'legendary', icon: '👵', bc: [{ e: 'stunAllEnemy' }],
+    quote: '«Я же говорила, что он тебе не пара!»' }),
+  M('batya', 'Батя с ремнём', 6, 5, 5, { ...ART('batya'), rarity: 'legendary', icon: '👨‍🦳', bc: [{ e: 'destroy', t: 'enemyMinion', minAtk: 5 }],
+    quote: '«Ну всё. Сейчас кто-то получит.»' }),
+  M('gop_kolyan', 'Гопник Колян', 2, 2, 2, { ...ART('gop_kolyan'), icon: '🧢', group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«Слышь, есть чё?»' }),
+  M('gop_tolyan', 'Гопник Толян', 2, 2, 2, { ...ART('gop_tolyan'), icon: '🧢', group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«А ты с какого района?»' }),
+  M('gop_vovan', 'Гопник Вован', 2, 2, 2, { ...ART('gop_vovan'), icon: '🧢', group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«Позвонить дай, брат.»' }),
+  M('babki', 'Бабки у подъезда', 1, 1, 2, { ...ART('babki'), rarity: 'rare', icon: '👀', bc: [{ e: 'drawBoth' }],
+    quote: '«А эта-то, с третьего этажа, опять с новым!»' }),
+  M('kachok', 'Качок из подвала', 3, 3, 3, { ...ART('kachok'), icon: '🏋️', count: 2, bc: [{ e: 'selfBuffIf', id: 'kachok', a: 2, h: 2 }],
+    quote: '«Ты ваще сколько жмёшь?»' }),
+  M('tamada', 'Тамада', 3, 2, 3, { ...ART('tamada'), rarity: 'rare', icon: '🎤', end: [{ e: 'buffRandomFriendly', a: 1, h: 1 }],
+    quote: '«А теперь — конкурс!»' }),
+  M('perforator', 'Сосед с перфоратором', 4, 3, 4, { ...ART('perforator'), rarity: 'rare', icon: '🔨', end: [{ e: 'dmgRandomEnemy', n: 1 }],
+    quote: '«Суббота, восемь утра — самое время.»' }),
+  M('uchastkovy', 'Участковый', 5, 3, 5, { ...ART('uchastkovy'), rarity: 'epic', icon: '👮', kw: ['taunt'], bc: [{ e: 'stun', t: 'enemyMinion' }],
+    quote: '«Тааак. Что тут у нас?»' }),
+  M('taksist', 'Таксист-философ', 3, 3, 2, { ...ART('taksist'), icon: '🚕', kw: ['charge'],
+    quote: '«Я тебе так скажу, брат: жизнь — она как дорога…»' }),
+  M('garazh_muzhiki', 'Мужики из гаражей', 5, 3, 3, { ...ART('garazh_muzhiki'), rarity: 'epic', icon: '🔧', bc: [{ e: 'summon', token: 'muzhik', n: 2 }],
+    quote: '«Щас мужиков позову — разберёмся.»' }),
+  M('feldsher', 'Фельдшер скорой', 3, 2, 4, { ...ART('feldsher'), rarity: 'rare', icon: '🚑', end: [{ e: 'healHero', n: 3 }],
+    quote: '«Ну что, опять упал? Сам упал?»' }),
+  M('rybak', 'Рыбак с байками', 2, 1, 3, { ...ART('rybak'), rarity: 'rare', icon: '🎣', end: [{ e: 'chance', p: 0.5, fx: [{ e: 'draw', n: 1 }] }],
+    quote: '«Вот такую вчера вытащил! Не веришь?»' }),
+  M('garmonist', 'Гармонист на свадьбе', 2, 2, 2, { ...ART('garmonist'), icon: '🪗', bc: [{ e: 'buffRandomFriendly', a: 2, h: 2 }],
+    quote: '«Эх, раз, ещё раз!»' }),
+  M('dvorovy_pes', 'Дворовый пёс Шарик', 2, 3, 2, { ...ART('dvorovy_pes'), rarity: 'rare', icon: '🐕', kw: ['stealth'],
+    quote: '«Его все кормят, но никто не поймает.»' }),
+  Sp('kirpich', 'Кирпич с балкона', 2, [{ e: 'dmg', n: 3, t: 'any' }], { ...ART('kirpich'), rarity: 'rare', icon: '🧱', quote: '«Он сам выпал. Честно.»' }),
+  Sp('tapok', 'Летящий тапок', 1, [{ e: 'dmg', n: 2, t: 'minion' }], { ...ART('tapok'), icon: '🩴', count: 2, quote: '«Мать — лучший снайпер в мире.»' }),
+  Sp('shaurma', 'Шаурма с вокзала', 2, [{ e: 'debuff', a: 2, h: 2, t: 'enemyMinion' }], { ...ART('shaurma'), rarity: 'epic', icon: '🌯', quote: '«Пахнет вкусно. Это и подозрительно.»' }),
+  Sp('korporativ', 'Утро после корпоратива', 3, [{ e: 'aoe', n: 1, who: 'enemyMinions' }, { e: 'stunAllEnemy' }], { ...ART('korporativ'), rarity: 'rare', icon: '🥴', quote: '«Кто мне вчера налил последнюю?»' }),
+  Sp('svadba', 'Драка на свадьбе', 7, [{ e: 'destroyAll' }], { ...ART('svadba'), rarity: 'epic', icon: '💍', quote: '«Ни одна нормальная свадьба без этого не обходится.»' }),
+  Sp('mama_zvonit', 'Мама звонит', 2, [{ e: 'discardEnemy' }, { e: 'draw', n: 1 }], { ...ART('mama_zvonit'), icon: '📞', quote: '«Ты покушал? Шапку надел?»' }),
+  Sp('avans', 'Аванс пришёл', 0, [{ e: 'mana', n: 2 }], { ...ART('avans'), rarity: 'rare', icon: '💸', quote: '«Гуляем! До зарплаты как-нибудь доживём.»' }),
+  Sp('rynok', 'Барахолка на рынке', 1, [{ e: 'randomCard' }], { ...ART('rynok'), icon: '🧺', quote: '«Бери, дорогой, для тебя — скидка!»' }),
+  Sp('banya', 'Банька с веником', 4, [{ e: 'buffAll', a: 0, h: 1 }, { e: 'healAll', n: 99 }], { ...ART('banya'), rarity: 'epic', icon: '🧖', quote: '«С лёгким паром!»' }),
+  Sp('pirozhki', 'Бабушкины пирожки', 2, [{ e: 'buff', a: 1, h: 3, t: 'friendlyMinion' }], { ...ART('pirozhki'), icon: '🥟', quote: '«Ешь давай, совсем худой стал.»' }),
+  Sp('garazh', 'Гараж', 3, [{ e: 'summon', token: 'garage', n: 1 }, { e: 'armor', n: 2 }], { ...ART('garazh'), rarity: 'rare', icon: '🏚️', quote: '«Не просто гараж — мужская крепость.»' }),
+  Sp('sto_gramm', 'Сто грамм для храбрости', 1, [{ e: 'buff', a: 3, h: 0, t: 'friendlyMinion', temp: true }], { ...ART('sto_gramm'), icon: '🥃', quote: '«Для сугреву и для смелости.»' }),
+  Sp('otmazka', 'Отмазка', 2, [{ e: 'bounce', t: 'minion' }], { ...ART('otmazka'), icon: '🤷', quote: '«Я вообще мимо проходил.»' }),
+  Sp('dozhd', 'Ливень на шашлыках', 3, [{ e: 'debuffAll', a: 1 }, { e: 'draw', n: 1 }], { ...ART('dozhd'), rarity: 'rare', icon: '🌧️', storm: 'rain', quote: '«Каждый раз! Каждый раз на майские!»' }),
+  Sp('nashatyr', 'Нашатырь', 1, [{ e: 'unstun' }, { e: 'draw', n: 1 }], { ...ART('nashatyr'), icon: '🧪', quote: '«Нюхни — и как новенький.»' }),
+];
+
+/* =====================================================================
+   ГЕРОИНИ — у каждой своя сила, своё поле и свои карты
+   ===================================================================== */
+const HEROES = {
+  wife: {
+    name: 'Кредитная Жена №1', short: 'Жена', ...IMG('wife'), icon: '💳', field: 'zags', fieldName: 'ЗАГС',
+    desc: 'Женит врагов друг на друге: супруги слабеют, а смерть одного бьёт по другому.',
+    power: { name: 'Брак', cost: 2, icon: '💍', fx: [{ e: 'marryRandom' }],
+      desc: 'Два случайных вражеских существа женятся: оба −2 атаки. Если врагов меньше двух — 2 урона вражескому герою.' },
+    quote: '«Любовь — это тоже контракт. А контракт у меня всегда с процентами!»',
     cards: [
-      U('iron_footman', 'Пехотинец Легиона', 4, 'melee', ['bond'], '🛡️', { count: 3 }),
-      U('iron_catapult', 'Катапульта', 8, 'siege', ['bond'], '🪨', { count: 2 }),
-      U('iron_archer', 'Лучник гарнизона', 4, 'ranged', [], '🏹', { count: 2 }),
-      U('iron_medic', 'Полевой лекарь', 5, 'siege', ['medic'], '⚕️'),
-      U('iron_banner', 'Знаменосец', 1, 'melee', ['morale'], '🚩'),
+      Sp('w_dogovor', 'Брачный договор', 3, [{ e: 'steal', t: 'enemyMinion', maxAtk: 3 }], { icon: '📃', rarity: 'epic', quote: '«Подпиши здесь, здесь и вот тут — навсегда.»' }),
+      Sp('w_kreditka', 'Кредитка с драконом', 1, [{ e: 'mana', n: 1 }, { e: 'draw', n: 1 }], { icon: '💳', count: 2, quote: '«Лимит? Не слышала.»' }),
+      M('w_svidetel', 'Свидетельница на свадьбе', 3, 2, 4, { icon: '💐', rarity: 'rare', count: 2, bc: [{ e: 'marryRandom' }], quote: '«Горько! Горько!»' }),
     ],
   },
-  forest: {
-    name: 'Лесное Братство', emblem: '🌲',
-    desc: 'Ловкие стрелки и хранители древних рощ.',
-    perk: 'Может заменить 3 карты вместо 2 и сам решает, кто ходит первым.',
-    leader: { id: 'forest_leader', name: 'Ведунья Эйлин', icon: '🌿', ability: 'draw',
-      desc: 'Возьмите 1 карту из колоды.' },
+  realtor: {
+    name: 'Риелторша Вечного Займа', short: 'Риелторша', ...IMG('realtor'), icon: '🏠', field: 'office', fieldName: 'Агентство недвижимости',
+    desc: 'Вешает на врагов ипотеку и прячется за бронёй.',
+    power: { name: 'Ипотека', cost: 2, icon: '🏠', fx: [{ e: 'armor', n: 2 }, { e: 'debtRandom', n: 1 }],
+      desc: 'Получите 2 брони. Случайное вражеское существо получает «Долг»: −1 атака в начале каждого его хода.' },
+    quote: '«Любовь, семья, дети, ипотека — всё включено, котик… подписывай, пока горячая ставка!»',
     cards: [
-      U('forest_ranger', 'Лесной следопыт', 6, 'agile', [], '🧝', { count: 2 }),
-      U('forest_yew', 'Стрелок Тисовой рощи', 4, 'ranged', ['bond'], '🎯', { count: 3 }),
-      U('forest_dryad', 'Дриада-целительница', 2, 'ranged', ['medic'], '🌸'),
-      U('forest_treant', 'Древень', 8, 'siege', [], '🌳'),
-      U('forest_keeper', 'Хранитель рощи', 2, 'melee', ['morale'], '🍃'),
+      Sp('r_klyuchi', 'Ключи от квартиры', 2, [{ e: 'armor', n: 5 }], { icon: '🔑', count: 2, quote: '«Дом, милый займ.»' }),
+      M('r_kollektor', 'Коллектор', 4, 4, 4, { icon: '📇', rarity: 'rare', count: 2, bc: [{ e: 'debt', n: 2, t: 'enemyMinion' }], quote: '«Мы просто поговорим.»' }),
+      M('r_novostroyka', 'Новостройка', 5, 2, 8, { icon: '🏢', rarity: 'epic', kw: ['taunt'], quote: '«Сдача — в следующем квартале. Какого года — не уточняем.»' }),
     ],
   },
-  dark: {
-    name: 'Порождения Тьмы', emblem: '🦇',
-    desc: 'Стаи чудовищ, которые приходят все разом.',
-    perk: 'После каждого раунда один случайный отряд остаётся на поле.',
-    leader: { id: 'dark_leader', name: 'Повелитель Мора', icon: '☠️', ability: 'scorchMelee',
-      desc: 'Если сила ближнего боя противника 10+, уничтожает его сильнейший отряд(ы) там.' },
+  cheetah: {
+    name: 'Бегущая Мать-Гепард', short: 'Мать-Гепард', ...IMG('cheetah'), icon: '🍼', field: 'night', fieldName: 'Ночной забег',
+    desc: 'Делает врагов «беременными» — и забирает рождённых детей себе.',
+    power: { name: 'Спид-беременность', cost: 2, icon: '🤰', fx: [{ e: 'pregnantRandom' }],
+      desc: 'Случайное вражеское существо «беременеет»: −2 атаки; через 2 ваших хода у вас рождается «Ребёнок» 2/2. Если врагов нет — «Ребёнок» рождается сразу.' },
+    quote: '«Пробежалась мимо — и ты уже отец, муж и ипотечный раб!»',
     cards: [
-      U('dark_ghoul', 'Гуль', 2, 'melee', ['muster'], '💀', { count: 3, muster: 'ghoul' }),
-      U('dark_coven1', 'Ведьма Полынь', 5, 'melee', ['muster'], '🧙‍♀️', { muster: 'coven' }),
-      U('dark_coven2', 'Ведьма Белена', 5, 'melee', ['muster'], '🧙‍♀️', { muster: 'coven' }),
-      U('dark_coven3', 'Ведьма Дурман', 5, 'melee', ['muster'], '🧙‍♀️', { muster: 'coven' }),
-      U('dark_harpy', 'Гарпия', 3, 'agile', [], '🦅', { count: 2 }),
-      U('dark_golem', 'Каменный голем', 7, 'siege', [], '🗿'),
+      M('c_aist', 'Аист с доставкой', 2, 2, 2, { icon: '🕊️', count: 2, kw: ['flying'], dr: [{ e: 'summon', token: 'baby', n: 1 }], quote: '«Распишитесь в получении.»' }),
+      Sp('c_test', 'Тест на две полоски', 1, [{ e: 'pregnant', t: 'enemyMinion' }, { e: 'draw', n: 1 }], { icon: '🧪', rarity: 'rare', quote: '«Ну всё, поздравляю.»' }),
+      Sp('c_matkapital', 'Маткапитал', 3, [{ e: 'summon', token: 'baby', n: 2 }], { icon: '💰', rarity: 'rare', quote: '«Государство поможет. Наверное.»' }),
     ],
   },
-  sea: {
-    name: 'Морские Кланы', emblem: '⚓',
-    desc: 'Налётчики с севера, сильные в братстве.',
-    perk: 'Побеждает в раунде при ничьей.',
-    leader: { id: 'sea_leader', name: 'Ярл Хротгар', icon: '🪓', ability: 'reviveRandom',
-      desc: 'Возвращает на поле случайный отряд (не легенду) из вашего сброса.' },
+  granny: {
+    name: 'Бабка-Репродукторша', short: 'Бабка', ...IMG('granny'), icon: '⏳', field: 'nursery', fieldName: 'Декретная лаборатория',
+    desc: 'Лечит своих зельями и отправляет врагов «в декрет».',
+    power: { name: 'Бабкино зелье', cost: 2, icon: '🧪', fx: [{ e: 'heal', n: 2, t: 'any' }],
+      desc: 'Восстановите 2 здоровья любому персонажу.' },
+    quote: '«Щас я тебе быстренько семью, ипотеку и троих подгоню!»',
     cards: [
-      U('sea_raider', 'Налётчик', 4, 'melee', ['bond'], '⚔️', { count: 3 }),
-      U('sea_axe', 'Метатель топоров', 4, 'ranged', ['bond'], '🪓', { count: 2 }),
-      U('sea_drakkar', 'Драккар', 6, 'siege', [], '⛵', { count: 2 }),
-      U('sea_skald', 'Скальд', 2, 'siege', ['horn'], '🎻'),
-      U('sea_healer', 'Знахарка', 3, 'ranged', ['medic'], '🌿'),
+      Sp('g_dekret', 'Декретный таймер', 3, [{ e: 'pregnantRandom' }, { e: 'pregnantRandom' }], { icon: '⏰', rarity: 'epic', quote: '«Тик-так, касатик.»' }),
+      M('g_vnuk', 'Любимый внук', 3, 3, 3, { icon: '🧒', count: 2, bc: [{ e: 'healHero', n: 3 }], quote: '«Ба, я ненадолго!»' }),
+      Sp('g_noski', 'Вязаные носки', 2, [{ e: 'buff', a: 2, h: 2, t: 'friendlyMinion', kw: 'taunt' }], { icon: '🧦', rarity: 'rare', quote: '«Надень, а то простудишься.»' }),
     ],
   },
 };
 
-/* =====================================================================
-   НОВЫЕ КАРТЫ (пока без картинок — рисуется значок).
-   Чтобы дать карте картинку, положите img/cards/<id>.jpg
-   и img/cards/thumbs/<id>.jpg — игра подхватит её сама.
-   ===================================================================== */
-const ART = (id) => ({ ...IMG(id), optionalArt: true });
-const EXTRA_CARDS = [
-  // ---- Легенды ----
-  U('tescha', 'Тёща', 10, 'siege', ['hero'], '👵', { ...ART('tescha'), rarity: 'legendary',
-    quote: '«Я же говорила, что он тебе не пара!»' }),
-  U('batya', 'Батя с ремнём', 8, 'melee', ['hero', 'scorch'], '👨‍🦳', { ...ART('batya'), rarity: 'legendary',
-    quote: '«Ну всё. Сейчас кто-то получит.»' }),
+// «Медяк» — бонус второму игроку
+const COIN = Sp('coin', 'Медяк', 0, [{ e: 'mana', n: 1 }], { icon: '🪙', rarity: 'common', quote: '«На удачу.»' });
 
-  // ---- Отряды ----
-  U('gop_kolyan', 'Гопник Колян', 3, 'melee', ['muster'], '🧢', { ...ART('gop_kolyan'), rarity: 'common', muster: 'gop',
-    quote: '«Слышь, есть чё?»' }),
-  U('gop_tolyan', 'Гопник Толян', 3, 'melee', ['muster'], '🧢', { ...ART('gop_tolyan'), rarity: 'common', muster: 'gop',
-    quote: '«А ты с какого района?»' }),
-  U('gop_vovan', 'Гопник Вован', 3, 'melee', ['muster'], '🧢', { ...ART('gop_vovan'), rarity: 'common', muster: 'gop',
-    quote: '«Позвонить дай, брат.»' }),
-  U('babki', 'Бабки у подъезда', 4, 'ranged', ['spy'], '👀', { ...ART('babki'), rarity: 'rare',
-    quote: '«А эта-то, с третьего этажа, опять с новым!»' }),
-  U('kachok', 'Качок из подвала', 4, 'melee', ['bond'], '🏋️', { ...ART('kachok'), rarity: 'common', count: 2,
-    quote: '«Ты ваще сколько жмёшь?»' }),
-  U('tamada', 'Тамада', 2, 'ranged', ['horn'], '🎤', { ...ART('tamada'), rarity: 'rare',
-    quote: '«А теперь — конкурс!»' }),
-  U('perforator', 'Сосед с перфоратором', 5, 'siege', ['shoot'], '🔨', { ...ART('perforator'), rarity: 'rare', value: 3,
-    quote: '«Суббота, восемь утра — самое время.»' }),
-  U('uchastkovy', 'Участковый', 6, 'melee', ['dispel'], '👮', { ...ART('uchastkovy'), rarity: 'epic',
-    quote: '«Тааак. Что тут у нас?»' }),
-  U('taksist', 'Таксист-философ', 4, 'agile', ['draw'], '🚕', { ...ART('taksist'), rarity: 'common',
-    quote: '«Я тебе так скажу, брат: жизнь — она как дорога…»' }),
-  U('garazh_muzhiki', 'Мужики из гаражей', 4, 'siege', ['reinforce'], '🔧', { ...ART('garazh_muzhiki'), rarity: 'epic',
-    quote: '«Щас мужиков позову — разберёмся.»' }),
-  U('feldsher', 'Фельдшер скорой', 3, 'siege', ['medic'], '🚑', { ...ART('feldsher'), rarity: 'rare',
-    quote: '«Ну что, опять упал? Сам упал?»' }),
-  U('rybak', 'Рыбак с байками', 3, 'ranged', ['income'], '🎣', { ...ART('rybak'), rarity: 'rare',
-    quote: '«Вот такую вчера вытащил! Не веришь?»' }),
-  U('garmonist', 'Гармонист на свадьбе', 2, 'siege', ['morale'], '🪗', { ...ART('garmonist'), rarity: 'common',
-    quote: '«Эх, раз, ещё раз!»' }),
-  U('dvorovy_pes', 'Дворовый пёс Шарик', 5, 'melee', ['stealth'], '🐕', { ...ART('dvorovy_pes'), rarity: 'rare',
-    quote: '«Его все кормят, но никто не поймает.»' }),
-
-  // ---- Особые карты ----
-  S('kirpich', 'damage', 'Кирпич с балкона', '🧱', { ...ART('kirpich'), rarity: 'rare', value: 6,
-    quote: '«Он сам выпал. Честно.»' }),
-  S('tapok', 'damage', 'Летящий тапок', '🩴', { ...ART('tapok'), rarity: 'common', value: 2, count: 2,
-    quote: '«Мать — лучший снайпер в мире.»' }),
-  S('shaurma', 'curse', 'Шаурма с вокзала', '🌯', { ...ART('shaurma'), rarity: 'epic',
-    quote: '«Пахнет вкусно. Это и подозрительно.»' }),
-  S('korporativ', 'rowdmg', 'Утро после корпоратива', '🥴', { ...ART('korporativ'), rarity: 'rare', value: 2,
-    quote: '«Кто мне вчера налил последнюю?»' }),
-  S('svadba', 'scorch', 'Драка на свадьбе', '💍', { ...ART('svadba'), rarity: 'epic',
-    quote: '«Ни одна нормальная свадьба без этого не обходится.»' }),
-  S('mama_zvonit', 'discard', 'Мама звонит', '📞', { ...ART('mama_zvonit'), rarity: 'common',
-    quote: '«Ты покушал? Шапку надел?»' }),
-  S('avans', 'draw2', 'Аванс пришёл', '💸', { ...ART('avans'), rarity: 'rare',
-    quote: '«Гуляем! До зарплаты как-нибудь доживём.»' }),
-  S('rynok', 'shop', 'Барахолка на рынке', '🧺', { ...ART('rynok'), rarity: 'common',
-    quote: '«Бери, дорогой, для тебя — скидка!»' }),
-  S('banya', 'heal', 'Банька с веником', '🧖', { ...ART('banya'), rarity: 'epic',
-    quote: '«С лёгким паром!»' }),
-  S('pirozhki', 'healOne', 'Бабушкины пирожки', '🥟', { ...ART('pirozhki'), rarity: 'common', value: 3, cleanse: true,
-    quote: '«Ешь давай, совсем худой стал.»' }),
-  S('garazh', 'fort', 'Гараж', '🏚️', { ...ART('garazh'), rarity: 'rare',
-    quote: '«Не просто гараж — мужская крепость.»' }),
-  S('sto_gramm', 'horn', 'Сто грамм для храбрости', '🥃', { ...ART('sto_gramm'), rarity: 'common',
-    quote: '«Для сугреву и для смелости.»' }),
-  S('otmazka', 'decoy', 'Отмазка', '🤷', { ...ART('otmazka'), rarity: 'common',
-    quote: '«Я вообще мимо проходил.»' }),
-  S('dozhd', 'weather', 'Ливень на шашлыках', '🌧️', { ...ART('dozhd'), rarity: 'rare', wrow: 'ranged',
-    quote: '«Каждый раз! Каждый раз на майские!»' }),
-  S('nashatyr', 'clear', 'Нашатырь', '🧪', { ...ART('nashatyr'), rarity: 'common',
-    quote: '«Нюхни — и как новенький.»' }),
-];
-
-// Служебное: проставляем принадлежность карт
+/* ---------------- служебное ---------------- */
 (function () {
-  SHARED_CARDS.forEach((c) => { c.faction = 'shared'; });
-  EXTRA_CARDS.forEach((c) => { c.faction = 'shared'; });
-  for (const k in FACTIONS) {
-    FACTIONS[k].key = k;
-    FACTIONS[k].cards.forEach((c) => { c.faction = k; });
-  }
+  SHARED_CARDS.forEach((c) => { c.cls = 'shared'; });
+  EXTRA_CARDS.forEach((c) => { c.cls = 'extra'; });
+  for (const k in HEROES) { HEROES[k].key = k; HEROES[k].cards.forEach((c) => { c.cls = k; }); }
+  COIN.cls = 'shared';
 })();
 
-// Шаблон карты рога — используется способностью лидера
-const LEADER_HORN_DEF = S('leader_horn', 'horn', 'Боевой рог лидера', '📯');
-// Щит, который ставит «Кент на Подхвате»
-const COVER_SHIELD_DEF = S('cover_shield', 'shield', 'Щит кента', '🛡️', IMG('kent'));
-
 function allCardDefs() {
-  const out = [...SHARED_CARDS, ...EXTRA_CARDS];
-  for (const k in FACTIONS) out.push(...FACTIONS[k].cards);
+  const out = [...SHARED_CARDS, ...EXTRA_CARDS, COIN];
+  for (const k in HEROES) out.push(...HEROES[k].cards);
   return out;
+}
+
+/* =====================================================================
+   ТЕКСТ КАРТ — собирается из эффектов
+   ===================================================================== */
+const TGT = {
+  any: 'любому персонажу', minion: 'существу', enemyMinion: 'вражескому существу',
+  friendlyMinion: 'вашему существу', friendly: 'вашему персонажу', enemy: 'врагу',
+};
+const TGT_ACC = {
+  any: 'любого персонажа', minion: 'существо', enemyMinion: 'вражеское существо',
+  friendlyMinion: 'ваше существо', friendly: 'вашего персонажа', enemy: 'врага',
+};
+
+function tokenText(key) {
+  const t = TOKENS[key];
+  return `«${t.name}» ${t.atk}/${t.hp}${t.kw ? ' с ' + t.kw.map((k) => KEYWORDS[k].name).join(', ') : ''}`;
+}
+
+function effText(f) {
+  switch (f.e) {
+    case 'dmg': return `Нанесите ${f.n} урона ${TGT[f.t]}${f.stun ? ' и оглушите его' : ''}.`;
+    case 'heal': return `Восстановите ${f.n} здоровья ${TGT[f.t]}${f.cleanse ? ' и снимите с него оглушение и долги' : ''}.`;
+    case 'buff': return `Дайте ${TGT[f.t]} +${f.a}/+${f.h}${f.kw ? ' и ' + KEYWORDS[f.kw].name : ''}${f.temp ? ' до конца хода' : ''}.`;
+    case 'debuff': return `${TGT_ACC[f.t][0].toUpperCase() + TGT_ACC[f.t].slice(1)} получает −${f.a}${f.h ? '/−' + f.h : ' атаки'}.`;
+    case 'setAtk': return `Атака ${TGT[f.t].replace(/у$/, 'а')} становится ${f.n}.`;
+    case 'stun': return `Оглушите ${TGT_ACC[f.t]}: оно пропустит свою следующую атаку.`;
+    case 'destroy': return `Уничтожьте ${TGT_ACC[f.t]}${f.minAtk ? ` с атакой ${f.minAtk} и больше` : ''}.`;
+    case 'steal': return `Возьмите под контроль ${TGT_ACC[f.t]}${f.maxAtk != null ? ` с атакой ${f.maxAtk} или меньше` : ''}.`;
+    case 'bounce': return `Верните ${TGT_ACC[f.t]} в руку владельца.`;
+    case 'bounceRandomEnemy': return `Высадите ${f.n} случайных вражеских существ — они возвращаются в руку владельца.`;
+    case 'silence': return `${TGT_ACC[f.t][0].toUpperCase() + TGT_ACC[f.t].slice(1)} теряет все свойства.`;
+    case 'silenceElite': return `Вражеские существа с атакой ${f.minAtk}+ теряют все свойства.`;
+    case 'aoe': return `Нанесите ${f.n} урона ${{ enemyMinions: 'всем вражеским существам', allMinions: 'ВСЕМ существам', enemyAll: 'всем врагам' }[f.who]}.`;
+    case 'stunAllEnemy': return 'Оглушите всех вражеских существ.';
+    case 'stunRandomEnemy': return `Оглушите ${f.n} случайных вражеских существ.`;
+    case 'debuffAll': return `Вражеские существа получают −${f.a} атаки.`;
+    case 'buffAll': return `${f.others ? 'Другие ваши существа' : 'Ваши существа'} получают +${f.a}/+${f.h}${f.temp ? ' до конца хода' : ''}.`.replace('/+0', ' атаки').replace('+0/', '+0/');
+    case 'buffRandomFriendly': return `Случайное другое ваше существо получает +${f.a}/+${f.h}.`;
+    case 'healHero': return `Восстановите ${f.n} здоровья вашему герою.`;
+    case 'healAll': return f.n >= 99 ? 'Полностью вылечите всех ваших персонажей.' : `Восстановите ${f.n} здоровья всем вашим персонажам.`;
+    case 'draw': return f.n === 1 ? 'Возьмите карту.' : `Возьмите ${f.n} карты.`;
+    case 'drawBoth': return 'Каждый игрок берёт карту.';
+    case 'discardEnemy': return 'Противник сбрасывает случайную карту.';
+    case 'stealCard': return 'Заберите случайную карту из руки противника.';
+    case 'discover': return 'Посмотрите 3 карты своей колоды и возьмите одну.';
+    case 'randomCard': return 'Получите случайную общую карту.';
+    case 'summon': return `Призовите ${f.n > 1 ? f.n + '× ' : ''}${tokenText(f.token)}.`;
+    case 'summonFromDeck': return `Выставьте из колоды ${f.n} случайных существа стоимостью до ${f.maxCost}.`;
+    case 'muster': return 'Выставьте из колоды всех других гопников.';
+    case 'fetch': return 'С вероятностью 95% достаньте из колоды «Одну историю охуительнее другой».';
+    case 'armor': return `Получите ${f.n} брони.`;
+    case 'mana': return `Получите ${f.n} ману в этом ходу.`;
+    case 'resurrect': return 'Воскресите случайное ваше погибшее существо.';
+    case 'destroyRandomEnemy': return `Уничтожьте ${f.n} случайных вражеских существ.`;
+    case 'destroyAll': return 'Уничтожьте ВСЕХ существ.';
+    case 'dmgRandomEnemy': return `Нанесите ${f.n} урона случайному врагу.`;
+    case 'dmgStrongestEnemy': return `Нанесите ${f.n} урона сильнейшему вражескому существу${f.debt ? ` и повесьте на него «Долг» (−${f.debt} атаки каждый ход)` : ''}.`;
+    case 'reveal': return 'Вражеские существа теряют Скрытность, Щит и Провокацию.';
+    case 'faceDmgHand': return 'Нанесите вражескому герою урон, равный числу карт в его руке.';
+    case 'selfBuffIf': return 'Если у вас есть другой «Качок» — получает +2/+2.';
+    case 'chance': return `С вероятностью ${Math.round(f.p * 100)}%: ${f.fx.map(effText).join(' ').replace(/^./, (c) => c.toLowerCase())}`;
+    case 'unstun': return 'Снимите оглушение со всех ваших существ.';
+    case 'marryRandom': return 'Два случайных вражеских существа женятся: оба −2 атаки. Если врагов меньше двух — 2 урона вражескому герою.';
+    case 'debt': return `${TGT_ACC[f.t][0].toUpperCase() + TGT_ACC[f.t].slice(1)} получает «Долг»: −${f.n} атаки в начале каждого своего хода.`;
+    case 'debtRandom': return `Случайное вражеское существо получает «Долг» (−${f.n} атака каждый ход).`;
+    case 'pregnant': return `${TGT_ACC[f.t][0].toUpperCase() + TGT_ACC[f.t].slice(1)} «беременеет»: −2 атаки, через 2 ваших хода у вас рождается «Ребёнок» 2/2.`;
+    case 'pregnantRandom': return 'Случайное вражеское существо «беременеет»: −2 атаки, через 2 ваших хода у вас рождается «Ребёнок» 2/2.';
+    default: return '';
+  }
+}
+
+/** Части текста карты: [{name, text}] */
+function cardTextParts(c) {
+  const out = [];
+  (c.kw || []).forEach((k) => out.push({ name: `${KEYWORDS[k].icon} ${KEYWORDS[k].name}`, text: KEYWORDS[k].desc }));
+  if (c.cantAttack) out.push({ name: '⛔ Орудие', text: 'Не может атаковать.' });
+  if (c.noSteal) out.push({ name: '🔒 Неподкупный', text: 'Его нельзя переманить.' });
+  if (c.resist) out.push({ name: '🚫 Барьер целомудрия', text: 'Иммунитет к манипуляциям: его нельзя переманить, оглушить, ослабить, лишить свойств, женить или сделать «беременным».' });
+  if (c.bc) out.push({ name: '📣 Клич', text: c.bc.map(effText).join(' ') });
+  if (c.fx) out.push({ name: '✨ Эффект', text: c.fx.map(effText).join(' ') });
+  if (c.dr) out.push({ name: '⚰️ Предсмертный хрип', text: c.dr.map(effText).join(' ') });
+  if (c.end) out.push({ name: '🌙 В конце вашего хода', text: c.end.map(effText).join(' ') });
+  if (c.aura) out.push({ name: '✴️ Аура', text: `Ваши другие существа имеют +${c.aura.atk} к атаке.` });
+  if (c.enrage) out.push({ name: '💢 Ярость', text: `Каждый раз, получив урон и выжив, получает +${c.enrage.atk} к атаке.` });
+  if (c.spellDiscount) out.push({ name: '🏷️ Скидка', text: `Ваши заклинания стоят на ${c.spellDiscount} меньше.` });
+  if (c.note) out.push({ name: '❗ Особо', text: c.note });
+  return out;
+}
+
+/** Короткий текст для маленькой карты в руке */
+function cardShortText(c) {
+  const kws = (c.kw || []).map((k) => KEYWORDS[k].name);
+  const parts = [];
+  if (kws.length) parts.push(kws.join(', ') + '.');
+  if (c.bc) parts.push('Клич: ' + c.bc.map(effText).join(' '));
+  if (c.fx) parts.push(c.fx.map(effText).join(' '));
+  if (c.dr) parts.push('Хрип: ' + c.dr.map(effText).join(' '));
+  if (c.end) parts.push('Конец хода: ' + c.end.map(effText).join(' '));
+  if (c.aura) parts.push(`Другие ваши +${c.aura.atk} атаки.`);
+  if (c.enrage) parts.push(`Ранен — +${c.enrage.atk} атаки.`);
+  if (c.spellDiscount) parts.push('Заклинания дешевле на 1.');
+  if (c.cantAttack) parts.push('Не атакует.');
+  if (c.resist) parts.push('Иммунитет к манипуляциям.');
+  return parts.join(' ');
 }

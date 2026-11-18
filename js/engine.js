@@ -1,20 +1,19 @@
 'use strict';
 /* =====================================================================
-   ИГРОВОЙ ДВИЖОК — правила, без интерфейса.
-   Состояние игры — простой объект (его можно клонировать для ИИ).
-   ctx = { sim, log(msg), choose(pIdx, cards, title) -> Promise<card|null> }
+   ТРОН — правила игры (без интерфейса).
+   Состояние — простой объект, его можно клонировать для ИИ.
+   ctx = { log(msg), fx(type, data), choose(pIdx, cards, title) → Promise<card> }
    ===================================================================== */
 
+const MAX_BOARD = 7;
+const MAX_HAND = 10;
+const HERO_HP = 30;
+const DECK_SIZE = 30;
+
 let UID_SEQ = 1;
-
-/** Сообщает интерфейсу о событии для анимаций и звуков (в расчётах ИИ не используется). */
-const fx = (ctx, type, d) => { if (ctx && ctx.fx) ctx.fx(type, d || {}); };
-
-const has = (c, a) => !!(c && c.abil && c.abil.indexOf(a) !== -1);
-const isHero = (c) => has(c, 'hero');
-const isUnit = (c) => !!c && c.type === 'unit';
 const rnd = (n) => Math.floor(Math.random() * n);
 const pickRandom = (arr) => arr[rnd(arr.length)];
+const fx = (ctx, type, d) => { if (ctx && ctx.fx) ctx.fx(type, d || {}); };
 const q = (c) => `«${c.name}»`;
 
 function shuffle(a) {
@@ -25,676 +24,683 @@ function shuffle(a) {
   return a;
 }
 
-function makeCard(def, owner) {
+let DEFS = null;
+function defOf(id) {
+  if (!DEFS) { DEFS = {}; allCardDefs().forEach((d) => { DEFS[d.id] = d; }); }
+  return DEFS[id];
+}
+
+const hasKw = (m, k) => !!(m && m.kw && m.kw.indexOf(k) !== -1);
+const heroId = (i) => 'h' + i;
+
+function inst(def, owner) {
   const c = JSON.parse(JSON.stringify(def));
   delete c.count;
   c.uid = UID_SEQ++;
   c.owner = owner;
-  c.base = c.power;
-  if (has(c, 'bond') && !c.bond) c.bond = c.id;
+  c.kw = c.kw || [];
   return c;
 }
 
-function buildDeck(fk, owner, extra) {
-  const defs = [...FACTIONS[fk].cards, ...SHARED_CARDS, ...(extra ? EXTRA_CARDS : [])];
+function tokenDef(key) {
+  const t = TOKENS[key];
+  return M('tok_' + key, t.name, 0, t.atk, t.hp, Object.assign(
+    { kw: t.kw ? t.kw.slice() : [], icon: t.icon, cantAttack: !!t.cantAttack, token: true, cls: 'shared' },
+    t.img ? IMG(t.img) : {}));
+}
+
+/* ---------------------- колода ---------------------- */
+function buildDeck(hk, owner, extra) {
   const deck = [];
-  defs.forEach((d) => { for (let i = 0; i < (d.count || 1); i++) deck.push(makeCard(d, owner)); });
-  return shuffle(deck);
+  HEROES[hk].cards.forEach((d) => { for (let i = 0; i < (d.count || 1); i++) deck.push(d); });
+  const pool = [];
+  [...SHARED_CARDS, ...(extra ? EXTRA_CARDS : [])].forEach((d) => {
+    const n = d.rarity === 'legendary' ? 1 : (d.count || 1);
+    for (let i = 0; i < n; i++) pool.push({ d, k: Math.random() + (d.optionalArt ? 0 : 0.35) });
+  });
+  pool.sort((a, b) => b.k - a.k);
+  const bucket = (c) => Math.min(7, Math.max(1, c));
+  const want = { 1: 4, 2: 6, 3: 6, 4: 5, 5: 3, 6: 3, 7: 3 };
+  const have = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+  deck.forEach((d) => { have[bucket(d.cost)]++; });
+  const rest = [];
+  for (const { d } of pool) {
+    if (deck.length >= DECK_SIZE) break;
+    const b = bucket(d.cost);
+    if (have[b] < want[b]) { deck.push(d); have[b]++; } else rest.push(d);
+  }
+  while (deck.length < DECK_SIZE && rest.length) deck.push(rest.shift());
+  return shuffle(deck.map((d) => inst(d, owner)));
 }
 
-const emptyRow = () => ({ cards: [], horn: null, curse: null, shield: null, fort: null });
-const SLOT_KEYS = ['horn', 'curse', 'shield', 'fort'];
-
-function newPlayer(idx, fk, isAI, extra) {
+function newPlayer(idx, hk, isAI, extra) {
   return {
-    idx, faction: fk, isAI,
+    idx, hero: hk, isAI,
     name: isAI ? 'Противник' : 'Вы',
-    leader: Object.assign({}, FACTIONS[fk].leader, { used: false }),
-    deck: buildDeck(fk, idx, extra), hand: [], grave: [],
-    rows: { melee: emptyRow(), ranged: emptyRow(), siege: emptyRow() },
-    passed: false, lives: 2,
+    hp: HERO_HP, maxHp: HERO_HP, armor: 0,
+    mana: 0, maxMana: 0, powerUsed: false,
+    deck: buildDeck(hk, idx, extra), hand: [], board: [], dead: [], fatigue: 0,
   };
 }
 
-function createGame(f0, f1, extra) {
+function createGame(h0, h1, extra, first) {
   const s = {
-    players: [newPlayer(0, f0, false, extra), newPlayer(1, f1, true, extra)],
-    weather: { melee: false, ranged: false, siege: false },
-    weatherCards: [],
-    round: 1, current: 0, starter: 0,
-    history: [], phase: 'mulligan', winner: null,
+    players: [newPlayer(0, h0, false, extra), newPlayer(1, h1, true, extra)],
+    turn: 0, current: first, first, phase: 'mulligan', winner: null,
   };
-  s.players.forEach((p) => drawCards(p, 10));
+  const quiet = { log() {} };
+  draw(s, first, 3, quiet);
+  draw(s, 1 - first, 4, quiet);
   return s;
 }
 
-function drawCards(p, n) {
-  let k = 0;
-  while (n-- > 0 && p.deck.length) { p.hand.push(p.deck.shift()); k++; }
-  return k;
-}
-
-function mulliganLimit(p) { return p.faction === 'forest' ? 3 : 2; }
-
-function mulliganCard(s, pIdx, uid) {
+function mulligan(s, pIdx, uids) {
   const P = s.players[pIdx];
-  const i = P.hand.findIndex((c) => c.uid === uid);
-  if (i < 0 || !P.deck.length) return null;
-  const old = P.hand[i];
-  const nw = P.deck.shift();
-  P.hand[i] = nw;
-  P.deck.splice(rnd(P.deck.length + 1), 0, old);
-  return nw;
+  const back = [];
+  uids.forEach((uid) => {
+    const i = P.hand.findIndex((c) => c.uid === uid);
+    if (i < 0 || !P.deck.length) return;
+    back.push(P.hand[i]);
+    P.hand[i] = P.deck.shift();
+  });
+  back.forEach((c) => P.deck.splice(rnd(P.deck.length + 1), 0, c));
 }
 
-/* ---------------------- подсчёт силы ---------------------- */
-
-function cardPower(s, side, rowKey, card) {
-  if (!isUnit(card)) return 0;
-  if (isHero(card)) return card.power;
-  const row = s.players[side].rows[rowKey];
-  let p = card.power;
-  if (s.weather[rowKey]) p = Math.min(p, 1);
-  if (row.curse) p = Math.ceil(p / 2);
-  if (has(card, 'bond')) p *= row.cards.filter((c) => c.bond === card.bond && isUnit(c)).length;
-  p += row.cards.filter((c) => c !== card && has(c, 'morale')).length;
-  if (row.fort) p += 2;
-  if (row.horn || row.cards.some((c) => c !== card && has(c, 'horn'))) p *= 2;
-  return p;
+/** После замены карт: «Медяк» второму игроку и первый ход */
+async function beginGame(s, ctx) {
+  const second = s.players[1 - s.first];
+  second.hand.push(inst(COIN, second.idx));
+  s.phase = 'play';
+  s.current = s.first;
+  await startTurn(s, ctx);
 }
 
-function rowScore(s, side, r) {
-  return s.players[side].rows[r].cards.reduce((a, c) => a + cardPower(s, side, r, c), 0);
-}
-
-function totalScore(s, side) {
-  return ROWS.reduce((a, r) => a + rowScore(s, side, r), 0);
-}
-
-/** Все отряды на стороне side: [{card, row, power}] */
-function unitsOn(s, side, filter) {
-  const out = [];
-  for (const r of ROWS) {
-    for (const c of s.players[side].rows[r].cards) {
-      if (!isUnit(c)) continue;
-      const item = { card: c, row: r, side, power: cardPower(s, side, r, c) };
-      if (!filter || filter(item)) out.push(item);
+/* ---------------------- базовые вещи ---------------------- */
+function draw(s, pIdx, n, ctx) {
+  const P = s.players[pIdx];
+  for (let i = 0; i < n; i++) {
+    if (!P.deck.length) {
+      P.fatigue++;
+      ctx.log(`${P.name}: колода пуста — усталость ${P.fatigue}`);
+      fx(ctx, 'fatigue', { pIdx, n: P.fatigue });
+      damage(s, heroId(pIdx), P.fatigue, ctx, null);
+      continue;
     }
+    const c = P.deck.shift();
+    if (P.hand.length >= MAX_HAND) {
+      ctx.log(`${P.name}: рука полна — ${q(c)} сгорает`);
+      fx(ctx, 'burnCard', { pIdx, card: c });
+      continue;
+    }
+    P.hand.push(c);
+    fx(ctx, 'draw', { pIdx, uid: c.uid });
   }
-  return out;
 }
 
-const vulnerable = (it) => !isHero(it.card);
-const targetable = (it) => vulnerable(it) && !has(it.card, 'stealth');
+function auraOf(s, m) {
+  const P = s.players[m.owner];
+  if (!P || P.board.indexOf(m) < 0) return 0;
+  return P.board.reduce((a, o) => a + (o !== m && o.aura ? o.aura.atk : 0), 0);
+}
 
-function findOnBoard(s, uid) {
-  for (const side of [0, 1]) {
-    for (const r of ROWS) {
-      const row = s.players[side].rows[r];
-      const i = row.cards.findIndex((c) => c.uid === uid);
-      if (i >= 0) return { side, row: r, index: i, card: row.cards[i] };
-    }
+function getAtk(s, m) {
+  return Math.max(0, m.atk + (m.tempAtk || 0) + auraOf(s, m));
+}
+
+function costOf(s, pIdx, c) {
+  if (c.type !== 'spell') return c.cost;
+  const disc = s.players[pIdx].board.reduce((a, m) => a + (m.spellDiscount || 0), 0);
+  return Math.max(0, c.cost - disc);
+}
+
+function findChar(s, id) {
+  if (typeof id === 'string' && id[0] === 'h') return { kind: 'hero', p: s.players[+id[1]] };
+  for (const P of s.players) {
+    const m = P.board.find((x) => x.uid === id);
+    if (m) return { kind: 'minion', m, side: P.idx };
   }
   return null;
 }
 
-/* ---------------------- цели ---------------------- */
-
-function legalTargets(s, pIdx, card) {
-  const enemy = 1 - pIdx;
-  const P = s.players[pIdx];
-  if (card.type === 'unit') {
-    if (has(card, 'spy')) return [{ type: 'row', side: enemy, row: card.row === 'agile' ? 'melee' : card.row }];
-    if (card.row === 'agile') return ['melee', 'ranged'].map((r) => ({ type: 'row', side: pIdx, row: r }));
-    return [{ type: 'row', side: pIdx, row: card.row }];
-  }
-  switch (card.kind) {
-    case 'horn':
-      return ROWS.filter((r) => !P.rows[r].horn).map((r) => ({ type: 'row', side: pIdx, row: r }));
-    case 'decoy':
-      return unitsOn(s, pIdx, vulnerable).map((it) => ({ type: 'unit', side: pIdx, row: it.row, uid: it.card.uid }));
-    case 'damage':
-    case 'charm':
-      return unitsOn(s, enemy, card.antiTobi ? vulnerable : targetable).map((it) => ({ type: 'unit', side: enemy, row: it.row, uid: it.card.uid }));
-    case 'healOne':
-      return unitsOn(s, pIdx, vulnerable).map((it) => ({ type: 'unit', side: pIdx, row: it.row, uid: it.card.uid }));
-    case 'shield':
-      return ROWS.filter((r) => !P.rows[r].shield).map((r) => ({ type: 'row', side: pIdx, row: r }));
-    case 'fort':
-      return ROWS.filter((r) => !P.rows[r].fort).map((r) => ({ type: 'row', side: pIdx, row: r }));
-    case 'story':
-      return ROWS.map((r) => ({ type: 'row', side: enemy, row: r }));
-    case 'curse':
-      return ROWS.filter((r) => !s.players[enemy].rows[r].curse).map((r) => ({ type: 'row', side: enemy, row: r }));
-    case 'rowdmg':
-      return ROWS.map((r) => ({ type: 'row', side: enemy, row: r }));
-    default:
-      return [{ type: 'global' }];
-  }
-}
-
-function leaderAvailable(s, pIdx) {
-  const P = s.players[pIdx];
-  if (P.leader.used) return false;
-  switch (P.leader.ability) {
-    case 'hornSiege': return !P.rows.siege.horn;
-    case 'draw': return P.deck.length > 0;
-    case 'reviveRandom': return P.grave.some((c) => isUnit(c) && !isHero(c));
-    default: return true;
-  }
-}
-
-/* ---------------------- перемещения карт ---------------------- */
-
-function resetCard(c) {
-  c.power = c.base;
-  delete c.placed;
-}
-
-function toGrave(s, c) {
-  if (!c || c.token || c.fromLeader || c.virtual) return;
-  resetCard(c);
-  s.players[c.owner].grave.push(c);
-}
-
-function removeFromBoard(s, card) {
-  for (const p of s.players) {
-    for (const r of ROWS) {
-      const row = p.rows[r];
-      const i = row.cards.indexOf(card);
-      if (i >= 0) { row.cards.splice(i, 1); return true; }
-    }
-  }
-  return false;
-}
-
-/** Щит ряда поглощает атаку. Возвращает true, если атака поглощена. */
-function absorb(s, side, row, ctx) {
-  const R = s.players[side].rows[row];
-  if (!R.shield) return false;
-  ctx.log(`${q(R.shield)} принимает удар на себя`);
-  fx(ctx, 'absorb', { side, row });
-  toGrave(s, R.shield);
-  R.shield = null;
+function isTargetable(s, byIdx, m, card) {
+  if (m.owner !== byIdx && hasKw(m, 'stealth')) return !!(card && card.antiTobi && m.id === 'tobi_ninja');
   return true;
 }
 
-/** Отбрасывает цели в рядах, где стоит щит (один щит гасит всю атаку по своему ряду). */
-function unshielded(s, items, ctx) {
-  const checked = new Map();
-  return items.filter((it) => {
-    const key = it.side + ':' + it.row;
-    if (!checked.has(key)) checked.set(key, absorb(s, it.side, it.row, ctx));
-    return !checked.get(key);
-  });
-}
-
-function destroy(s, items, ctx, why) {
-  items = unshielded(s, items, ctx);
-  if (!items.length) return;
-  for (const it of items) {
-    fx(ctx, 'kill', { side: it.side, row: it.row, uid: it.card.uid, big: true });
-    removeFromBoard(s, it.card);
-    toGrave(s, it.card);
-  }
-  ctx.log(`${why ? why + ': ' : ''}уничтожено — ${items.map((it) => q(it.card)).join(', ')}`);
-}
-
-function hitUnits(s, items, dmg, ctx) {
-  unshielded(s, items, ctx).forEach((it) => damageUnit(s, it, dmg, ctx));
-}
-
-function buffUnit(c, n) {
-  if (isUnit(c) && !isHero(c)) c.power = Math.max(c.power, c.base) + n;
-}
-
-function strongest(items) {
-  const max = Math.max(0, ...items.map((it) => it.power));
-  if (max <= 0) return [];
-  return items.filter((it) => it.power === max);
-}
-
-function damageUnit(s, item, dmg, ctx) {
-  const c = item.card;
-  if (isHero(c)) return;
-  c.power -= dmg;
-  fx(ctx, 'hit', { side: item.side, row: item.row, uid: c.uid, dmg });
-  if (c.power <= 0) {
-    fx(ctx, 'kill', { side: item.side, row: item.row, uid: c.uid });
-    removeFromBoard(s, c);
-    toGrave(s, c);
-    ctx.log(`${q(c)} погибает`);
-  }
-}
-
-function bestAgileRow(s, pIdx, card) {
-  let best = 'melee', bestVal = -Infinity;
-  for (const r of ['melee', 'ranged']) {
-    const row = s.players[pIdx].rows[r];
-    const before = totalScore(s, pIdx);
-    row.cards.push(card);
-    const v = totalScore(s, pIdx) - before;
-    row.cards.pop();
-    if (v > bestVal) { bestVal = v; best = r; }
-  }
-  return best;
-}
-
-function clearWeather(s) {
-  s.weatherCards.forEach((c) => toGrave(s, c));
-  s.weatherCards = [];
-  ROWS.forEach((r) => { s.weather[r] = false; });
-}
-
-/* ---------------------- розыгрыш ---------------------- */
-
-const who = (s, i) => s.players[i].name;
-
-async function performAction(s, pIdx, a, ctx) {
-  const P = s.players[pIdx];
-  if (a.type === 'pass') {
-    P.passed = true;
-    ctx.log(`${who(s, pIdx)}: пас`);
-    fx(ctx, 'pass', { pIdx });
-    return;
-  }
-  if (a.type === 'leader') { await useLeader(s, pIdx, ctx); return; }
-  const i = P.hand.findIndex((c) => c.uid === a.uid);
-  if (i < 0) return;
-  const card = P.hand.splice(i, 1)[0];
-  await resolveCard(s, pIdx, card, a.target, ctx);
-  if (card.free) s.extraTurn = true;
-}
-
-async function resolveCard(s, pIdx, card, target, ctx) {
-  const P = s.players[pIdx];
+function targetsForSpec(s, pIdx, f, card, src) {
   const enemy = 1 - pIdx;
-  const E = s.players[enemy];
-  if (card.type === 'unit') {
-    let row = card.row;
-    if (row === 'agile') row = target && target.row ? target.row : bestAgileRow(s, pIdx, card);
-    await placeUnit(s, pIdx, card, row, ctx);
-    return;
+  const mins = (side) => s.players[side].board.filter((m) => m !== src && isTargetable(s, pIdx, m, card));
+  let ids = [];
+  switch (f.t) {
+    case 'any': ids = [heroId(pIdx), heroId(enemy), ...mins(pIdx), ...mins(enemy)]; break;
+    case 'minion': ids = [...mins(pIdx), ...mins(enemy)]; break;
+    case 'enemyMinion': ids = mins(enemy); break;
+    case 'friendlyMinion': ids = mins(pIdx); break;
+    case 'friendly': ids = [heroId(pIdx), ...mins(pIdx)]; break;
+    case 'enemy': ids = [heroId(enemy), ...mins(enemy)]; break;
+    default: return [];
   }
-  ctx.log(`${who(s, pIdx)}: ${q(card)}`);
-  fx(ctx, 'special', { pIdx, kind: card.kind, wrow: card.wrow, row: target && target.row, side: target && target.side });
-  switch (card.kind) {
-    case 'weather':
-      if (s.weather[card.wrow]) toGrave(s, card);
-      else { s.weather[card.wrow] = true; s.weatherCards.push(card); }
-      break;
-    case 'clear':
-      clearWeather(s);
-      ROWS.forEach((r) => { if (P.rows[r].curse) { toGrave(s, P.rows[r].curse); P.rows[r].curse = null; } });
-      if (card.buff) unitsOn(s, pIdx).forEach((it) => buffUnit(it.card, card.buff));
-      toGrave(s, card);
-      break;
-    case 'horn':
-      P.rows[target.row].horn = card;
-      break;
-    case 'decoy': {
-      const row = P.rows[target.row];
-      const idx = row.cards.findIndex((c) => c.uid === target.uid);
-      if (idx < 0) { toGrave(s, card); break; }
-      const t = row.cards[idx];
-      card.type = 'decoy';
-      row.cards[idx] = card;
-      resetCard(t);
-      t.owner = pIdx;
-      P.hand.push(t);
-      ctx.log(`${q(t)} возвращается в руку`);
-      break;
+  return ids.filter((x) => {
+    if (typeof x === 'string') return true;
+    if (f.maxAtk != null && getAtk(s, x) > f.maxAtk) return false;
+    if (f.minAtk != null && getAtk(s, x) < f.minAtk) return false;
+    if (f.e === 'steal' && (x.noSteal || x.resist)) return false;
+    if (x.resist && ['stun', 'silence', 'debuff', 'setAtk', 'debt', 'pregnant'].includes(f.e)) return false;
+    return true;
+  }).map((x) => (typeof x === 'string' ? x : x.uid));
+}
+
+const targetFxOf = (c) => ((c.type === 'spell' ? c.fx : c.bc) || []).find((f) => f.t);
+
+function cardTargets(s, pIdx, c) {
+  const f = targetFxOf(c);
+  return f ? targetsForSpec(s, pIdx, f, c, null) : null;
+}
+
+function canPlay(s, pIdx, c) {
+  const P = s.players[pIdx];
+  if (s.phase !== 'play' || s.current !== pIdx) return false;
+  if (costOf(s, pIdx, c) > P.mana) return false;
+  if (c.type === 'minion') return P.board.length < MAX_BOARD;
+  const t = cardTargets(s, pIdx, c);
+  return !t || t.length > 0;
+}
+
+function powerOf(s, pIdx) { return HEROES[s.players[pIdx].hero].power; }
+
+function powerTargets(s, pIdx) {
+  const f = powerOf(s, pIdx).fx.find((x) => x.t);
+  return f ? targetsForSpec(s, pIdx, f, null, null) : null;
+}
+
+function canPower(s, pIdx) {
+  const P = s.players[pIdx];
+  if (s.phase !== 'play' || s.current !== pIdx || P.powerUsed) return false;
+  if (P.mana < powerOf(s, pIdx).cost) return false;
+  const t = powerTargets(s, pIdx);
+  return !t || t.length > 0;
+}
+
+function canAttack(s, m) {
+  return s.phase === 'play' && m.owner === s.current && !m.sleeping && !m.frozen &&
+    m.attacks > 0 && !m.cantAttack && getAtk(s, m) > 0;
+}
+
+function attackTargets(s, m) {
+  const enemy = 1 - m.owner;
+  const visible = s.players[enemy].board.filter((x) => !hasKw(x, 'stealth'));
+  const taunts = visible.filter((x) => hasKw(x, 'taunt'));
+  if (taunts.length && !hasKw(m, 'flying')) return taunts.map((x) => x.uid);
+  return [heroId(enemy), ...visible.map((x) => x.uid)];
+}
+
+/* ---------------------- урон и лечение ---------------------- */
+function damage(s, id, n, ctx, src) {
+  if (n <= 0) return 0;
+  const ch = findChar(s, id);
+  if (!ch) return 0;
+  if (ch.kind === 'hero') {
+    const p = ch.p;
+    const a = Math.min(p.armor, n);
+    p.armor -= a;
+    p.hp -= n - a;
+    fx(ctx, 'dmg', { id, n });
+  } else {
+    const m = ch.m;
+    if (hasKw(m, 'shield')) {
+      m.kw = m.kw.filter((k) => k !== 'shield');
+      fx(ctx, 'shieldpop', { id });
+      return 0;
     }
-    case 'scorch': {
-      const all = [...unitsOn(s, 0, vulnerable), ...unitsOn(s, 1, vulnerable)];
-      destroy(s, strongest(all), ctx, 'Пожар');
-      for (const p of s.players) {
-        for (const r of ROWS) {
-          if (p.rows[r].fort) { ctx.log(`${q(p.rows[r].fort)} сгорает`); fx(ctx, 'burn', { side: p.idx, row: r }); toGrave(s, p.rows[r].fort); p.rows[r].fort = null; }
-        }
-      }
-      toGrave(s, card);
-      break;
+    m.hp -= n;
+    fx(ctx, 'dmg', { id, n });
+    if (src && src.type === 'minion' && hasKw(src, 'poison')) m.dead = true;
+    if (m.enrage && m.hp > 0) m.atk += m.enrage.atk;
+  }
+  if (src && src.type === 'minion' && hasKw(src, 'lifesteal')) heal(s, heroId(src.owner), n, ctx);
+  return n;
+}
+
+function heal(s, id, n, ctx) {
+  const ch = findChar(s, id);
+  if (!ch) return 0;
+  const o = ch.kind === 'hero' ? ch.p : ch.m;
+  const before = o.hp;
+  o.hp = Math.min(o.maxHp, o.hp + n);
+  if (o.hp > before) fx(ctx, 'heal', { id, n: o.hp - before });
+  return o.hp - before;
+}
+
+/* ---------------------- существа ---------------------- */
+function placeMinion(s, side, m, pos, ctx) {
+  const P = s.players[side];
+  if (P.board.length >= MAX_BOARD) return null;
+  m.owner = side;
+  m.maxHp = m.maxHp || m.hp;
+  m.sleeping = !hasKw(m, 'charge');
+  m.attacks = hasKw(m, 'windfury') ? 2 : 1;
+  m.frozen = false;
+  m.tempAtk = 0;
+  const at = pos == null || pos > P.board.length ? P.board.length : Math.max(0, pos);
+  P.board.splice(at, 0, m);
+  fx(ctx, 'summon', { side, uid: m.uid });
+  return m;
+}
+
+function summonDef(s, side, def, ctx, pos) {
+  return placeMinion(s, side, inst(def, side), pos, ctx);
+}
+
+function removeMinion(s, m) {
+  for (const P of s.players) {
+    const i = P.board.indexOf(m);
+    if (i >= 0) { P.board.splice(i, 1); return i; }
+  }
+  return -1;
+}
+
+function freeze(m, ctx) { if (m.resist) return; m.frozen = true; fx(ctx, 'stun', { id: m.uid }); }
+
+function silence(s, m, ctx) {
+  if (m.resist) return;
+  m.kw = [];
+  ['bc', 'dr', 'end', 'aura', 'enrage', 'spellDiscount', 'debt', 'preg'].forEach((k) => { delete m[k]; });
+  m.cantAttack = false;
+  m.tempAtk = 0;
+  m.silenced = true;
+  if (m.spouse) {
+    const f = findChar(s, m.spouse);
+    if (f && f.m) delete f.m.spouse;
+    delete m.spouse;
+  }
+  fx(ctx, 'silence', { id: m.uid });
+}
+
+function takeControl(s, m, newOwner, ctx) {
+  if (m.noSteal || m.resist) return;
+  removeMinion(s, m);
+  if (s.players[newOwner].board.length >= MAX_BOARD) { m.dead = true; s.players[m.owner].board.push(m); return; }
+  m.owner = newOwner;
+  s.players[newOwner].board.push(m);
+  m.sleeping = true;
+  m.attacks = hasKw(m, 'windfury') ? 2 : 1;
+  ctx.log(`${q(m)} переходит на сторону: ${s.players[newOwner].name}`);
+  fx(ctx, 'steal', { id: m.uid });
+}
+
+function returnToHand(s, m, ctx) {
+  removeMinion(s, m);
+  fx(ctx, 'bounce', { id: m.uid });
+  if (m.token) return;
+  const P = s.players[m.owner];
+  if (P.hand.length >= MAX_HAND) return;
+  P.hand.push(inst(defOf(m.id), P.idx));
+  ctx.log(`${q(m)} возвращается в руку`);
+}
+
+function marry(s, a, b, ctx) {
+  a.spouse = b.uid; b.spouse = a.uid;
+  a.atk = Math.max(0, a.atk - 2); b.atk = Math.max(0, b.atk - 2);
+  ctx.log(`Свадьба: ${q(a)} + ${q(b)}`);
+  fx(ctx, 'marry', { a: a.uid, b: b.uid });
+}
+
+function makePregnant(s, m, by, ctx) {
+  if (m.preg || m.resist) return false;
+  m.preg = { by, turns: 2 };
+  m.atk = Math.max(0, m.atk - 2);
+  ctx.log(`${q(m)} «беременеет»`);
+  fx(ctx, 'preg', { id: m.uid });
+  return true;
+}
+
+/** Убирает погибших, запускает предсмертные хрипы, проверяет победу */
+async function resolveDeaths(s, ctx) {
+  for (let guard = 0; guard < 20; guard++) {
+    const dying = [];
+    for (const P of s.players) for (const m of P.board) if (m.hp <= 0 || m.dead) dying.push(m);
+    if (!dying.length) break;
+    const after = [];
+    for (const m of dying) {
+      const side = m.owner;
+      const pos = removeMinion(s, m);
+      fx(ctx, 'kill', { uid: m.uid, side });
+      ctx.log(`${q(m)} погибает`);
+      if (!m.token) s.players[side].dead.push(m.id);
+      if (m.spouse) after.push({ spouse: m.spouse });
+      if (m.dr) after.push({ side, dr: m.dr, pos, src: m });
     }
-    case 'kill2': {
-      const items = unitsOn(s, enemy, vulnerable).sort((a, b) => b.power - a.power).slice(0, 2);
-      destroy(s, items, ctx, 'Гибель');
-      toGrave(s, card);
-      break;
+    for (const a of after) {
+      if (a.spouse) {
+        const f = findChar(s, a.spouse);
+        if (f && f.m) { delete f.m.spouse; ctx.log(`Развод! ${q(f.m)} получает 2 урона`); damage(s, f.m.uid, 2, ctx, null); }
+      } else await runFx(s, a.side, a.dr, null, ctx, a.src, a.pos);
     }
-    case 'damage': {
-      const f = findOnBoard(s, target.uid);
-      if (f && card.antiTobi && has(f.card, 'stealth')) {
-        destroy(s, [f], ctx, '«Тоби? Ну тут тебе пизда.»');
-      } else if (f) {
-        ctx.log(`${q(f.card)} получает ${card.value} урона`);
-        hitUnits(s, [f], card.value, ctx);
-      }
-      toGrave(s, card);
-      break;
-    }
-    case 'aoe':
-      hitUnits(s, unitsOn(s, enemy, vulnerable), card.value, ctx);
-      toGrave(s, card);
-      break;
-    case 'rowdmg':
-      hitUnits(s, unitsOn(s, enemy, (it) => vulnerable(it) && it.row === target.row), card.value, ctx);
-      toGrave(s, card);
-      break;
-    case 'story':
-      hitUnits(s, unitsOn(s, enemy, (it) => vulnerable(it) && it.row === target.row), 2, ctx);
-      unitsOn(s, pIdx).forEach((it) => buffUnit(it.card, 1));
-      toGrave(s, card);
-      break;
-    case 'reflect':
-      ROWS.forEach((r) => {
-        const mine = P.rows[r], theirs = E.rows[r];
-        if (!mine.curse) return;
-        if (theirs.curse) { toGrave(s, mine.curse); mine.curse = null; return; }
-        theirs.curse = mine.curse; theirs.curse.owner = pIdx; mine.curse = null;
-        if (theirs.horn) { toGrave(s, theirs.horn); theirs.horn = null; }
-        if (theirs.fort) { toGrave(s, theirs.fort); theirs.fort = null; }
-        ctx.log(`Проклятие перелетает на ряд противника: ${ROW_NAMES[r]}`);
-      });
-      hitUnits(s, unitsOn(s, enemy, vulnerable), 1, ctx);
-      toGrave(s, card);
-      break;
-    case 'shield':
-      P.rows[target.row].shield = card;
-      break;
-    case 'fort':
-      P.rows[target.row].fort = card;
+  }
+  checkWin(s);
+}
+
+function checkWin(s) {
+  if (s.phase === 'over') return;
+  const [a, b] = s.players;
+  if (a.hp <= 0 || b.hp <= 0) {
+    s.phase = 'over';
+    s.winner = a.hp <= 0 && b.hp <= 0 ? null : a.hp <= 0 ? 1 : 0;
+  }
+}
+
+/* ---------------------- эффекты ---------------------- */
+async function runFx(s, pIdx, list, target, ctx, src, pos) {
+  for (const f of list || []) {
+    if (s.phase === 'over') return;
+    await applyFx(s, pIdx, f, target, ctx, src, pos);
+  }
+}
+
+async function applyFx(s, pIdx, f, target, ctx, src, pos) {
+  const enemy = 1 - pIdx;
+  const P = s.players[pIdx], E = s.players[enemy];
+  const T = target != null && f.t ? findChar(s, target) : null;
+  const tm = T && T.kind === 'minion' ? T.m : null;
+  const others = (side) => s.players[side].board.filter((m) => m !== src && m.hp > 0 && !m.dead);
+  const randEnemyMinion = () => (E.board.length ? pickRandom(E.board.filter((m) => m.hp > 0)) : null);
+  switch (f.e) {
+    case 'dmg':
+      if (!T) break;
+      if (tm && src && src.antiTobi && tm.id === 'tobi_ninja') { tm.dead = true; ctx.log('«Тоби? Ну тут тебе пизда.»'); break; }
+      damage(s, target, f.n, ctx, src);
+      if (f.stun && tm && tm.hp > 0) freeze(tm, ctx);
       break;
     case 'heal':
-      unitsOn(s, pIdx).forEach((it) => buffUnit(it.card, 1));
-      toGrave(s, card);
+      if (!T) break;
+      heal(s, target, f.n, ctx);
+      if (f.cleanse && tm) { tm.frozen = false; delete tm.debt; }
       break;
-    case 'healOne': {
-      const f = findOnBoard(s, target.uid);
-      if (f) {
-        buffUnit(f.card, card.value);
-        const row = P.rows[f.row];
-        if (card.cleanse && row.curse) { toGrave(s, row.curse); row.curse = null; ctx.log('Проклятие снято'); }
-      }
-      toGrave(s, card);
+    case 'buff':
+      if (!tm) break;
+      if (f.temp) tm.tempAtk = (tm.tempAtk || 0) + f.a; else tm.atk += f.a;
+      tm.hp += f.h; tm.maxHp += f.h;
+      if (f.kw && !hasKw(tm, f.kw)) tm.kw.push(f.kw);
+      fx(ctx, 'buff', { id: tm.uid });
+      break;
+    case 'debuff':
+      if (!tm || tm.resist) break;
+      tm.atk = Math.max(0, tm.atk - f.a);
+      if (f.h) { tm.hp -= f.h; tm.maxHp = Math.max(1, tm.maxHp - f.h); }
+      fx(ctx, 'debuff', { id: tm.uid });
+      break;
+    case 'setAtk': if (tm && !tm.resist) { tm.atk = f.n; tm.tempAtk = 0; fx(ctx, 'debuff', { id: tm.uid }); } break;
+    case 'stun': if (tm) freeze(tm, ctx); break;
+    case 'destroy': if (tm) tm.dead = true; break;
+    case 'steal': if (tm) takeControl(s, tm, pIdx, ctx); break;
+    case 'bounce': if (tm) returnToHand(s, tm, ctx); break;
+    case 'bounceRandomEnemy':
+      shuffle(E.board.slice()).slice(0, f.n).forEach((m) => returnToHand(s, m, ctx));
+      break;
+    case 'silence': if (tm) silence(s, tm, ctx); break;
+    case 'silenceElite': E.board.filter((m) => getAtk(s, m) >= f.minAtk).forEach((m) => silence(s, m, ctx)); break;
+    case 'aoe': {
+      const ids = [];
+      if (f.who === 'enemyAll') ids.push(heroId(enemy));
+      const sides = f.who === 'allMinions' ? [pIdx, enemy] : [enemy];
+      sides.forEach((sd) => others(sd).forEach((m) => ids.push(m.uid)));
+      fx(ctx, 'aoe', { pIdx, who: f.who });
+      ids.forEach((id) => damage(s, id, f.n, ctx, src));
       break;
     }
-    case 'tax': {
-      if (E.hand.length) {
+    case 'stunAllEnemy': E.board.forEach((m) => freeze(m, ctx)); break;
+    case 'stunRandomEnemy': shuffle(E.board.slice()).slice(0, f.n).forEach((m) => freeze(m, ctx)); break;
+    case 'debuffAll': E.board.filter((m) => !m.resist).forEach((m) => { m.atk = Math.max(0, m.atk - f.a); fx(ctx, 'debuff', { id: m.uid }); }); break;
+    case 'buffAll':
+      (f.others ? others(pIdx) : P.board).forEach((m) => {
+        if (f.temp) m.tempAtk = (m.tempAtk || 0) + f.a; else m.atk += f.a;
+        m.hp += f.h; m.maxHp += f.h;
+        fx(ctx, 'buff', { id: m.uid });
+      });
+      break;
+    case 'buffRandomFriendly': {
+      const o = others(pIdx);
+      if (o.length) { const m = pickRandom(o); m.atk += f.a; m.hp += f.h; m.maxHp += f.h; fx(ctx, 'buff', { id: m.uid }); }
+      break;
+    }
+    case 'healHero': heal(s, heroId(pIdx), f.n, ctx); break;
+    case 'healAll':
+      heal(s, heroId(pIdx), f.n, ctx);
+      P.board.forEach((m) => heal(s, m.uid, f.n, ctx));
+      break;
+    case 'draw': draw(s, pIdx, f.n, ctx); break;
+    case 'drawBoth': draw(s, pIdx, 1, ctx); draw(s, enemy, 1, ctx); break;
+    case 'discardEnemy':
+      if (E.hand.length) { const c = E.hand.splice(rnd(E.hand.length), 1)[0]; ctx.log(`${E.name} сбрасывает ${q(c)}`); fx(ctx, 'discard', { pIdx: enemy }); }
+      break;
+    case 'stealCard':
+      if (E.hand.length && P.hand.length < MAX_HAND) {
         const c = E.hand.splice(rnd(E.hand.length), 1)[0];
         c.owner = pIdx;
         P.hand.push(c);
-        ctx.log(`${who(s, pIdx)} забирает из руки противника ${pIdx === 0 ? q(c) : 'карту ' + q(c)}`);
+        ctx.log(`${P.name} забирает карту из руки противника`);
+        fx(ctx, 'draw', { pIdx, uid: c.uid });
       }
-      toGrave(s, card);
       break;
-    }
-    case 'revive': {
-      toGrave(s, card);
-      const options = P.grave.filter((c) => isUnit(c) && !isHero(c) && c !== card);
-      if (!options.length) break;
-      const chosen = (await ctx.choose(pIdx, options, 'Рассол: выберите отряд, который воскреснет', false)) || options[0];
-      P.grave.splice(P.grave.indexOf(chosen), 1);
-      const r = chosen.row === 'agile' ? bestAgileRow(s, pIdx, chosen) : chosen.row;
-      await placeUnit(s, pIdx, chosen, r, ctx);
-      break;
-    }
-    case 'charm': {
-      const f = findOnBoard(s, target.uid);
-      if (f && f.side === enemy && !absorb(s, f.side, f.row, ctx)) {
-        E.rows[f.row].cards.splice(f.index, 1);
-        f.card.owner = pIdx;
-        P.rows[f.row].cards.push(f.card);
-        ctx.log(`${q(f.card)} переходит на сторону: ${who(s, pIdx)}`);
-      }
-      toGrave(s, card);
-      break;
-    }
-    case 'curse': {
-      const row = E.rows[target.row];
-      if (row.horn) { toGrave(s, row.horn); row.horn = null; }
-      if (row.fort) { toGrave(s, row.fort); row.fort = null; }
-      row.curse = card;
-      break;
-    }
-    case 'discard': {
-      if (E.hand.length) {
-        const c = E.hand.splice(rnd(E.hand.length), 1)[0];
-        toGrave(s, c);
-        ctx.log(`${who(s, enemy)} сбрасывает ${q(c)}`);
-      }
-      toGrave(s, card);
-      break;
-    }
-    case 'draw2': {
-      const n = drawCards(P, 2);
-      ctx.log(`${who(s, pIdx)} берёт карт: ${n}`);
-      toGrave(s, card);
-      break;
-    }
-    case 'shop': {
-      toGrave(s, card);
-      if (!P.deck.length) break;
+    case 'discover': {
+      if (!P.deck.length || P.hand.length >= MAX_HAND) break;
       const offer = shuffle(P.deck.slice()).slice(0, 3);
-      const chosen = (await ctx.choose(pIdx, offer, 'Торговая Точка: заберите одну карту в руку', false)) || offer[0];
-      P.deck.splice(P.deck.indexOf(chosen), 1);
-      P.hand.push(chosen);
-      shuffle(P.deck);
-      ctx.log(`${who(s, pIdx)} покупает карту в Торговой Точке`);
-      break;
-    }
-    default:
-      toGrave(s, card);
-  }
-}
-
-async function placeUnit(s, pIdx, card, row, ctx) {
-  const P = s.players[pIdx];
-  const enemy = 1 - pIdx;
-  const spy = has(card, 'spy');
-  const side = spy ? enemy : pIdx;
-  card.placed = row;
-  s.players[side].rows[row].cards.push(card);
-  ctx.log(`${who(s, pIdx)}: ${q(card)} → ${ROW_NAMES[row]}${spy ? ' (к противнику)' : ''}`);
-  fx(ctx, 'place', { pIdx, side, row, uid: card.uid, hero: isHero(card) });
-
-  if (spy) {
-    const n = drawCards(P, 2);
-    ctx.log(`${who(s, pIdx)} берёт карт: ${n}`);
-  }
-  if (has(card, 'draw')) drawCards(P, 1);
-  if (has(card, 'cover') && !s.players[side].rows[row].shield) {
-    const sh = makeCard(COVER_SHIELD_DEF, side);
-    sh.virtual = true;
-    sh.faction = card.faction;
-    s.players[side].rows[row].shield = sh;
-  }
-  if (has(card, 'fetch') && card.fetch) {
-    const i = P.deck.findIndex((c) => c.id === card.fetch);
-    if (i >= 0 && Math.random() < 0.95) {
-      const c = P.deck.splice(i, 1)[0];
-      P.hand.push(c);
-      ctx.log(`${who(s, pIdx)}: «А вот был случай…» — ${q(c)} в руку`);
-    }
-  }
-  if (has(card, 'muster')) {
-    const pulled = P.deck.filter((c) => c.muster === card.muster);
-    P.deck = P.deck.filter((c) => c.muster !== card.muster);
-    for (const c of pulled) {
-      const r = c.row === 'agile' ? bestAgileRow(s, pIdx, c) : c.row;
-      c.placed = r;
-      P.rows[r].cards.push(c);
-    }
-    if (pulled.length) ctx.log(`Зов стаи: ${pulled.map(q).join(', ')}`);
-  }
-  if (has(card, 'summon') && card.summon) {
-    const t = card.summon;
-    for (let i = 0; i < (t.count || 1); i++) {
-      const tok = makeCard({ id: card.id + '_token', name: t.name, type: 'unit', power: t.power, row: t.row,
-        abil: [], icon: t.icon, img: card.img, thumb: card.thumb, rarity: 'common', faction: card.faction }, pIdx);
-      tok.token = true;
-      tok.placed = t.row;
-      P.rows[t.row].cards.push(tok);
-    }
-    ctx.log(`Призыв: ${t.name} ×${t.count}`);
-  }
-  if (has(card, 'reinforce')) {
-    const pool = shuffle(P.deck.filter((c) => isUnit(c) && !isHero(c))).slice(0, 2);
-    for (const c of pool) {
+      const c = (await ctx.choose(pIdx, offer, 'Выберите карту — она отправится в руку')) || offer[0];
       P.deck.splice(P.deck.indexOf(c), 1);
-      const r = c.row === 'agile' ? bestAgileRow(s, pIdx, c) : c.row;
-      const sd = has(c, 'spy') ? enemy : pIdx;
-      c.placed = r;
-      s.players[sd].rows[r].cards.push(c);
+      P.hand.push(c);
+      fx(ctx, 'draw', { pIdx, uid: c.uid });
+      break;
     }
-    if (pool.length) ctx.log(`Подкрепление: ${pool.map(q).join(', ')}`);
-  }
-  if (has(card, 'dispel')) {
-    let n = 0;
-    ROWS.forEach((r) => {
-      const R = s.players[1 - side].rows[r];
-      if (R.horn) { toGrave(s, R.horn); R.horn = null; n++; }
-      if (R.fort) { toGrave(s, R.fort); R.fort = null; n++; }
-    });
-    if (n) ctx.log('Ярость: усиления противника сняты');
-  }
-  if (has(card, 'convert')) {
-    const victims = unitsOn(s, 1 - side, targetable).sort((a, b) => a.power - b.power);
-    if (victims.length && !absorb(s, victims[0].side, victims[0].row, ctx)) {
-      const v = victims[0];
-      removeFromBoard(s, v.card);
-      v.card.owner = pIdx;
-      s.players[side].rows[v.row].cards.push(v.card);
-      ctx.log(`${q(v.card)} переходит на сторону: ${who(s, side)}`);
-    }
-  }
-  if (has(card, 'shoot')) {
-    const t = strongest(unitsOn(s, 1 - side, targetable))[0];
-    if (t) { ctx.log(`Выстрел: ${q(t.card)} −${card.value}`); hitUnits(s, [t], card.value, ctx); }
-  }
-  if (has(card, 'scorch')) {
-    const enemySide = 1 - side;
-    if (rowScore(s, enemySide, row) >= 10) {
-      destroy(s, strongest(unitsOn(s, enemySide, (it) => vulnerable(it) && it.row === row)), ctx, 'Выжигание');
-    }
-  }
-  if (has(card, 'medic')) {
-    const options = P.grave.filter((c) => isUnit(c) && !isHero(c));
-    if (options.length) {
-      const chosen = await ctx.choose(pIdx, options, 'Целитель: выберите отряд, который вернётся на поле', true);
-      if (chosen) {
-        P.grave.splice(P.grave.indexOf(chosen), 1);
-        const r = chosen.row === 'agile' ? bestAgileRow(s, pIdx, chosen) : chosen.row;
-        await placeUnit(s, pIdx, chosen, r, ctx);
+    case 'randomCard':
+      if (P.hand.length < MAX_HAND) {
+        const c = inst(pickRandom(SHARED_CARDS), pIdx);
+        P.hand.push(c);
+        fx(ctx, 'draw', { pIdx, uid: c.uid });
       }
+      break;
+    case 'summon':
+      for (let i = 0; i < f.n; i++) summonDef(s, pIdx, tokenDef(f.token), ctx, pos == null ? null : pos + i);
+      break;
+    case 'summonFromDeck': {
+      const pool = shuffle(P.deck.filter((c) => c.type === 'minion' && c.cost <= f.maxCost)).slice(0, f.n);
+      for (const c of pool) {
+        if (P.board.length >= MAX_BOARD) break;
+        P.deck.splice(P.deck.indexOf(c), 1);
+        placeMinion(s, pIdx, c, null, ctx);
+        ctx.log(`Из колоды выходит ${q(c)}`);
+      }
+      break;
     }
+    case 'muster': {
+      const pool = P.deck.filter((c) => c.group === f.group);
+      for (const c of pool) {
+        if (P.board.length >= MAX_BOARD) break;
+        P.deck.splice(P.deck.indexOf(c), 1);
+        delete c.bc;
+        placeMinion(s, pIdx, c, null, ctx);
+      }
+      if (pool.length) ctx.log(`Подтягиваются: ${pool.map(q).join(', ')}`);
+      break;
+    }
+    case 'fetch': {
+      const i = P.deck.findIndex((c) => c.id === f.id);
+      if (i >= 0 && Math.random() < f.chance && P.hand.length < MAX_HAND) {
+        const c = P.deck.splice(i, 1)[0];
+        P.hand.push(c);
+        ctx.log(`«А вот был случай…» — ${q(c)} в руку`);
+        fx(ctx, 'draw', { pIdx, uid: c.uid });
+      }
+      break;
+    }
+    case 'armor': P.armor += f.n; fx(ctx, 'armor', { id: heroId(pIdx), n: f.n }); break;
+    case 'mana': P.mana = Math.min(10, P.mana + f.n); fx(ctx, 'mana', { pIdx }); break;
+    case 'resurrect':
+      if (P.dead.length && P.board.length < MAX_BOARD) {
+        const id = pickRandom(P.dead);
+        P.dead.splice(P.dead.indexOf(id), 1);
+        const m = summonDef(s, pIdx, defOf(id), ctx);
+        if (m) ctx.log(`${q(m)} воскресает`);
+      }
+      break;
+    case 'destroyRandomEnemy': shuffle(E.board.slice()).slice(0, f.n).forEach((m) => { m.dead = true; }); fx(ctx, 'doom', {}); break;
+    case 'destroyAll': s.players.forEach((p) => p.board.forEach((m) => { m.dead = true; })); fx(ctx, 'doom', {}); break;
+    case 'dmgRandomEnemy': {
+      const pool = [heroId(enemy), ...E.board.filter((m) => m.hp > 0 && !m.dead).map((m) => m.uid)];
+      damage(s, pickRandom(pool), f.n, ctx, src);
+      break;
+    }
+    case 'dmgStrongestEnemy': {
+      const alive = E.board.filter((m) => m.hp > 0);
+      if (!alive.length) break;
+      const max = Math.max(...alive.map((m) => getAtk(s, m)));
+      const m = pickRandom(alive.filter((x) => getAtk(s, x) === max));
+      damage(s, m.uid, f.n, ctx, src);
+      if (m.hp > 0 && f.debt) { m.debt = (m.debt || 0) + f.debt; fx(ctx, 'debuff', { id: m.uid }); }
+      break;
+    }
+    case 'reveal': E.board.forEach((m) => { m.kw = m.kw.filter((k) => k !== 'stealth' && k !== 'shield' && k !== 'taunt'); }); break;
+    case 'faceDmgHand': damage(s, heroId(enemy), E.hand.length, ctx, src); break;
+    case 'selfBuffIf':
+      if (src && P.board.some((m) => m !== src && m.id === f.id)) { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); }
+      break;
+    case 'chance': if (Math.random() < f.p) await runFx(s, pIdx, f.fx, null, ctx, src); break;
+    case 'unstun': P.board.forEach((m) => { m.frozen = false; }); break;
+    case 'marryRandom': {
+      const free = shuffle(E.board.filter((m) => m.hp > 0 && !m.spouse && !m.resist));
+      if (free.length >= 2) marry(s, free[0], free[1], ctx);
+      else damage(s, heroId(enemy), 2, ctx, null);
+      break;
+    }
+    case 'debt': if (tm && !tm.resist) { tm.debt = (tm.debt || 0) + f.n; fx(ctx, 'debuff', { id: tm.uid }); } break;
+    case 'debtRandom': { const m = randEnemyMinion(); if (m && !m.resist) { m.debt = (m.debt || 0) + f.n; fx(ctx, 'debuff', { id: m.uid }); } break; }
+    case 'pregnant': if (tm) makePregnant(s, tm, pIdx, ctx); break;
+    case 'pregnantRandom': {
+      const free = E.board.filter((m) => m.hp > 0 && !m.preg && !m.resist);
+      if (free.length) makePregnant(s, pickRandom(free), pIdx, ctx);
+      else { summonDef(s, pIdx, tokenDef('baby'), ctx); ctx.log('Рождается «Ребёнок»'); }
+      break;
+    }
+    default: break;
   }
 }
 
-async function useLeader(s, pIdx, ctx) {
+/* ---------------------- ходы ---------------------- */
+async function startTurn(s, ctx) {
+  const P = s.players[s.current];
+  s.turn++;
+  P.maxMana = Math.min(10, P.maxMana + 1);
+  P.mana = P.maxMana;
+  P.powerUsed = false;
+  for (const m of P.board) {
+    m.sleeping = false;
+    m.attacks = hasKw(m, 'windfury') ? 2 : 1;
+    if (m.debt) { m.atk = Math.max(0, m.atk - m.debt); fx(ctx, 'debuff', { id: m.uid }); }
+  }
+  // роды: ребёнок появляется у того, кто сделал существо «беременным»
+  for (const O of s.players) {
+    for (const m of O.board) {
+      if (!m.preg || m.preg.by !== P.idx) continue;
+      if (--m.preg.turns <= 0) {
+        delete m.preg;
+        m.atk += 2;
+        const b = summonDef(s, P.idx, tokenDef('baby'), ctx);
+        ctx.log(`${q(m)} рожает! ${b ? '«Ребёнок» достаётся: ' + P.name : 'но места на поле нет'}`);
+        fx(ctx, 'birth', { id: m.uid });
+      }
+    }
+  }
+  fx(ctx, 'turn', { pIdx: P.idx });
+  draw(s, P.idx, 1, ctx);
+  await resolveDeaths(s, ctx);
+}
+
+async function endTurn(s, ctx) {
+  const P = s.players[s.current];
+  for (const m of P.board.slice()) {
+    if (s.phase === 'over') return;
+    if (!m.end || m.hp <= 0 || m.dead || P.board.indexOf(m) < 0) continue;
+    fx(ctx, 'trigger', { id: m.uid });
+    await runFx(s, P.idx, m.end, null, ctx, m);
+    await resolveDeaths(s, ctx);
+  }
+  if (s.phase === 'over') return;
+  P.board.forEach((m) => { m.frozen = false; });
+  s.players.forEach((p) => p.board.forEach((m) => { m.tempAtk = 0; }));
+  s.current = 1 - s.current;
+  await startTurn(s, ctx);
+}
+
+/**
+ * Действия: {type:'play', uid, pos, target} | {type:'attack', uid, target}
+ *           {type:'power', target} | {type:'end'}
+ */
+async function performAction(s, a, ctx) {
+  if (s.phase !== 'play') return false;
+  const pIdx = s.current;
   const P = s.players[pIdx];
-  const L = P.leader;
-  L.used = true;
-  ctx.log(`${who(s, pIdx)}: лидер ${L.name}`);
-  fx(ctx, 'leader', { pIdx });
-  switch (L.ability) {
-    case 'hornSiege': {
-      const h = makeCard(LEADER_HORN_DEF, pIdx);
-      h.fromLeader = true;
-      h.faction = P.faction;
-      P.rows.siege.horn = h;
-      break;
-    }
-    case 'draw':
-      drawCards(P, 1);
-      break;
-    case 'scorchMelee': {
-      const enemy = 1 - pIdx;
-      if (rowScore(s, enemy, 'melee') >= 10) {
-        destroy(s, strongest(unitsOn(s, enemy, (it) => vulnerable(it) && it.row === 'melee')), ctx, 'Мор');
+  switch (a.type) {
+    case 'play': {
+      const c = P.hand.find((x) => x.uid === a.uid);
+      if (!c || !canPlay(s, pIdx, c)) return false;
+      const tf = targetFxOf(c);
+      let target = a.target;
+      if (tf) {
+        const valid = targetsForSpec(s, pIdx, tf, c, null);
+        if (target == null || valid.indexOf(target) < 0) {
+          if (c.type === 'spell') return false;
+          target = null;
+        }
       }
-      break;
-    }
-    case 'reviveRandom': {
-      const options = P.grave.filter((c) => isUnit(c) && !isHero(c));
-      if (options.length) {
-        const c = pickRandom(options);
-        P.grave.splice(P.grave.indexOf(c), 1);
-        const r = c.row === 'agile' ? bestAgileRow(s, pIdx, c) : c.row;
-        await placeUnit(s, pIdx, c, r, ctx);
+      P.mana -= costOf(s, pIdx, c);
+      P.hand.splice(P.hand.indexOf(c), 1);
+      ctx.log(`${P.name}: ${q(c)}`);
+      fx(ctx, 'play', { pIdx, uid: c.uid, id: c.id, type: c.type, storm: c.storm, target });
+      if (c.type === 'minion') {
+        const m = placeMinion(s, pIdx, c, a.pos, ctx);
+        if (m && m.bc) await runFx(s, pIdx, m.bc, target, ctx, m, P.board.indexOf(m) + 1);
+      } else {
+        await runFx(s, pIdx, c.fx, target, ctx, c);
       }
-      break;
+      await resolveDeaths(s, ctx);
+      return true;
     }
-  }
-}
-
-/** После действия: передаём ход, если соперник ещё не пасовал */
-function advanceTurn(s) {
-  if (s.extraTurn) { s.extraTurn = false; return; } // карта «не тратит ход»
-  const o = 1 - s.current;
-  if (!s.players[o].passed) s.current = o;
-}
-
-function tieWinner(s) {
-  const sea = [0, 1].filter((i) => s.players[i].faction === 'sea');
-  return sea.length === 1 ? sea[0] : null;
-}
-
-function endRound(s, ctx) {
-  const scores = [totalScore(s, 0), totalScore(s, 1)];
-  let winner = scores[0] > scores[1] ? 0 : scores[1] > scores[0] ? 1 : null;
-  let tieBreak = false;
-  if (winner === null) {
-    winner = tieWinner(s);
-    tieBreak = winner !== null;
-  }
-  if (winner === null) s.players.forEach((p) => p.lives--);
-  else s.players[1 - winner].lives--;
-  s.history.push({ round: s.round, scores, winner });
-
-  const notes = [];
-  if (winner !== null && s.players[winner].faction === 'iron' && drawCards(s.players[winner], 1)) {
-    notes.push(`${who(s, winner)}: Железный Легион берёт карту за победу`);
-  }
-  for (const side of [0, 1]) {
-    const traders = unitsOn(s, side, (it) => has(it.card, 'income')).length;
-    const n = traders ? drawCards(s.players[side], traders) : 0;
-    if (n) notes.push(`${who(s, side)}: Барыга приносит карт — ${n}`);
-  }
-
-  // уборка поля
-  for (const p of s.players) {
-    let keep = null;
-    if (p.faction === 'dark') {
-      const units = unitsOn(s, p.idx, (it) => !it.card.token);
-      if (units.length) keep = pickRandom(units).card;
-    }
-    for (const r of ROWS) {
-      const row = p.rows[r];
-      row.cards = row.cards.filter((c) => {
-        if (c === keep) return true;
-        if (c.type === 'decoy') c.type = 'special';
-        toGrave(s, c);
-        return false;
-      });
-      for (const k of SLOT_KEYS) {
-        if (row[k]) { toGrave(s, row[k]); row[k] = null; }
+    case 'attack': {
+      const m = P.board.find((x) => x.uid === a.uid);
+      if (!m || !canAttack(s, m) || attackTargets(s, m).indexOf(a.target) < 0) return false;
+      m.kw = m.kw.filter((k) => k !== 'stealth');
+      m.attacks--;
+      const T = findChar(s, a.target);
+      const atk = getAtk(s, m);
+      fx(ctx, 'attack', { uid: m.uid, target: a.target });
+      if (T.kind === 'hero') {
+        ctx.log(`${q(m)} бьёт героя на ${atk}`);
+        damage(s, a.target, atk, ctx, m);
+      } else {
+        const tAtk = getAtk(s, T.m);
+        ctx.log(`${q(m)} атакует ${q(T.m)}`);
+        damage(s, T.m.uid, atk, ctx, m);
+        damage(s, m.uid, tAtk, ctx, T.m);
       }
+      await resolveDeaths(s, ctx);
+      return true;
     }
-    if (keep) notes.push(`${p.name}: ${q(keep)} остаётся на поле (Порождения Тьмы)`);
-    p.passed = false;
+    case 'power': {
+      if (!canPower(s, pIdx)) return false;
+      const pw = powerOf(s, pIdx);
+      const valid = powerTargets(s, pIdx);
+      if (valid && valid.indexOf(a.target) < 0) return false;
+      P.mana -= pw.cost;
+      P.powerUsed = true;
+      ctx.log(`${P.name}: сила героя «${pw.name}»`);
+      fx(ctx, 'power', { pIdx, target: a.target });
+      await runFx(s, pIdx, pw.fx, a.target, ctx, null);
+      await resolveDeaths(s, ctx);
+      return true;
+    }
+    case 'end':
+      await endTurn(s, ctx);
+      return true;
+    default:
+      return false;
   }
-  clearWeather(s);
-
-  const [a, b] = s.players;
-  if (a.lives <= 0 || b.lives <= 0) {
-    s.phase = 'over';
-    s.winner = a.lives <= 0 && b.lives <= 0 ? null : a.lives <= 0 ? 1 : 0;
-  } else {
-    s.round++;
-    s.starter = winner === null ? 1 - s.starter : 1 - winner; // проигравший ходит первым
-    s.current = s.starter;
-  }
-  notes.forEach((n) => ctx.log(n));
-  return { scores, winner, tieBreak, notes };
 }

@@ -6,11 +6,11 @@
    ===================================================================== */
 
 const LOCATIONS = {
-  tavern: { name: 'Трактир' },
-  iron:   { name: 'Крепостной двор' },
-  forest: { name: 'Лесная поляна' },
-  dark:   { name: 'Проклятый склеп' },
-  sea:    { name: 'Пристань' },
+  tavern:  { name: 'Трактир' },
+  zags:    { name: 'ЗАГС' },
+  office:  { name: 'Агентство недвижимости' },
+  night:   { name: 'Ночной забег' },
+  nursery: { name: 'Декретная лаборатория' },
 };
 
 const Sound = (() => {
@@ -103,6 +103,16 @@ const Sound = (() => {
     leader()  { chord([262, 330, 392, 523], 0.09, { type: 'sawtooth', vol: 0.1, dur: 0.7, lp: 1600 }); },
     crack()   { noise(0.12, { filter: 'highpass', freq: 1800, vol: 0.4 }); tone(300, 0.1, { slide: 120, vol: 0.2, type: 'square', lp: 900 }); },
     smash()   { SFX.crack(); noise(0.7, { freq: 1500, slide: 100, vol: 0.45, delay: 0.05 }); for (let i = 0; i < 4; i++) tone(500 + Math.random() * 900, 0.08, { vol: 0.08, delay: 0.1 + i * 0.07, type: 'triangle' }); },
+    attack()  { noise(0.22, { filter: 'bandpass', freq: 600, slide: 2400, q: 1.2, vol: 0.35 }); },
+    heroHit() { tone(90, 0.4, { slide: 45, vol: 0.6 }); noise(0.3, { freq: 1200, slide: 200, vol: 0.4 }); },
+    shieldpop() { tone(1800, 0.25, { type: 'triangle', slide: 600, vol: 0.12 }); noise(0.2, { filter: 'highpass', freq: 4000, vol: 0.25 }); },
+    mana()    { chord([660, 880], 0.05, { type: 'sine', vol: 0.1, dur: 0.3 }); },
+    stun()    { for (let i = 0; i < 3; i++) tone(1200 + i * 300, 0.12, { type: 'triangle', vol: 0.06, delay: i * 0.07 }); },
+    marry()   { [1047, 1319, 1568, 1319, 1047].forEach((f, i) => tone(f, 0.9, { vol: 0.08, delay: i * 0.18 })); },
+    birth()   { tone(500, 0.25, { slide: 700, vol: 0.12, type: 'triangle' }); tone(650, 0.35, { slide: 450, vol: 0.12, delay: 0.25, type: 'triangle' }); },
+    buff()    { chord([523, 659, 784], 0.04, { type: 'triangle', vol: 0.08, dur: 0.3 }); },
+    debuff()  { chord([392, 311, 247], 0.05, { type: 'sawtooth', vol: 0.06, dur: 0.35, lp: 1200 }); },
+    doom()    { tone(55, 2, { type: 'sawtooth', vol: 0.3, lp: 300, attack: 0.1 }); noise(1.8, { freq: 800, slide: 80, vol: 0.4, attack: 0.2 }); },
     win()     { chord([392, 494, 587, 784], 0.13, { type: 'sawtooth', vol: 0.12, dur: 0.9, lp: 2200 }); },
     lose()    { chord([392, 349, 311, 262], 0.18, { type: 'triangle', vol: 0.14, dur: 0.9 }); },
   };
@@ -146,6 +156,29 @@ const Sound = (() => {
       loopNoise(c, { freq: 300, vol: 0.12, lfo: 0.3, depth: 0.3 });
       every(c, 0.05, 0.4, (o) => noise(0.03, { filter: 'bandpass', freq: 2000 + Math.random() * 3000, q: 3, vol: 0.1 + Math.random() * 0.2, dest: o }));
       every(c, 6, 14, (o) => { tone(1900, 0.25, { vol: 0.05, dest: o, type: 'triangle' }); tone(2500, 0.3, { vol: 0.04, delay: 0.05, dest: o }); });
+    },
+    zags(c) {   // ЗАГС: орган, колокола, гул гостей
+      drone(c, [130.8, 196, 261.6], 0.025, 900);
+      loopNoise(c, { filter: 'bandpass', freq: 500, q: 0.6, vol: 0.06, lfo: 0.2, depth: 0.5 });
+      every(c, 6, 12, (o) => [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 1.6, { vol: 0.03, delay: i * 0.22, dest: o })));
+      every(c, 9, 18, (o) => noise(1.2, { filter: 'bandpass', freq: 1400, q: 2, vol: 0.05, attack: 0.3, dest: o }));
+    },
+    office(c) { // агентство: часы, печатная машинка, город
+      loopNoise(c, { freq: 300, vol: 0.08, lfo: 0.05, depth: 0.4 });
+      every(c, 0.95, 1.05, (o) => tone(2600, 0.03, { type: 'square', vol: 0.02, dest: o }));
+      every(c, 4, 9, (o) => { const n = 3 + rnd(6); for (let i = 0; i < n; i++) noise(0.03, { filter: 'highpass', freq: 3000, vol: 0.12, delay: i * (0.08 + Math.random() * 0.08), dest: o }); });
+      every(c, 10, 20, (o) => tone(880, 0.6, { vol: 0.04, dest: o }));
+    },
+    night(c) {  // ночной забег: ветер, сердце, аисты
+      loopNoise(c, { freq: 700, vol: 0.16, lfo: 0.3, depth: 0.7 });
+      every(c, 0.55, 0.65, (o) => { tone(60, 0.12, { slide: 40, vol: 0.18, dest: o }); tone(55, 0.12, { slide: 38, vol: 0.13, delay: 0.16, dest: o }); });
+      every(c, 7, 14, (o) => { for (let i = 0; i < 6; i++) noise(0.04, { filter: 'bandpass', freq: 2200, q: 4, vol: 0.12, delay: i * 0.06, dest: o }); });
+    },
+    nursery(c) { // лаборатория: котёл, музыкальная шкатулка, погремушка
+      loopNoise(c, { freq: 200, vol: 0.05 });
+      every(c, 0.2, 0.9, (o) => tone(120 + Math.random() * 120, 0.15, { slide: 60, vol: 0.08, lp: 500, dest: o }));
+      every(c, 8, 14, (o) => [1568, 1319, 1175, 1047, 1175, 1319, 1047].forEach((f, i) => tone(f, 0.5, { type: 'triangle', vol: 0.035, delay: i * 0.32, dest: o })));
+      every(c, 10, 20, (o) => { for (let i = 0; i < 5; i++) noise(0.04, { filter: 'highpass', freq: 5000, vol: 0.1, delay: i * 0.09, dest: o }); });
     },
     iron(c) {
       loopNoise(c, { freq: 420, vol: 0.18, lfo: 0.07, depth: 0.7 });

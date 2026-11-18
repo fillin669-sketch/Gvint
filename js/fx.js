@@ -9,9 +9,11 @@
 
 const FX = (() => {
   let cv = null, cx = null, layer = null;
-  let rows = {};                                  // 'side:row' → rect
-  const level = { melee: 0, ranged: 0, siege: 0 }; // текущая сила погоды 0..1
-  let target = { melee: false, ranged: false, siege: false };
+  const KINDS = ['toxic', 'rain', 'haze', 'gold'];
+  let zones = [];                                   // области поля для бури
+  const level = { toxic: 0, rain: 0, haze: 0, gold: 0 }; // сила бури 0..1
+  let target = { toxic: false, rain: false, haze: false, gold: false };
+  const timers = {};
   let parts = [];
   let raf = 0, last = 0, t = 0;
   const MAX_PARTS = 420;
@@ -33,21 +35,23 @@ const FX = (() => {
     return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k };
   }
 
-  function setRows() {
+  function setZones(els) {
     const c = stageScale();
-    rows = {};
-    document.querySelectorAll('#board .row').forEach((el) => { rows[el.dataset.side + ':' + el.dataset.row] = toStage(el, c); });
+    zones = els.filter(Boolean).map((el) => toStage(el, c));
   }
 
-  function setWeather(w) {
-    target = Object.assign({}, w);
+  /** Буря на всём поле на ms миллисекунд: toxic | rain | haze | gold */
+  function storm(kind, ms) {
+    if (!(kind in target)) return;
+    target[kind] = true;
+    clearTimeout(timers[kind]);
+    timers[kind] = setTimeout(() => { target[kind] = false; }, ms || 3000);
     kick();
   }
 
   function clearAll() {
     parts = [];
-    target = { melee: false, ranged: false, siege: false };
-    ROWS.forEach((r) => { level[r] = 0; });
+    KINDS.forEach((k) => { target[k] = false; level[k] = 0; clearTimeout(timers[k]); });
     if (cx) cx.clearRect(0, 0, 1600, 900);
     if (layer) layer.innerHTML = '';
   }
@@ -84,29 +88,32 @@ const FX = (() => {
   // дальний бой — ливень
   // осада — пьяный угар: янтарно-лиловая дымка и пена
   const FOG = {
-    melee:  ['rgba(110,140,40,', 'rgba(120,90,30,'],
-    ranged: ['rgba(150,170,200,', 'rgba(110,130,160,'],
-    siege:  ['rgba(200,140,40,', 'rgba(150,60,170,'],
+    toxic: ['rgba(110,140,40,', 'rgba(120,90,30,'],
+    rain:  ['rgba(150,170,200,', 'rgba(110,130,160,'],
+    haze:  ['rgba(200,140,40,', 'rgba(150,60,170,'],
+    gold:  ['rgba(255,210,110,', 'rgba(255,240,180,'],
   };
 
   function spawnWeather(dt) {
-    for (const r of ROWS) {
+    for (const r of KINDS) {
       const L = level[r];
       if (L < 0.02) continue;
-      for (const side of [0, 1]) {
-        const R = rows[side + ':' + r];
-        if (!R) continue;
-        if (r === 'ranged') {
+      for (const R of zones) {
+        if (r === 'gold') {
+          if (Math.random() < L * 20 * dt) add({ kind: 'spark', x: rand(R.x, R.x + R.w), y: rand(R.y, R.y + R.h), vx: 0, vy: rand(-40, -10), g: 0, life: rand(0.5, 1.2), r: rand(1.5, 3), col: pickRandom(['#ffe9a6', '#fff', '#ffd36b']) });
+          continue;
+        }
+        if (r === 'rain') {
           const n = Math.round(L * 90 * dt * 10) / 10 + (Math.random() < (L * 90 * dt) % 1 ? 1 : 0);
           for (let i = 0; i < n; i++) {
             add({ kind: 'rain', x: rand(R.x - 30, R.x + R.w), y: R.y - 10, vx: 120, vy: rand(650, 800), life: 1, bottom: R.y + R.h - 4, R });
           }
-        } else if (r === 'melee') {
-          if (Math.random() < L * 18 * dt) {
+        } else if (r === 'toxic') {
+          if (Math.random() < L * 30 * dt) {
             add({ kind: 'bubble', x: rand(R.x + 10, R.x + R.w - 10), y: R.y + R.h - 6, vx: 0, vy: rand(-45, -20), life: rand(1.4, 2.6), r: rand(3, 9),
               col: pickRandom(['rgba(150,180,60,', 'rgba(140,100,40,']), top: R.y + 6, wob: rand(0, 6) });
           }
-        } else if (Math.random() < L * 14 * dt) {
+        } else if (Math.random() < L * 24 * dt) {
           add({ kind: 'bubble', x: rand(R.x + 10, R.x + R.w - 10), y: R.y + R.h - 6, vx: rand(-10, 10), vy: rand(-35, -15), life: rand(1.6, 3), r: rand(2, 6),
             col: pickRandom(['rgba(255,240,200,', 'rgba(255,200,120,', 'rgba(220,170,255,']), top: R.y + 6, wob: rand(0, 6) });
         }
@@ -115,31 +122,29 @@ const FX = (() => {
   }
 
   function drawFog() {
-    for (const r of ROWS) {
+    for (const r of KINDS) {
       const L = level[r];
       if (L < 0.02) continue;
-      for (const side of [0, 1]) {
-        const R = rows[side + ':' + r];
-        if (!R) continue;
+      for (const R of zones) {
         cx.save();
         cx.beginPath();
         cx.rect(R.x, R.y, R.w, R.h);
         cx.clip();
         const cols = FOG[r];
         for (let i = 0; i < 5; i++) {
-          const speed = r === 'ranged' ? 40 : 18;
+          const speed = r === 'rain' ? 40 : 18;
           const span = R.w + 320;
           const x = R.x - 160 + ((t * speed * (i % 2 ? 1 : -0.7) + i * 230) % span + span) % span;
           const y = R.y + R.h * (0.3 + 0.4 * Math.sin(t * 0.6 + i * 1.7) * 0.5 + 0.2);
           const rad = 90 + 30 * Math.sin(t + i);
           const g = cx.createRadialGradient(x, y, 0, x, y, rad);
-          const a = (r === 'ranged' ? 0.18 : 0.24) * L;
+          const a = (r === 'rain' ? 0.18 : r === 'gold' ? 0.14 : 0.24) * L;
           g.addColorStop(0, cols[i % 2] + a + ')');
           g.addColorStop(1, cols[i % 2] + '0)');
           cx.fillStyle = g;
           cx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
         }
-        if (r === 'ranged') { // тёмная пелена дождя
+        if (r === 'rain') { // тёмная пелена дождя
           cx.fillStyle = `rgba(20,30,50,${0.25 * L})`;
           cx.fillRect(R.x, R.y, R.w, R.h);
         }
@@ -150,7 +155,7 @@ const FX = (() => {
 
   /* ---------------- цикл ---------------- */
   function busy() {
-    return parts.length > 0 || ROWS.some((r) => level[r] > 0.01 || target[r]);
+    return parts.length > 0 || KINDS.some((r) => level[r] > 0.01 || target[r]);
   }
 
   function kick() {
@@ -161,7 +166,7 @@ const FX = (() => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     t += dt;
-    for (const r of ROWS) {
+    for (const r of KINDS) {
       const goal = target[r] ? 1 : 0;
       level[r] += (goal - level[r]) * Math.min(1, dt * 1.6);
       if (!target[r] && level[r] < 0.01) level[r] = 0;
@@ -268,10 +273,23 @@ const FX = (() => {
 
   /** Золотые искры по всему полю (очищение) */
   function sparkle() {
-    Object.values(rows).forEach((R) => {
-      for (let i = 0; i < 6; i++) burst(rand(R.x, R.x + R.w), rand(R.y, R.y + R.h), 'spark', 3);
+    zones.forEach((R) => {
+      for (let i = 0; i < 14; i++) burst(rand(R.x, R.x + R.w), rand(R.y, R.y + R.h), 'spark', 3);
     });
   }
 
-  return { init, setRows, setWeather, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, toStage, rowRect: (side, row) => rows[side + ':' + row] };
+  /** Снаряд от точки к точке (заклинания, сила героя) */
+  function bolt(from, to, cls, ms) {
+    const b = document.createElement('div');
+    b.className = 'bolt ' + (cls || '');
+    b.style.left = (from.x + from.w / 2) + 'px';
+    b.style.top = (from.y + from.h / 2) + 'px';
+    layer.appendChild(b);
+    const dx = (to.x + to.w / 2) - (from.x + from.w / 2), dy = (to.y + to.h / 2) - (from.y + from.h / 2);
+    const anim = b.animate([{ transform: 'translate(-50%,-50%) scale(.6)' }, { transform: `translate(calc(${dx}px - 50%), calc(${dy}px - 50%)) scale(1.2)` }],
+      { duration: ms || 380, easing: 'cubic-bezier(.5,0,.8,.6)' });
+    return new Promise((res) => { anim.onfinish = () => { b.remove(); burstRect(to, cls === 'heal' ? 'heal' : 'ember', 16); res(); }; });
+  }
+
+  return { init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
 })();
