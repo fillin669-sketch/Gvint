@@ -10,6 +10,8 @@ const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (ch) => ({ '&':
 const App = {
   s: null,
   myField: 'zags',
+  mySoul: 'brave',
+  myArtifact: 'mug',
   extra: true,
   sel: null,            // {kind:'card'|'bc'|'power'|'minion', uid, pos}
   targets: new Set(),
@@ -120,11 +122,14 @@ function minionHTML(s, m, o) {
 
 const HERO_IMG = ARTPATH('img/icon.png');
 const heroName = (i) => (i === 0 ? 'Вы' : 'Противник');
+const heroInfo = (i) => ({ isHero: true, idx: i });
 
 function heroHTML(s, i, extra) {
   const P = s.players[i];
-  return `<div class="hero side${i} ${extra || ''}" data-t="h${i}">
-    <div class="h-art"><img src="${esc(HERO_IMG)}" alt=""></div>
+  const so = SOULS[P.soul];
+  return `<div class="hero side${i} ${extra || ''}" data-t="h${i}" style="--soul:${so.color}">
+    <div class="h-art"><img src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${so.hue}deg)"></div>
+    <div class="h-soul" title="${esc(so.name)}">${so.icon}</div>
     ${P.armor ? `<div class="h-armor">${P.armor}</div>` : ''}
     <div class="h-hp ${P.hp < P.maxHp ? 'hurt' : ''}">${P.hp}</div>
     <div class="h-name">${heroName(i)}</div></div>`;
@@ -132,7 +137,7 @@ function heroHTML(s, i, extra) {
 
 function powerHTML(s, i, extra) {
   const P = s.players[i];
-  const pw = PLAYER_HERO.power;
+  const pw = powerOf(s, i);
   const cls = ['power'];
   if (P.powerUsed) cls.push('used');
   else if (i === 0 && canAct() && canPower(s, 0)) cls.push('ready');
@@ -141,17 +146,28 @@ function powerHTML(s, i, extra) {
 }
 
 /* ---------------------- превью ---------------------- */
+function heroText(i) {
+  const s = App.s;
+  const P = s.players[i];
+  const so = SOULS[P.soul], pw = so.power, ar = ARTIFACTS[P.artifact];
+  return { name: i === 0 ? 'Вы — Претендент на Трон' : 'Противник — Претендент на Трон',
+    meta: `Герой · ${P.hp}/${P.maxHp} здоровья${P.armor ? ' · ' + P.armor + ' брони' : ''} · 🪙 ${P.gold} золота`,
+    parts: [
+      [`${so.icon} Натура «${so.name}»`, so.passive],
+      [`${pw.icon} Сила «${pw.name}» (${pw.cost} маны)`, pw.desc + ' Раз в ход.'],
+      ar ? [`${ar.icon} Артефакт «${ar.name}»`, ar.desc] : null,
+    ].filter(Boolean) };
+}
+
 function previewHTML(c, live) {
   if (!c) {
     return `<div class="pv-empty">Нажмите на карту или существо,<br>чтобы рассмотреть его.<br><br>
       Карта в руке → место на поле или цель.<br>Своё существо → кого атаковать.<br><br>🔍 Долгое нажатие на карту —<br>крупный просмотр.</div>`;
   }
-  if (c === PLAYER_HERO) {
-    const pw = c.power;
-    return `<img class="pv-img" src="${esc(HERO_IMG)}" alt=""><h3>${esc(c.name)}</h3>
-      <div class="pv-meta">Герой · ${HERO_HP} здоровья</div>
-      <div class="pv-ab"><b>${pw.icon} Сила «${esc(pw.name)}» (${pw.cost} маны).</b> ${esc(pw.desc)} Один раз за ход.</div>
-      <div class="pv-ab">Опустите здоровье вражеского претендента до нуля — и трон ваш.</div>`;
+  if (c.isHero) {
+    const h = heroText(c.idx);
+    return `<img class="pv-img" src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${SOULS[App.s.players[c.idx].soul].hue}deg)"><h3>${esc(h.name)}</h3>
+      <div class="pv-meta">${esc(h.meta)}</div>${h.parts.map(([n, t]) => `<div class="pv-ab"><b>${n}.</b> ${esc(t)}</div>`).join('')}`;
   }
   const src = artOf(c, true);
   const img = src ? `<img class="pv-img" src="${esc(src)}" alt="">` : `<div class="pv-glyph">${c.icon || '✦'}</div>`;
@@ -184,10 +200,10 @@ function openZoom(c, live) {
   const z = document.createElement('div');
   z.id = 'zoom';
   let left, body;
-  if (c === PLAYER_HERO) {
-    left = `<img class="z-img" src="${esc(HERO_IMG)}" alt="">`;
-    body = `<h2>${esc(c.name)}</h2><div class="z-meta">Герой · ${HERO_HP} здоровья</div>
-      <div class="z-ab"><b>${c.power.icon} Сила «${esc(c.power.name)}» (${c.power.cost} маны).</b> ${esc(c.power.desc)}</div>`;
+  if (c.isHero) {
+    const h = heroText(c.idx);
+    left = `<img class="z-img" src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${SOULS[App.s.players[c.idx].soul].hue}deg)">`;
+    body = `<h2>${esc(h.name)}</h2><div class="z-meta">${esc(h.meta)}</div>${h.parts.map(([n, t]) => `<div class="z-ab"><b>${n}.</b> ${esc(t)}</div>`).join('')}`;
   } else {
     const src = artOf(c, true);
     left = src ? `<img class="z-img" src="${esc(src)}" alt="">` : `<div class="z-glyph">${c.icon || '✦'}</div>`;
@@ -201,6 +217,7 @@ function openZoom(c, live) {
   z.innerHTML = `${left}<div class="z-text">${body}<div class="z-close">Нажмите в любом месте, чтобы закрыть</div></div>`;
   z.addEventListener('click', (e) => { e.stopPropagation(); closeZoom(); });
   $('#stage').appendChild(z);
+  Tut.event('zoom');
 }
 function closeZoom() { const z = $('#zoom'); if (z) z.remove(); }
 
@@ -238,14 +255,14 @@ function previewFromEl(el) {
     const id = el.dataset.t[0] === 'h' ? el.dataset.t : +el.dataset.t;
     const ch = findChar(s, id);
     if (!ch) return null;
-    if (ch.kind === 'hero') return { c: PLAYER_HERO };
+    if (ch.kind === 'hero') return { c: heroInfo(ch.p.idx) };
     return { c: ch.m, live: ch.m };
   }
   if (el.dataset.h && s) {
     const c = s.players[0].hand.find((x) => x.uid === +el.dataset.h);
     return c ? { c } : null;
   }
-  if (el.dataset.power != null && s) return { c: PLAYER_HERO };
+  if (el.dataset.power != null && s) return { c: heroInfo(+el.dataset.power) };
   if (el.dataset.gid) return { c: defOf(el.dataset.gid) };
   return null;
 }
@@ -314,7 +331,7 @@ function computeTargets() {
 
 function hasMoves(s) {
   if (!canAct()) return false;
-  if (canPower(s, 0)) return true;
+  if (canPower(s, 0) || canShop(s, 0)) return true;
   if (s.players[0].hand.some((c) => canPlay(s, 0, c))) return true;
   return s.players[0].board.some((m) => canAttack(s, m));
 }
@@ -440,13 +457,17 @@ function render() {
   // панели
   const crystals = (P) => Array.from({ length: 10 }, (_, k) => `<span class="crystal ${k < P.mana ? 'full' : k < P.maxMana ? 'spent' : ''}"></span>`).join('');
   const op = s.players[1];
-  $('#op-info').innerHTML = `<div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
+  const soulTag = (P) => `<span class="i-soul" style="color:${SOULS[P.soul].color}">${SOULS[P.soul].icon} ${SOULS[P.soul].name}</span>${P.artifact ? ' ' + ARTIFACTS[P.artifact].icon : ''}`;
+  $('#op-info').innerHTML = `<div class="i-row">${soulTag(op)}<span class="i-gold">🪙 ${op.gold}</span></div><div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
     <div class="crystals">${crystals(op)}</div>
     <div class="i-row"><span>🂠 Рука: ${opN}</span><span>📚 Колода: ${op.deck.length}</span></div>`;
-  $('#me-info').innerHTML = `<div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
+  $('#me-info').innerHTML = `<div class="i-row">${soulTag(me)}<span class="i-gold">🪙 ${me.gold}</span></div><div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
     <div class="crystals">${crystals(me)}</div>
     <div class="i-row"><span>📚 Колода: ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
 
+  const shopBtn = $('#btn-shop');
+  shopBtn.innerHTML = `🛒 Лавка: карта за ${shopCost(me)} 🪙${me.shopUsed ? ' (куплено)' : ''}`;
+  shopBtn.disabled = !(canAct() && canShop(s, 0));
   const endBtn = $('#btn-end');
   const myTurn = s.phase === 'play' && s.current === 0;
   endBtn.disabled = !canAct();
@@ -484,6 +505,7 @@ function render() {
   });
   App.prev = nowVals;
   playFx(events, snap, propHits);
+  Tut.decorate();
 }
 
 /* ---------------------- звуки и эффекты событий ---------------------- */
@@ -523,6 +545,10 @@ function playFx(events, snap, propHits) {
       case 'birth': { const r = rectOf(e.id); if (r) FX.float('👶', r, 'icon'); sounds.add('birth'); break; }
       case 'buff': sounds.add('buff'); break;
       case 'debuff': sounds.add('debuff'); break;
+      case 'dodge': { const r = rectOf(e.id); if (r) { FX.float('💨 мимо!', r, 'icon'); } sounds.add('attack'); break; }
+      case 'gold': { const r = rectOf('h' + e.pIdx); if (r) FX.float('🪙+' + e.n, r, 'up'); sounds.add('mana'); break; }
+      case 'shop': sounds.add('draw'); break;
+      case 'saved': { const r = rectOf(e.id); if (r) { FX.float('❤️ Упрямство!', r, 'up'); FX.burstRect(r, 'spark', 40); } sounds.add('clear'); break; }
       case 'armor': { const r = rectOf(e.id); if (r) FX.float('🛡️+' + e.n, r, 'up'); sounds.add('absorb'); break; }
       case 'mana': sounds.add('mana'); break;
       case 'aoe':
@@ -604,13 +630,14 @@ async function loop() {
     while (s === App.s && s.phase === 'play' && s.current === 1) {
       await sleep(650);
       if (s !== App.s) return;
-      const a = await AI.choose(s, 1);
+      const a = (Tut.active && Tut.aiAction(s)) || await AI.choose(s, 1);
       if (s !== App.s) return;
       await doAction(a);
       if (a.type === 'end') break;
     }
   } finally {
     App.looping = false;
+    Tut.decorate();
   }
   if (s !== App.s) return;
   if (s.phase === 'over') { gameOver(); return; }
@@ -619,9 +646,11 @@ async function loop() {
 
 async function humanAct(a) {
   if (!canAct()) return;
+  if (Tut.active && !Tut.allow(a)) { Tut.nudge(); App.sel = null; render(); return; }
   await doAction(a);
   const s = App.s;
   if (!s) return;
+  if (Tut.active) Tut.after(a);
   if (s.phase === 'over') { gameOver(); return; }
   if (s.current === 1) loop();
 }
@@ -786,10 +815,26 @@ function mulliganModal() {
 }
 
 /* ---------------------- начало и конец партии ---------------------- */
+function resetView(s) {
+  App.s = s;
+  App.sel = null;
+  App.busy = true;
+  App.fxq = [];
+  App.prev = new Map();
+  App.seen = new Set();
+  App.handSeen = new Set();
+  App.opHandN = 0;
+  App.logLines = [];
+  App.props = makeProps(s);
+  FX.clearAll();
+}
+
 async function startGame() {
+  Tut.stop();
   const opp = pickRandom(Object.keys(FIELDS).filter((k) => k !== App.myField));
   const first = rnd(2);
-  const s = createGame(App.myField, opp, App.extra, first);
+  const s = createGame({ field: App.myField, soul: App.mySoul, artifact: App.myArtifact },
+    { field: opp, soul: pickRandom(Object.keys(SOULS)), artifact: pickRandom(Object.keys(ARTIFACTS)) }, App.extra, first);
   App.s = s;
   App.sel = null;
   App.busy = true;
@@ -820,6 +865,7 @@ async function startGame() {
 
 function gameOver() {
   const s = App.s;
+  if (Tut.active) { Tut.finish(s.winner); return; }
   const loser = s.winner == null ? null : 1 - s.winner;
   if (loser != null) {
     const el = elOf('h' + loser);
@@ -838,6 +884,7 @@ function gameOver() {
 }
 
 function goMenu() {
+  Tut.stop();
   App.s = null;
   FX.clearAll();
   $('#banner').classList.add('hidden');
@@ -858,6 +905,17 @@ function fieldTileHTML(k, sel) {
 
 function renderMenu() {
   $('#hero-list').innerHTML = Object.keys(FIELDS).map((k) => fieldTileHTML(k, App.myField === k)).join('');
+  $('#soul-list').innerHTML = Object.keys(SOULS).map((k) => {
+    const so = SOULS[k];
+    return `<div class="chip ${App.mySoul === k ? 'sel' : ''}" data-soul="${k}" style="--c:${so.color}">
+      <div class="c-top">${so.icon} <b>${so.name}</b> · ${so.power.icon} ${so.power.name} (${so.power.cost})</div>
+      <div class="c-sub">${esc(so.power.desc)} ${esc(so.passive)}</div></div>`;
+  }).join('');
+  $('#artifact-list').innerHTML = Object.keys(ARTIFACTS).map((k) => {
+    const ar = ARTIFACTS[k];
+    return `<div class="chip art ${App.myArtifact === k ? 'sel' : ''}" data-artifact="${k}">
+      <div class="c-top">${ar.icon} <b>${ar.name}</b></div><div class="c-sub">${esc(ar.desc)}</div></div>`;
+  }).join('');
 }
 
 function showRules() {
@@ -869,7 +927,8 @@ function showRules() {
       <li>Карты стоят ману (синий кристалл в углу карты). Существа выходят на поле, заклинания срабатывают сразу.</li>
       <li>Существа атакуют со следующего хода (кроме тех, у кого Рывок). Каждое — один раз за ход.</li>
       <li>При атаке существа наносят урон друг другу одновременно. Вражеского героя можно бить напрямую, если нет Провокации.</li>
-      <li>Сила героя «Удар по столу» (круглая кнопка) — 1 урон любому персонажу, раз в ход за 2 маны.</li>
+      <li>Натура героя даёт силу (круглая кнопка, раз в ход) и постоянный бонус. Артефакт — стартовый бонус.</li>
+      <li>🪙 Золото даётся за каждое убитое вражеское существо. В Лавке за ${SHOP_COST} золота можно раз в ход купить карту.</li>
       <li>Кто ходит вторым, получает «Медяк» — +1 мана на один ход.</li>
       <li>На поле не больше 7 существ, в руке не больше 10 карт. Пустая колода — урон «усталостью».</li>
     </ul>
@@ -880,6 +939,7 @@ function showRules() {
       <li><b>💍 Брак</b> — супруги слабеют, а смерть одного наносит 2 урона другому.</li>
       <li><b>🤰 Беременность</b> — −2 атаки; через 2 хода «Ребёнок» 2/2 достаётся тому, кто это устроил.</li>
       <li><b>📜 Долг</b> — существо теряет атаку в начале каждого своего хода.</li>
+      <li><b>🗡️ Добивание</b> — срабатывает, когда существо убивает врага в атаке.</li>
     </ul>
     <h3>Управление</h3><p><b>🔍 Долгое нажатие на любую карту</b> (или правая кнопка мыши) открывает её крупно — с оригинальной картинкой и описанием. Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
     <div class="mbtns"><button class="btn btn-gold" data-v="ok">Понятно</button></div>`, null, 'rules');
@@ -928,7 +988,21 @@ function init() {
     renderMenu();
   });
   $('#extra-toggle').addEventListener('change', (e) => { App.extra = e.target.checked; });
-  $('#btn-start').addEventListener('click', startGame);
+  $('#btn-start').addEventListener('click', async () => {
+    let done = false;
+    try { done = localStorage.getItem('tron-tut-done') === '1'; } catch (e) { /* нет хранилища */ }
+    if (!done) {
+      const v = await modal(`<h2>Первый раз в ТРОНе?</h2><p>Короткое обучение за 3 минуты покажет, как играть.</p>
+        <div class="mbtns"><button class="btn btn-gold" data-v="tut">🎓 Пройти обучение</button><button class="btn" data-v="skip">Сразу в бой</button></div>`);
+      try { localStorage.setItem('tron-tut-done', '1'); } catch (e) { /* ignore */ }
+      if (v === 'tut') { Tut.start(); return; }
+    }
+    startGame();
+  });
+  $('#btn-tutorial').addEventListener('click', () => Tut.start());
+  $('#btn-shop').addEventListener('click', () => { if (canAct()) humanAct({ type: 'shop' }); });
+  $('#soul-list').addEventListener('click', (e) => { const t = e.target.closest('[data-soul]'); if (t) { App.mySoul = t.dataset.soul; renderMenu(); } });
+  $('#artifact-list').addEventListener('click', (e) => { const t = e.target.closest('[data-artifact]'); if (t) { App.myArtifact = t.dataset.artifact; renderMenu(); } });
   $('#btn-rules').addEventListener('click', showRules);
   $('#btn-gallery').addEventListener('click', () => { show('gallery'); renderGallery(); });
   $('#btn-gal-back').addEventListener('click', () => show('menu'));

@@ -30,6 +30,10 @@ const AI = (() => {
     if (hasKw(m, 'poison')) v += 2;
     if (hasKw(m, 'windfury')) v += atk * 0.5;
     if (hasKw(m, 'lifesteal')) v += atk * 0.4;
+    if (hasKw(m, 'dodge')) v += atk * 0.4 + 0.5;
+    if (hasKw(m, 'tough')) v += 1;
+    if (hasKw(m, 'thorns')) v += 1;
+    if (m.kill) v += 1;
     if (m.aura) v += 2;
     if (m.end) v += 2.5;
     if (m.spellDiscount) v += 1;
@@ -48,6 +52,7 @@ const AI = (() => {
     O.board.forEach((m) => { v -= minionValue(s, m) * 1.05; });
     const handCards = (p) => p.hand.filter((c) => c.id !== 'coin').length;
     v += handCards(P) * 1.6 - handCards(O) * 0.8;
+    v += P.gold * 0.45 - O.gold * 0.2;
     // угроза летала: сумма атаки врага против нашего здоровья
     const threat = O.board.reduce((a, m) => a + (m.cantAttack ? 0 : getAtk(s, m)), 0);
     if (threat >= P.hp + P.armor) v -= 40;
@@ -72,6 +77,7 @@ const AI = (() => {
       if (t) t.forEach((target) => out.push({ type: 'power', target }));
       else out.push({ type: 'power', target: null });
     }
+    if (canShop(s, me)) out.push({ type: 'shop' });
     for (const m of P.board) {
       if (!canAttack(s, m)) continue;
       attackTargets(s, m).forEach((target) => out.push({ type: 'attack', uid: m.uid, target }));

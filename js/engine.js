@@ -70,25 +70,34 @@ function buildDeck(owner, extra) {
   return shuffle(deck.map((d) => inst(d, owner)));
 }
 
-function newPlayer(idx, field, isAI, extra) {
+/** o = {field, soul, artifact} */
+function newPlayer(idx, o, isAI, extra) {
+  const hp = o.soul === 'kind' ? 35 : HERO_HP;
   return {
-    idx, field, isAI,
+    idx, field: o.field, soul: o.soul || 'brave', artifact: o.artifact || null, isAI,
     name: isAI ? 'Противник' : 'Вы',
-    hp: HERO_HP, maxHp: HERO_HP, armor: 0,
+    hp, maxHp: hp, armor: (o.artifact === 'mug' ? 5 : 0) + (o.soul === 'stubborn' ? 3 : 0),
     mana: 0, maxMana: 0, powerUsed: false,
+    gold: o.artifact === 'piggy' ? 3 : 0, shopUsed: false, keyUsed: false, savedOnce: false,
     deck: buildDeck(idx, extra), hand: [], board: [], dead: [], fatigue: 0,
   };
 }
 
-function createGame(h0, h1, extra, first) {
+function createGame(o0, o1, extra, first) {
   const s = {
-    players: [newPlayer(0, h0, false, extra), newPlayer(1, h1, true, extra)],
+    players: [newPlayer(0, o0, false, extra), newPlayer(1, o1, true, extra)],
     turn: 0, current: first, first, phase: 'mulligan', winner: null,
   };
   const quiet = { log() {} };
-  draw(s, first, 3, quiet);
-  draw(s, 1 - first, 4, quiet);
+  s.players.forEach((p) => draw(s, p.idx, (p.idx === first ? 3 : 4) + (p.soul === 'patient' ? 1 : 0), quiet));
   return s;
+}
+
+const shopCost = (P) => Math.max(0, SHOP_COST - (P.soul === 'greedy' ? 1 : 0));
+
+function canShop(s, pIdx) {
+  const P = s.players[pIdx];
+  return s.phase === 'play' && s.current === pIdx && !P.shopUsed && P.gold >= shopCost(P) && P.deck.length > 0 && P.hand.length < MAX_HAND;
 }
 
 function mulligan(s, pIdx, uids) {
@@ -107,6 +116,7 @@ function mulligan(s, pIdx, uids) {
 async function beginGame(s, ctx) {
   const second = s.players[1 - s.first];
   second.hand.push(inst(COIN, second.idx));
+  s.players.forEach((p) => { if (p.artifact === 'sock' && p.hand.length < MAX_HAND) p.hand.push(inst(COIN, p.idx)); });
   s.phase = 'play';
   s.current = s.first;
   await startTurn(s, ctx);
@@ -134,6 +144,11 @@ function draw(s, pIdx, n, ctx) {
   }
 }
 
+function soulBonus(s, m) {
+  const P = s.players[m.owner];
+  return P && P.soul === 'brave' && (hasKw(m, 'charge') || hasKw(m, 'rush')) ? 1 : 0;
+}
+
 function auraOf(s, m) {
   const P = s.players[m.owner];
   if (!P || P.board.indexOf(m) < 0) return 0;
@@ -141,7 +156,7 @@ function auraOf(s, m) {
 }
 
 function getAtk(s, m) {
-  return Math.max(0, m.atk + (m.tempAtk || 0) + auraOf(s, m));
+  return Math.max(0, m.atk + (m.tempAtk || 0) + auraOf(s, m) + soulBonus(s, m));
 }
 
 function costOf(s, pIdx, c) {
@@ -203,7 +218,7 @@ function canPlay(s, pIdx, c) {
   return !t || t.length > 0;
 }
 
-function powerOf() { return PLAYER_HERO.power; }
+function powerOf(s, pIdx) { return SOULS[s.players[pIdx].soul].power; }
 
 function powerTargets(s, pIdx) {
   const f = powerOf(s, pIdx).fx.find((x) => x.t);
@@ -220,19 +235,21 @@ function canPower(s, pIdx) {
 
 function canAttack(s, m) {
   return s.phase === 'play' && m.owner === s.current && !m.sleeping && !m.frozen &&
-    m.attacks > 0 && !m.cantAttack && getAtk(s, m) > 0;
+    m.attacks > 0 && !m.cantAttack && getAtk(s, m) > 0 && attackTargets(s, m).length > 0;
 }
 
 function attackTargets(s, m) {
   const enemy = 1 - m.owner;
   const visible = s.players[enemy].board.filter((x) => !hasKw(x, 'stealth'));
   const taunts = visible.filter((x) => hasKw(x, 'taunt'));
+  // Спешка: в ход появления — только существа
+  const noHero = m.justPlayed && hasKw(m, 'rush') && !hasKw(m, 'charge');
   if (taunts.length && !hasKw(m, 'flying')) return taunts.map((x) => x.uid);
-  return [heroId(enemy), ...visible.map((x) => x.uid)];
+  return [...(noHero ? [] : [heroId(enemy)]), ...visible.map((x) => x.uid)];
 }
 
 /* ---------------------- урон и лечение ---------------------- */
-function damage(s, id, n, ctx, src) {
+function damage(s, id, n, ctx, src, isAttack) {
   if (n <= 0) return 0;
   const ch = findChar(s, id);
   if (!ch) return 0;
@@ -244,11 +261,19 @@ function damage(s, id, n, ctx, src) {
     fx(ctx, 'dmg', { id, n });
   } else {
     const m = ch.m;
+    if (isAttack && hasKw(m, 'dodge')) {
+      m.kw = m.kw.filter((k) => k !== 'dodge');
+      fx(ctx, 'dodge', { id });
+      ctx.log(`${q(m)} уворачивается!`);
+      return 0;
+    }
     if (hasKw(m, 'shield')) {
       m.kw = m.kw.filter((k) => k !== 'shield');
       fx(ctx, 'shieldpop', { id });
       return 0;
     }
+    if (hasKw(m, 'tough')) n -= 1;
+    if (n <= 0) { fx(ctx, 'dmg', { id, n: 0 }); return 0; }
     m.hp -= n;
     fx(ctx, 'dmg', { id, n });
     if (src && src.type === 'minion' && hasKw(src, 'poison')) m.dead = true;
@@ -274,7 +299,8 @@ function placeMinion(s, side, m, pos, ctx) {
   if (P.board.length >= MAX_BOARD) return null;
   m.owner = side;
   m.maxHp = m.maxHp || m.hp;
-  m.sleeping = !hasKw(m, 'charge');
+  m.sleeping = !hasKw(m, 'charge') && !hasKw(m, 'rush');
+  m.justPlayed = true;
   m.attacks = hasKw(m, 'windfury') ? 2 : 1;
   m.frozen = false;
   m.tempAtk = 0;
@@ -301,7 +327,7 @@ function freeze(m, ctx) { if (m.resist) return; m.frozen = true; fx(ctx, 'stun',
 function silence(s, m, ctx) {
   if (m.resist) return;
   m.kw = [];
-  ['bc', 'dr', 'end', 'aura', 'enrage', 'spellDiscount', 'debt', 'preg'].forEach((k) => { delete m[k]; });
+  ['bc', 'dr', 'end', 'kill', 'aura', 'enrage', 'spellDiscount', 'debt', 'preg'].forEach((k) => { delete m[k]; });
   m.cantAttack = false;
   m.tempAtk = 0;
   m.silenced = true;
@@ -363,6 +389,10 @@ async function resolveDeaths(s, ctx) {
       const pos = removeMinion(s, m);
       fx(ctx, 'kill', { uid: m.uid, side });
       ctx.log(`${q(m)} погибает`);
+      const K = s.players[1 - side];
+      const g = K.soul === 'greedy' ? 2 : 1;
+      K.gold += g;
+      fx(ctx, 'gold', { pIdx: K.idx, n: g });
       if (!m.token) s.players[side].dead.push(m.id);
       if (m.spouse) after.push({ spouse: m.spouse });
       if (m.dr) after.push({ side, dr: m.dr, pos, src: m });
@@ -374,11 +404,18 @@ async function resolveDeaths(s, ctx) {
       } else await runFx(s, a.side, a.dr, null, ctx, a.src, a.pos);
     }
   }
-  checkWin(s);
+  checkWin(s, ctx);
 }
 
-function checkWin(s) {
+function checkWin(s, ctx) {
   if (s.phase === 'over') return;
+  s.players.forEach((p) => {
+    if (p.hp <= 0 && p.soul === 'stubborn' && !p.savedOnce) {
+      p.savedOnce = true;
+      p.hp = 1;
+      if (ctx) { ctx.log(`${p.name}: Упрямство не даёт упасть — 1 здоровья!`); fx(ctx, 'saved', { id: heroId(p.idx) }); }
+    }
+  });
   const [a, b] = s.players;
   if (a.hp <= 0 || b.hp <= 0) {
     s.phase = 'over';
@@ -561,6 +598,9 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       if (src && P.board.some((m) => m !== src && m.id === f.id)) { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); }
       break;
     case 'chance': if (Math.random() < f.p) await runFx(s, pIdx, f.fx, null, ctx, src); break;
+    case 'selfBuff': if (src && src.type === 'minion') { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); } break;
+    case 'healSelf': if (src && src.type === 'minion') heal(s, src.uid, f.n, ctx); break;
+    case 'gold': P.gold += f.n; fx(ctx, 'gold', { pIdx, n: f.n }); break;
     case 'destroyFemale': {
       const victims = s.players.flatMap((p) => p.board.filter((m) => m.female && m !== src));
       victims.forEach((m) => { m.dead = true; });
@@ -608,8 +648,10 @@ async function startTurn(s, ctx) {
   P.maxMana = Math.min(10, P.maxMana + 1);
   P.mana = P.maxMana;
   P.powerUsed = false;
+  P.shopUsed = false;
   for (const m of P.board) {
     m.sleeping = false;
+    m.justPlayed = false;
     m.attacks = hasKw(m, 'windfury') ? 2 : 1;
     if (m.debt) { m.atk = Math.max(0, m.atk - m.debt); fx(ctx, 'debuff', { id: m.uid }); }
   }
@@ -674,9 +716,15 @@ async function performAction(s, a, ctx) {
       fx(ctx, 'play', { pIdx, uid: c.uid, id: c.id, type: c.type, storm: c.storm, target });
       if (c.type === 'minion') {
         const m = placeMinion(s, pIdx, c, a.pos, ctx);
+        if (m && P.artifact === 'key' && !P.keyUsed) {
+          P.keyUsed = true; m.atk += 2; m.hp += 2; m.maxHp += 2;
+          ctx.log(`Ключ от гаража: ${q(m)} получает +2/+2`);
+          fx(ctx, 'buff', { id: m.uid });
+        }
         if (m && m.bc) await runFx(s, pIdx, m.bc, target, ctx, m, P.board.indexOf(m) + 1);
       } else {
         await runFx(s, pIdx, c.fx, target, ctx, c);
+        if (P.artifact === 'ring') heal(s, heroId(pIdx), 1, ctx);
       }
       await resolveDeaths(s, ctx);
       return true;
@@ -691,14 +739,23 @@ async function performAction(s, a, ctx) {
       fx(ctx, 'attack', { uid: m.uid, target: a.target });
       if (T.kind === 'hero') {
         ctx.log(`${q(m)} бьёт героя на ${atk}`);
-        damage(s, a.target, atk, ctx, m);
-      } else {
-        const tAtk = getAtk(s, T.m);
-        ctx.log(`${q(m)} атакует ${q(T.m)}`);
-        damage(s, T.m.uid, atk, ctx, m);
-        damage(s, m.uid, tAtk, ctx, T.m);
+        damage(s, a.target, atk, ctx, m, true);
+        await resolveDeaths(s, ctx);
+        return true;
       }
+      const tAtk = getAtk(s, T.m);
+      ctx.log(`${q(m)} атакует ${q(T.m)}`);
+      damage(s, T.m.uid, atk, ctx, m, true);
+      damage(s, m.uid, tAtk, ctx, T.m, false);
+      if (hasKw(T.m, 'thorns')) { ctx.log(`Шипы! ${q(m)} получает 2 урона`); damage(s, m.uid, 2, ctx, null); }
+      const killed = T.m.hp <= 0 || T.m.dead;
       await resolveDeaths(s, ctx);
+      if (killed && m.kill && P.board.indexOf(m) >= 0 && s.phase === 'play') {
+        fx(ctx, 'trigger', { id: m.uid });
+        ctx.log(`Добивание: ${q(m)}`);
+        await runFx(s, pIdx, m.kill, null, ctx, m);
+        await resolveDeaths(s, ctx);
+      }
       return true;
     }
     case 'power': {
@@ -712,6 +769,15 @@ async function performAction(s, a, ctx) {
       fx(ctx, 'power', { pIdx, target: a.target });
       await runFx(s, pIdx, pw.fx, a.target, ctx, null);
       await resolveDeaths(s, ctx);
+      return true;
+    }
+    case 'shop': {
+      if (!canShop(s, pIdx)) return false;
+      P.gold -= shopCost(P);
+      P.shopUsed = true;
+      ctx.log(`${P.name}: покупка в Лавке`);
+      fx(ctx, 'shop', { pIdx });
+      draw(s, pIdx, 1, ctx);
       return true;
     }
     case 'end':
