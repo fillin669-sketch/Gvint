@@ -89,8 +89,8 @@ button { font-family: inherit; }
 
 /* ---------------- поля героинь ---------------- */
 .field { position: absolute; left: 284px; width: 1032px; transition: background .6s; }
-#field-op { top: 0; height: 419px; border-bottom: 2px solid rgba(217,180,90,.35); }
-#field-me { top: 419px; height: 481px; }
+#field-op { top: 0; height: 389px; border-bottom: 2px solid rgba(217,180,90,.35); }
+#field-me { top: 389px; height: 511px; }
 .field::before { content: attr(data-emblem); position: absolute; left: 0; right: 0; top: 46%; transform: translateY(-50%); text-align: center; font-size: 240px; opacity: .06; pointer-events: none; }
 .field-zags {
   background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.05) 31%, transparent 34%), linear-gradient(60deg, transparent 55%, rgba(255,215,140,.06) 56%, transparent 59%),
@@ -115,33 +115,33 @@ button { font-family: inherit; }
 /* ---------------- колонки ---------------- */
 #left { position: absolute; left: 12px; top: 12px; width: 260px; height: 876px; display: flex; flex-direction: column; gap: 10px; z-index: 5; }
 .preview { flex: 1 1 auto; min-height: 0; background: var(--panel); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 10px; overflow-y: auto; }
-#left .preview { flex: 0 0 560px; }
-.preview .pv-img { width: 100%; max-height: 300px; object-fit: contain; display: block; border-radius: 8px; margin: 0 auto; }
+#left .preview { flex: 0 0 600px; cursor: zoom-in; }
+.preview .pv-img { width: 100%; max-height: 330px; object-fit: contain; display: block; border-radius: 8px; margin: 0 auto; }
 .preview .pv-glyph { height: 170px; display: flex; align-items: center; justify-content: center; font-size: 100px; border-radius: 10px; background: linear-gradient(160deg, #4a3220, #1d130a); }
-.preview h3 { margin: 8px 0 2px; font-size: 20px; color: var(--gold); line-height: 1.15; }
-.preview .pv-meta { color: var(--ink-dim); font-size: 14px; margin-bottom: 6px; }
+.preview h3 { margin: 8px 0 2px; font-size: 24px; color: var(--gold); line-height: 1.15; }
+.preview .pv-meta { color: var(--ink-dim); font-size: 16px; margin-bottom: 6px; }
 .preview .pv-stats { display: flex; gap: 10px; margin: 4px 0 6px; font-size: 18px; font-weight: 700; }
 .preview .pv-stats span { padding: 2px 10px; border-radius: 10px; background: rgba(0,0,0,.45); }
 .preview .s-cost { color: #9fd0ff; } .preview .s-atk { color: var(--atk); } .preview .s-hp { color: #ff8a7a; }
-.preview .pv-ab { font-size: 14.5px; line-height: 1.3; margin: 5px 0; }
+.preview .pv-ab { font-size: 18px; line-height: 1.3; margin: 5px 0; }
 .preview .pv-ab b { color: #ffe39a; }
-.preview .pv-quote { font-style: italic; color: var(--ink-dim); font-size: 13.5px; margin-top: 6px; }
-.preview .pv-empty { color: var(--ink-dim); text-align: center; margin-top: 50px; font-size: 15px; line-height: 1.5; }
-.log { flex: 1; min-height: 0; overflow-y: auto; background: var(--panel); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 8px 10px; font-size: 13.5px; line-height: 1.3; color: #ddd0b4; }
+.preview .pv-quote { font-style: italic; color: var(--ink-dim); font-size: 16px; margin-top: 6px; }
+.preview .pv-empty { color: var(--ink-dim); text-align: center; margin-top: 40px; font-size: 19px; line-height: 1.5; }
+.log { flex: 1; min-height: 0; overflow-y: auto; background: var(--panel); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 8px 10px; font-size: 16px; line-height: 1.3; color: #ddd0b4; }
 .log div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .log div.me { color: #cfe8ff; } .log div.op { color: #ffd2c8; } .log div.sys { color: var(--gold); }
 
 #right { position: absolute; left: 1328px; top: 12px; width: 260px; height: 876px; z-index: 5; }
-.info { position: absolute; left: 0; right: 0; background: var(--panel); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 10px 12px; font-size: 16px; }
+.info { position: absolute; left: 0; right: 0; background: var(--panel); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 10px 12px; font-size: 19px; }
 #op-info { top: 0; }
 #me-info { bottom: 60px; }
 .info .i-row { display: flex; justify-content: space-between; align-items: center; margin: 3px 0; }
-.info .i-name { font-size: 18px; font-weight: 700; color: var(--gold); }
+.info .i-name { font-size: 22px; font-weight: 700; color: var(--gold); }
 .crystals { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
 .crystal { width: 19px; height: 19px; transform: rotate(45deg) scale(.8); border-radius: 4px; background: #1a2230; border: 1px solid #3a4a60; }
 .crystal.full { background: radial-gradient(circle at 30% 30%, #bfe3ff, #2f7fe0 60%, #174a99); border-color: #cfe9ff; box-shadow: 0 0 8px rgba(80,160,255,.7); }
 .crystal.spent { background: #22324a; border-color: #4d6a8f; }
-.mana-num { font-size: 22px; font-weight: 700; color: #9fd0ff; }
+.mana-num { font-size: 26px; font-weight: 700; color: #9fd0ff; }
 .btn-end { position: absolute; left: 0; right: 0; top: 380px; height: 96px; font-size: 26px; font-weight: 700; border-radius: 48px;
   background: linear-gradient(180deg, #4b3a1d, #2a1e0d); border: 2px solid #8a6d3b; }
 .btn-end.ready { background: linear-gradient(180deg, #3f8a3a, #1e4d1b); border-color: #9be38f; box-shadow: 0 0 24px rgba(120,230,110,.55); animation: pulse 1.6s infinite; }
@@ -158,24 +158,25 @@ button { font-family: inherit; }
 #op-hand .back.drawn { animation: backIn .5s ease-out backwards; }
 @keyframes backIn { from { transform: rotate(180deg) translateY(80px); opacity: 0; } }
 .hero-zone { position: absolute; left: 0; right: 0; height: 170px; }
-#op-zone { top: 48px; }
-#me-zone { top: 618px; height: 150px; }
-.lane { position: absolute; left: 0; right: 0; height: 176px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 14px; transition: box-shadow .2s, background .2s; }
-#op-board { top: 232px; }
-#me-board { top: 434px; }
+#op-zone { top: 34px; }
+#me-zone { top: 564px; height: 132px; }
+.lane { position: absolute; left: 0; right: 0; height: 172px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 14px; transition: box-shadow .2s, background .2s; }
+#op-board { top: 206px; }
+#me-board { top: 392px; }
 .lane.drop { background: rgba(255,220,120,.08); box-shadow: inset 0 0 0 2px rgba(217,180,90,.55); cursor: pointer; }
 .lane.cast { background: rgba(160,120,255,.08); box-shadow: inset 0 0 0 2px rgba(180,140,255,.6); cursor: pointer; }
-.divider { position: absolute; left: 0; right: 0; top: 415px; height: 8px; z-index: 3; }
+.divider { position: absolute; left: 0; right: 0; top: 384px; height: 8px; z-index: 3; }
 .torch { position: absolute; top: -22px; font-size: 30px; animation: torch 1.1s infinite alternate ease-in-out; filter: drop-shadow(0 0 12px rgba(255,150,40,.9)); pointer-events: none; }
 .torch.l { left: -18px; } .torch.r { right: -18px; animation-delay: -.5s; }
 @keyframes torch { 0% { transform: scale(1) rotate(-4deg); opacity: .9; } 50% { transform: scale(1.12,.95) rotate(3deg); opacity: 1; } 100% { transform: scale(.95,1.08) rotate(-2deg); opacity: .85; } }
 #hint { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); white-space: nowrap; padding: 6px 18px; border-radius: 18px;
-  background: rgba(10,6,3,.88); border: 1px solid var(--gold); color: #ffe39a; font-size: 17px; pointer-events: none; opacity: 0; transition: opacity .2s; }
+  background: rgba(10,6,3,.88); border: 1px solid var(--gold); color: #ffe39a; font-size: 21px; pointer-events: none; opacity: 0; transition: opacity .2s; }
 #hint.on { opacity: 1; }
 
 /* ---------------- герой ---------------- */
 .hero { position: absolute; left: 50%; transform: translateX(-50%); width: 150px; height: 168px; cursor: pointer; z-index: 2; }
-#me-zone .hero { width: 136px; height: 150px; }
+#me-zone .hero { width: 116px; height: 128px; }
+#me-zone .hero .h-hp { width: 46px; height: 50px; font-size: 23px; }
 .hero .h-art { position: absolute; inset: 0; border-radius: 50% 50% 18px 18px / 40% 40% 18px 18px; overflow: hidden;
   border: 4px solid #c9a04e; box-shadow: 0 0 0 3px #3b260b, 0 8px 24px rgba(0,0,0,.8); background: #2a1a10; }
 .hero .h-art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; transform: scale(1.35); transform-origin: 50% 20%; }
@@ -185,7 +186,7 @@ button { font-family: inherit; }
 .hero .h-hp.hurt { color: #ffd2c8; }
 .hero .h-armor { position: absolute; right: -8px; bottom: 44px; width: 42px; height: 46px; display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 20px; color: #fff; background: linear-gradient(180deg, #b9c3cf, #5b6673); clip-path: polygon(50% 0, 100% 15%, 92% 70%, 50% 100%, 8% 70%, 0 15%); text-shadow: 0 1px 2px #000; }
-.hero .h-name { position: absolute; left: 50%; transform: translateX(-50%); bottom: -24px; white-space: nowrap; font-size: 15px; color: var(--gold); text-shadow: 0 2px 3px #000; }
+.hero .h-name { position: absolute; left: 50%; transform: translateX(-50%); bottom: -24px; white-space: nowrap; font-size: 18px; color: var(--gold); text-shadow: 0 2px 3px #000; }
 .hero.tgt .h-art { box-shadow: 0 0 0 3px #ff6b5b, 0 0 28px rgba(255,90,70,.95); animation: pulse 1.1s infinite; }
 .hero.tgt.friendly .h-art { box-shadow: 0 0 0 3px #7dff8a, 0 0 28px rgba(120,255,140,.8); }
 .hero.hit { animation: heroHit .45s; }
@@ -193,7 +194,7 @@ button { font-family: inherit; }
 .power { position: absolute; left: calc(50% + 100px); top: 46px; width: 82px; height: 82px; border-radius: 50%; cursor: pointer; z-index: 2;
   background: radial-gradient(circle at 40% 35%, #5a3d22, #20150b); border: 3px solid #8a6d3b; box-shadow: 0 4px 12px rgba(0,0,0,.7);
   display: flex; align-items: center; justify-content: center; font-size: 38px; transition: filter .2s, box-shadow .2s; }
-#me-zone .power { top: 34px; }
+#me-zone .power { top: 22px; left: calc(50% + 86px); }
 .power .pw-cost { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 30px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; background: radial-gradient(circle at 35% 30%, #bfe3ff, #2f7fe0 60%, #174a99); border: 1px solid #cfe9ff; }
 .power.ready { border-color: #9be38f; box-shadow: 0 0 18px rgba(120,230,110,.7); }
@@ -208,8 +209,8 @@ button { font-family: inherit; }
 .minion .m-art { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .minion .m-art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 26%; transform: scale(1.55); transform-origin: 50% 26%; }
 .minion .m-art .glyph { font-size: 62px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.8)); }
-.minion .m-atk, .minion .m-hp, .hcard .hc-atk, .hcard .hc-hp { position: absolute; bottom: -10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 23px; color: #fff; text-shadow: 0 2px 2px #000, 0 0 4px #000; z-index: 2; }
+.minion .m-atk, .minion .m-hp, .hcard .hc-atk, .hcard .hc-hp { position: absolute; bottom: -10px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 27px; color: #fff; text-shadow: 0 2px 2px #000, 0 0 4px #000; z-index: 2; }
 .minion .m-atk, .hcard .hc-atk { left: -8px; background: radial-gradient(circle at 35% 30%, #ffe08a, #c98a10 65%); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
 .minion .m-hp, .hcard .hc-hp { right: -8px; background: radial-gradient(circle at 35% 30%, #ff8a7a, #b0201a 65%); border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; }
 .minion .m-atk.up, .minion .m-hp.up { color: #9dff9d; }
@@ -243,7 +244,7 @@ button { font-family: inherit; }
 @keyframes pulse { 50% { filter: brightness(1.3); } }
 
 /* ---------------- карты в руке ---------------- */
-#hand { position: absolute; left: 284px; width: 1032px; top: 772px; height: 200px; display: flex; justify-content: center; align-items: flex-start; z-index: 8; pointer-events: none; }
+#hand { position: absolute; left: 284px; width: 1032px; top: 696px; height: 196px; display: flex; justify-content: center; align-items: flex-start; z-index: 8; pointer-events: none; }
 #hand .hcard { pointer-events: auto; }
 #hand .hcard + .hcard { margin-left: var(--gap, 6px); }
 .hcard { position: relative; width: 136px; height: 192px; flex: none; border-radius: 12px; cursor: pointer; overflow: hidden;
@@ -254,17 +255,17 @@ button { font-family: inherit; }
 .hcard .hc-art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 24%; transform: scale(1.45); transform-origin: 50% 24%; }
 .hcard .hc-art .glyph { font-size: 58px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.8)); }
 .hcard.spell .hc-art { border-radius: 0 0 50% 50% / 0 0 18px 18px; }
-.hcard .hc-cost { position: absolute; left: 4px; top: 4px; width: 38px; height: 38px; border-radius: 50%; z-index: 2; display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700; color: #fff; text-shadow: 0 2px 2px #000; background: radial-gradient(circle at 35% 30%, #bfe3ff, #2f7fe0 60%, #174a99); border: 2px solid #cfe9ff; }
+.hcard .hc-cost { position: absolute; left: 4px; top: 4px; width: 42px; height: 42px; border-radius: 50%; z-index: 2; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 2px 2px #000; background: radial-gradient(circle at 35% 30%, #bfe3ff, #2f7fe0 60%, #174a99); border: 2px solid #cfe9ff; }
 .hcard .hc-cost.cheap { color: #9dff9d; }
-.hcard .hc-name { position: absolute; left: 0; right: 0; top: 100px; padding: 3px 4px; text-align: center; font-size: 13px; font-weight: 700; line-height: 1.1;
+.hcard .hc-name { position: absolute; left: 0; right: 0; top: 98px; padding: 3px 4px; text-align: center; font-size: 15px; font-weight: 700; line-height: 1.1;
   background: linear-gradient(90deg, transparent, rgba(0,0,0,.85) 12%, rgba(0,0,0,.85) 88%, transparent); color: #f5e8cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hcard .hc-text { position: absolute; left: 6px; right: 6px; top: 122px; bottom: 16px; font-size: 10.5px; line-height: 1.15; color: #e9dcc2; text-align: center; overflow: hidden; }
-.hcard .hc-atk, .hcard .hc-hp { width: 36px; height: 36px; font-size: 20px; bottom: 2px; }
+.hcard .hc-text { position: absolute; left: 5px; right: 5px; top: 120px; bottom: 30px; font-size: 12.5px; line-height: 1.12; font-weight: 700; color: #e9dcc2; text-align: center; overflow: hidden; }
+.hcard .hc-atk, .hcard .hc-hp { width: 40px; height: 40px; font-size: 23px; bottom: 2px; }
 .hcard .hc-atk { left: 2px; } .hcard .hc-hp { right: 2px; }
 .hcard.playable { box-shadow: 0 0 0 2px #7dff8a, 0 0 18px rgba(120,255,140,.7), 0 6px 16px rgba(0,0,0,.8); }
-#hand .hcard:hover { transform: translateY(-80px) scale(1.12); z-index: 3; }
-#hand .hcard.sel { transform: translateY(-104px) scale(1.16); z-index: 4; box-shadow: 0 0 0 3px var(--gold), 0 0 28px rgba(217,180,90,.9); }
+#hand .hcard:hover { transform: translateY(-30px) scale(1.12); z-index: 3; }
+#hand .hcard.sel { transform: translateY(-40px) scale(1.16); z-index: 4; box-shadow: 0 0 0 3px var(--gold), 0 0 28px rgba(217,180,90,.9); }
 #hand .hcard.drawn { animation: drawIn .55s cubic-bezier(.2,1,.4,1) backwards; }
 @keyframes drawIn { from { transform: translate(560px, -60px) rotate(20deg) scale(.6); opacity: 0; } }
 #hand.locked .hcard { filter: brightness(.8); }
@@ -370,6 +371,22 @@ button { font-family: inherit; }
 .field-tile .ht-body { background: rgba(0,0,0,.45); }
 .hero.side1 .h-art img, .result-hero.side1 { filter: hue-rotate(160deg) saturate(1.3); }
 .hero .h-art img { transform: scale(1.1); }
+
+/* ---------------- крупный просмотр карты ---------------- */
+#zoom { position: absolute; inset: 0; z-index: 70; background: rgba(0,0,0,.86); display: flex; align-items: center; justify-content: center; gap: 36px; padding: 30px 40px; cursor: zoom-out; animation: zoomIn .18s ease-out; }
+@keyframes zoomIn { from { opacity: 0; } }
+#zoom .z-img { max-height: 840px; max-width: 840px; border-radius: 14px; box-shadow: 0 0 60px rgba(217,180,90,.35), 0 10px 40px #000; }
+#zoom .z-glyph { width: 520px; height: 640px; display: flex; align-items: center; justify-content: center; font-size: 300px; border-radius: 24px; background: linear-gradient(160deg, #4a3220, #1d130a); border: 4px solid #8a6d3b; }
+#zoom .z-text { width: 560px; max-height: 840px; overflow-y: auto; }
+#zoom h2 { margin: 0 0 6px; font-size: 44px; color: var(--gold); line-height: 1.1; }
+#zoom .z-meta { color: var(--ink-dim); font-size: 22px; margin-bottom: 10px; }
+#zoom .z-stats { display: flex; gap: 14px; font-size: 30px; font-weight: 700; margin-bottom: 12px; }
+#zoom .z-stats span { padding: 4px 16px; border-radius: 14px; background: rgba(255,255,255,.08); }
+#zoom .z-ab { font-size: 25px; line-height: 1.3; margin: 10px 0; }
+#zoom .z-ab b { color: #ffe39a; }
+#zoom .z-quote { font-style: italic; color: var(--ink-dim); font-size: 22px; margin-top: 14px; }
+#zoom .z-close { color: var(--ink-dim); font-size: 18px; margin-top: 20px; }
+.pv-zoomhint { text-align: center; color: var(--gold); font-size: 15px; margin-top: 4px; opacity: .8; }
 
 </style>
 </head>
@@ -2417,7 +2434,7 @@ function powerHTML(s, i, extra) {
 function previewHTML(c, live) {
   if (!c) {
     return `<div class="pv-empty">Нажмите на карту или существо,<br>чтобы рассмотреть его.<br><br>
-      Карта в руке → место на поле или цель.<br>Своё существо → кого атаковать.<br>Круглая кнопка у героини — её сила.</div>`;
+      Карта в руке → место на поле или цель.<br>Своё существо → кого атаковать.<br><br>🔍 Долгое нажатие на карту —<br>крупный просмотр.</div>`;
   }
   if (c === PLAYER_HERO) {
     const pw = c.power;
@@ -2446,7 +2463,63 @@ function previewHTML(c, live) {
 
 function showPreview(c, live) {
   const el = $('#preview');
-  if (el) el.innerHTML = previewHTML(c, live);
+  App.pv = c ? { c, live } : null;
+  if (el) el.innerHTML = previewHTML(c, live) + (c ? '<div class="pv-zoomhint">🔍 Нажмите сюда, чтобы увеличить</div>' : '');
+}
+
+/* ---------------------- крупный просмотр ---------------------- */
+function openZoom(c, live) {
+  if (!c) return;
+  closeZoom();
+  const z = document.createElement('div');
+  z.id = 'zoom';
+  let left, body;
+  if (c === PLAYER_HERO) {
+    left = `<img class="z-img" src="${esc(HERO_IMG)}" alt="">`;
+    body = `<h2>${esc(c.name)}</h2><div class="z-meta">Герой · ${HERO_HP} здоровья</div>
+      <div class="z-ab"><b>${c.power.icon} Сила «${esc(c.power.name)}» (${c.power.cost} маны).</b> ${esc(c.power.desc)}</div>`;
+  } else {
+    const src = artOf(c, true);
+    left = src ? `<img class="z-img" src="${esc(src)}" alt="">` : `<div class="z-glyph">${c.icon || '✦'}</div>`;
+    const atk = live ? getAtk(App.s, live) : c.atk;
+    const hp = live ? live.hp : c.hp;
+    const stats = `<div class="z-stats"><span style="color:#9fd0ff">💎 ${c.cost}</span>${c.type === 'minion' ? `<span style="color:var(--atk)">⚔ ${atk}</span><span style="color:#ff8a7a">❤ ${hp}</span>` : ''}</div>`;
+    const parts = cardTextParts(c).map((p) => `<div class="z-ab"><b>${p.name}.</b> ${esc(p.text)}</div>`).join('');
+    body = `<h2>${esc(c.name)}</h2><div class="z-meta">${c.type === 'minion' ? 'Существо' : 'Заклинание'} · ${RARITY_NAMES[c.rarity || 'common']}</div>
+      ${stats}${parts || '<div class="z-ab">Без особых свойств.</div>'}${c.quote ? `<div class="z-quote">${esc(c.quote)}</div>` : ''}`;
+  }
+  z.innerHTML = `${left}<div class="z-text">${body}<div class="z-close">Нажмите в любом месте, чтобы закрыть</div></div>`;
+  z.addEventListener('click', (e) => { e.stopPropagation(); closeZoom(); });
+  $('#stage').appendChild(z);
+}
+function closeZoom() { const z = $('#zoom'); if (z) z.remove(); }
+
+/** Долгое нажатие (или правая кнопка мыши) на карте открывает крупный просмотр */
+function setupLongPress() {
+  let timer = null, startX = 0, startY = 0, fired = false;
+  const cardEl = (t) => t.closest && t.closest('[data-t], .hcard, [data-power]');
+  const zoomFrom = (el) => {
+    const pv = previewFromEl(el);
+    if (pv) openZoom(pv.c, pv.live);
+  };
+  const stage = $('#stage');
+  stage.addEventListener('pointerdown', (e) => {
+    fired = false;
+    const el = cardEl(e.target);
+    if (!el || e.target.closest('#zoom')) return;
+    startX = e.clientX; startY = e.clientY;
+    timer = setTimeout(() => { fired = true; timer = null; zoomFrom(el); }, 450);
+  });
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  stage.addEventListener('pointermove', (e) => { if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > 12) cancel(); });
+  stage.addEventListener('pointerup', cancel);
+  stage.addEventListener('pointercancel', cancel);
+  // клик после долгого нажатия не должен выбирать карту
+  document.addEventListener('click', (e) => { if (fired) { fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  stage.addEventListener('contextmenu', (e) => {
+    const el = cardEl(e.target);
+    if (el) { e.preventDefault(); e.stopPropagation(); zoomFrom(el); }
+  }, true);
 }
 
 function previewFromEl(el) {
@@ -3098,7 +3171,7 @@ function showRules() {
       <li><b>🤰 Беременность</b> — −2 атаки; через 2 хода «Ребёнок» 2/2 достаётся тому, кто это устроил.</li>
       <li><b>📜 Долг</b> — существо теряет атаку в начале каждого своего хода.</li>
     </ul>
-    <h3>Управление</h3><p>Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
+    <h3>Управление</h3><p><b>🔍 Долгое нажатие на любую карту</b> (или правая кнопка мыши) открывает её крупно — с оригинальной картинкой и описанием. Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
     <div class="mbtns"><button class="btn btn-gold" data-v="ok">Понятно</button></div>`, null, 'rules');
 }
 
@@ -3156,7 +3229,7 @@ function init() {
   $('#gal-grid').addEventListener('click', (e) => {
     const el = e.target.closest('.hcard');
     const pv = el && previewFromEl(el);
-    if (pv) $('#gal-preview').innerHTML = previewHTML(pv.c);
+    if (pv) { App.galPv = pv.c; $('#gal-preview').innerHTML = previewHTML(pv.c) + '<div class="pv-zoomhint">🔍 Нажмите сюда, чтобы увеличить</div>'; }
   });
 
   $('#arena').addEventListener('click', onArenaClick);
@@ -3182,7 +3255,10 @@ function init() {
     App.hovering = false;
   });
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && App.sel) clearSel(); });
+  setupLongPress();
+  $('#preview').addEventListener('click', () => { if (App.pv) openZoom(App.pv.c, App.pv.live); });
+  $('#gal-preview').addEventListener('click', () => { if (App.galPv) openZoom(App.galPv); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeZoom(); if (App.sel) clearSel(); } });
   document.addEventListener('contextmenu', (e) => { if (App.sel) { e.preventDefault(); clearSel(); } });
   window.addEventListener('resize', () => { if (App.s) FX.setZones([$('#field-op'), $('#field-me')]); });
 }

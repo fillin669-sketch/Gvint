@@ -144,7 +144,7 @@ function powerHTML(s, i, extra) {
 function previewHTML(c, live) {
   if (!c) {
     return `<div class="pv-empty">Нажмите на карту или существо,<br>чтобы рассмотреть его.<br><br>
-      Карта в руке → место на поле или цель.<br>Своё существо → кого атаковать.<br>Круглая кнопка у героини — её сила.</div>`;
+      Карта в руке → место на поле или цель.<br>Своё существо → кого атаковать.<br><br>🔍 Долгое нажатие на карту —<br>крупный просмотр.</div>`;
   }
   if (c === PLAYER_HERO) {
     const pw = c.power;
@@ -173,7 +173,63 @@ function previewHTML(c, live) {
 
 function showPreview(c, live) {
   const el = $('#preview');
-  if (el) el.innerHTML = previewHTML(c, live);
+  App.pv = c ? { c, live } : null;
+  if (el) el.innerHTML = previewHTML(c, live) + (c ? '<div class="pv-zoomhint">🔍 Нажмите сюда, чтобы увеличить</div>' : '');
+}
+
+/* ---------------------- крупный просмотр ---------------------- */
+function openZoom(c, live) {
+  if (!c) return;
+  closeZoom();
+  const z = document.createElement('div');
+  z.id = 'zoom';
+  let left, body;
+  if (c === PLAYER_HERO) {
+    left = `<img class="z-img" src="${esc(HERO_IMG)}" alt="">`;
+    body = `<h2>${esc(c.name)}</h2><div class="z-meta">Герой · ${HERO_HP} здоровья</div>
+      <div class="z-ab"><b>${c.power.icon} Сила «${esc(c.power.name)}» (${c.power.cost} маны).</b> ${esc(c.power.desc)}</div>`;
+  } else {
+    const src = artOf(c, true);
+    left = src ? `<img class="z-img" src="${esc(src)}" alt="">` : `<div class="z-glyph">${c.icon || '✦'}</div>`;
+    const atk = live ? getAtk(App.s, live) : c.atk;
+    const hp = live ? live.hp : c.hp;
+    const stats = `<div class="z-stats"><span style="color:#9fd0ff">💎 ${c.cost}</span>${c.type === 'minion' ? `<span style="color:var(--atk)">⚔ ${atk}</span><span style="color:#ff8a7a">❤ ${hp}</span>` : ''}</div>`;
+    const parts = cardTextParts(c).map((p) => `<div class="z-ab"><b>${p.name}.</b> ${esc(p.text)}</div>`).join('');
+    body = `<h2>${esc(c.name)}</h2><div class="z-meta">${c.type === 'minion' ? 'Существо' : 'Заклинание'} · ${RARITY_NAMES[c.rarity || 'common']}</div>
+      ${stats}${parts || '<div class="z-ab">Без особых свойств.</div>'}${c.quote ? `<div class="z-quote">${esc(c.quote)}</div>` : ''}`;
+  }
+  z.innerHTML = `${left}<div class="z-text">${body}<div class="z-close">Нажмите в любом месте, чтобы закрыть</div></div>`;
+  z.addEventListener('click', (e) => { e.stopPropagation(); closeZoom(); });
+  $('#stage').appendChild(z);
+}
+function closeZoom() { const z = $('#zoom'); if (z) z.remove(); }
+
+/** Долгое нажатие (или правая кнопка мыши) на карте открывает крупный просмотр */
+function setupLongPress() {
+  let timer = null, startX = 0, startY = 0, fired = false;
+  const cardEl = (t) => t.closest && t.closest('[data-t], .hcard, [data-power]');
+  const zoomFrom = (el) => {
+    const pv = previewFromEl(el);
+    if (pv) openZoom(pv.c, pv.live);
+  };
+  const stage = $('#stage');
+  stage.addEventListener('pointerdown', (e) => {
+    fired = false;
+    const el = cardEl(e.target);
+    if (!el || e.target.closest('#zoom')) return;
+    startX = e.clientX; startY = e.clientY;
+    timer = setTimeout(() => { fired = true; timer = null; zoomFrom(el); }, 450);
+  });
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  stage.addEventListener('pointermove', (e) => { if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > 12) cancel(); });
+  stage.addEventListener('pointerup', cancel);
+  stage.addEventListener('pointercancel', cancel);
+  // клик после долгого нажатия не должен выбирать карту
+  document.addEventListener('click', (e) => { if (fired) { fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  stage.addEventListener('contextmenu', (e) => {
+    const el = cardEl(e.target);
+    if (el) { e.preventDefault(); e.stopPropagation(); zoomFrom(el); }
+  }, true);
 }
 
 function previewFromEl(el) {
@@ -825,7 +881,7 @@ function showRules() {
       <li><b>🤰 Беременность</b> — −2 атаки; через 2 хода «Ребёнок» 2/2 достаётся тому, кто это устроил.</li>
       <li><b>📜 Долг</b> — существо теряет атаку в начале каждого своего хода.</li>
     </ul>
-    <h3>Управление</h3><p>Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
+    <h3>Управление</h3><p><b>🔍 Долгое нажатие на любую карту</b> (или правая кнопка мыши) открывает её крупно — с оригинальной картинкой и описанием. Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
     <div class="mbtns"><button class="btn btn-gold" data-v="ok">Понятно</button></div>`, null, 'rules');
 }
 
@@ -883,7 +939,7 @@ function init() {
   $('#gal-grid').addEventListener('click', (e) => {
     const el = e.target.closest('.hcard');
     const pv = el && previewFromEl(el);
-    if (pv) $('#gal-preview').innerHTML = previewHTML(pv.c);
+    if (pv) { App.galPv = pv.c; $('#gal-preview').innerHTML = previewHTML(pv.c) + '<div class="pv-zoomhint">🔍 Нажмите сюда, чтобы увеличить</div>'; }
   });
 
   $('#arena').addEventListener('click', onArenaClick);
@@ -909,7 +965,10 @@ function init() {
     App.hovering = false;
   });
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && App.sel) clearSel(); });
+  setupLongPress();
+  $('#preview').addEventListener('click', () => { if (App.pv) openZoom(App.pv.c, App.pv.live); });
+  $('#gal-preview').addEventListener('click', () => { if (App.galPv) openZoom(App.galPv); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeZoom(); if (App.sel) clearSel(); } });
   document.addEventListener('contextmenu', (e) => { if (App.sel) { e.preventDefault(); clearSel(); } });
   window.addEventListener('resize', () => { if (App.s) FX.setZones([$('#field-op'), $('#field-me')]); });
 }
