@@ -669,7 +669,7 @@ async function startTurn(s, ctx) {
     }
   }
   fx(ctx, 'turn', { pIdx: P.idx });
-  draw(s, P.idx, 1, ctx);
+  if (s.turn > 1) draw(s, P.idx, 1, ctx);   // первый ход партии — без добора (сглаживает преимущество первого хода)
   await resolveDeaths(s, ctx);
 }
 
