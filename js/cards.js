@@ -77,9 +77,17 @@ const SHARED_CARDS = [
   M('kreditor', 'Пиздодракон Кредитор', 9, 6, 7, { ...IMG('kreditor'), rarity: 'legendary', icon: '📜',
     bc: [{ e: 'dmgStrongestEnemy', n: 6, debt: 2 }],
     quote: '«Долги надо отдавать, пидор. Даже в аду.»' }),
-  M('baba_snaryad', 'Баба-Снаряд', 8, 6, 6, { ...IMG('baba_snaryad'), rarity: 'legendary', icon: '🍺', kw: ['charge'],
+  M('baba_snaryad', 'Баба-Снаряд', 8, 6, 6, { female: true, ...IMG('baba_snaryad'), rarity: 'legendary', icon: '🍺', kw: ['charge'],
     bc: [{ e: 'aoe', n: 2, who: 'enemyMinions' }, { e: 'stunAllEnemy' }],
     quote: '«Летит, орёт, давит — и ещё просит добавки!»' }),
+
+  // ---- экстра-легенда ----
+  M('gigaslav_pro', 'GiGa$lav Pro+', 10, 8, 10, { ...IMG('gigaslav_pro'), rarity: 'legendary', icon: '🦅', kw: ['taunt', 'shield'], resist: true,
+    bc: [{ e: 'destroyFemale' }, { e: 'purify' }],
+    quote: '«Бывшие не возвращаются. Они стираются.»' }),
+  M('byvshaya', 'Бывшая', 5, 4, 5, { ...IMG('byvshaya'), rarity: 'epic', icon: '💔', female: true,
+    bc: [{ e: 'debuff', a: 3, h: 0, t: 'enemyMinion' }], end: [{ e: 'dmgHero', n: 2 }], dr: [{ e: 'debuffAll', a: 1 }],
+    quote: '«Та, что клялась в верности… оказалась лишь красивой ложью.»' }),
 
   // ---- легенды ----
   M('gigaslav', 'Гигаслав', 7, 6, 7, { ...IMG('gigaslav'), rarity: 'legendary', icon: '👑', kw: ['taunt', 'shield'], resist: true,
@@ -112,7 +120,7 @@ const SHARED_CARDS = [
   M('ubezhdenie', 'Убеждение: Перерождение Веры', 5, 3, 4, { ...IMG('ubezhdenie'), rarity: 'epic', icon: '☀️',
     bc: [{ e: 'steal', t: 'enemyMinion', maxAtk: 2 }],
     quote: '«Вера в тебя — это лишь вопрос правильных слов…»' }),
-  M('pricha', 'Соблазнительная Прича', 4, 3, 4, { ...IMG('pricha'), rarity: 'epic', icon: '💘', kw: ['lifesteal'],
+  M('pricha', 'Соблазнительная Прича', 4, 3, 4, { female: true, ...IMG('pricha'), rarity: 'epic', icon: '💘', kw: ['lifesteal'],
     bc: [{ e: 'stun', t: 'enemyMinion' }],
     quote: '«Сопротивление? Милая… ты уже проиграла.»' }),
   M('stvol', 'Носил с собою ствол', 3, 3, 2, { ...IMG('stvol'), rarity: 'epic', icon: '🔫', bc: [{ e: 'dmg', n: 2, t: 'any' }],
@@ -197,14 +205,14 @@ const SHARED_CARDS = [
    НОВЫЕ КАРТЫ (пока без картинок — рисуется значок)
    ===================================================================== */
 const EXTRA_CARDS = [
-  M('tescha', 'Тёща', 8, 6, 9, { ...ART('tescha'), rarity: 'legendary', icon: '👵', bc: [{ e: 'stunAllEnemy' }],
+  M('tescha', 'Тёща', 8, 6, 9, { female: true, ...ART('tescha'), rarity: 'legendary', icon: '👵', bc: [{ e: 'stunAllEnemy' }],
     quote: '«Я же говорила, что он тебе не пара!»' }),
   M('batya', 'Батя с ремнём', 6, 5, 5, { ...ART('batya'), rarity: 'legendary', icon: '👨‍🦳', bc: [{ e: 'destroy', t: 'enemyMinion', minAtk: 5 }],
     quote: '«Ну всё. Сейчас кто-то получит.»' }),
   M('gop_kolyan', 'Гопник Колян', 2, 2, 2, { ...ART('gop_kolyan'), icon: '🧢', group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«Слышь, есть чё?»' }),
   M('gop_tolyan', 'Гопник Толян', 2, 2, 2, { ...ART('gop_tolyan'), icon: '🧢', group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«А ты с какого района?»' }),
   M('gop_vovan', 'Гопник Вован', 2, 2, 2, { ...ART('gop_vovan'), icon: '🧢', group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«Позвонить дай, брат.»' }),
-  M('babki', 'Бабки у подъезда', 1, 1, 2, { ...ART('babki'), rarity: 'rare', icon: '👀', bc: [{ e: 'drawBoth' }],
+  M('babki', 'Бабки у подъезда', 1, 1, 2, { female: true, ...ART('babki'), rarity: 'rare', icon: '👀', bc: [{ e: 'drawBoth' }],
     quote: '«А эта-то, с третьего этажа, опять с новым!»' }),
   M('kachok', 'Качок из подвала', 3, 3, 3, { ...ART('kachok'), icon: '🏋️', count: 2, bc: [{ e: 'selfBuffIf', id: 'kachok', a: 2, h: 2 }],
     quote: '«Ты ваще сколько жмёшь?»' }),
@@ -256,7 +264,7 @@ const HEROES = {
     cards: [
       Sp('w_dogovor', 'Брачный договор', 3, [{ e: 'steal', t: 'enemyMinion', maxAtk: 3 }], { icon: '📃', rarity: 'epic', quote: '«Подпиши здесь, здесь и вот тут — навсегда.»' }),
       Sp('w_kreditka', 'Кредитка с драконом', 1, [{ e: 'mana', n: 1 }, { e: 'draw', n: 1 }], { icon: '💳', count: 2, quote: '«Лимит? Не слышала.»' }),
-      M('w_svidetel', 'Свидетельница на свадьбе', 3, 2, 4, { icon: '💐', rarity: 'rare', count: 2, bc: [{ e: 'marryRandom' }], quote: '«Горько! Горько!»' }),
+      M('w_svidetel', 'Свидетельница на свадьбе', 3, 2, 4, { female: true, icon: '💐', rarity: 'rare', count: 2, bc: [{ e: 'marryRandom' }], quote: '«Горько! Горько!»' }),
     ],
   },
   realtor: {
@@ -374,6 +382,9 @@ function effText(f) {
     case 'faceDmgHand': return 'Нанесите вражескому герою урон, равный числу карт в его руке.';
     case 'selfBuffIf': return 'Если у вас есть другой «Качок» — получает +2/+2.';
     case 'chance': return `С вероятностью ${Math.round(f.p * 100)}%: ${f.fx.map(effText).join(' ').replace(/^./, (c) => c.toLowerCase())}`;
+    case 'destroyFemale': return 'Уничтожьте всех существ женского пола на поле (у обоих игроков).';
+    case 'purify': return 'Снимите с ваших существ оглушение, долги, беременность и браки.';
+    case 'dmgHero': return `Нанесите ${f.n} урона вражескому герою.`;
     case 'unstun': return 'Снимите оглушение со всех ваших существ.';
     case 'marryRandom': return 'Два случайных вражеских существа женятся: оба −2 атаки. Если врагов меньше двух — 2 урона вражескому герою.';
     case 'debt': return `${TGT_ACC[f.t][0].toUpperCase() + TGT_ACC[f.t].slice(1)} получает «Долг»: −${f.n} атаки в начале каждого своего хода.`;
@@ -390,6 +401,7 @@ function cardTextParts(c) {
   (c.kw || []).forEach((k) => out.push({ name: `${KEYWORDS[k].icon} ${KEYWORDS[k].name}`, text: KEYWORDS[k].desc }));
   if (c.cantAttack) out.push({ name: '⛔ Орудие', text: 'Не может атаковать.' });
   if (c.noSteal) out.push({ name: '🔒 Неподкупный', text: 'Его нельзя переманить.' });
+  if (c.female) out.push({ name: '♀ Женщина', text: 'Женское существо.' });
   if (c.resist) out.push({ name: '🚫 Барьер целомудрия', text: 'Иммунитет к манипуляциям: его нельзя переманить, оглушить, ослабить, лишить свойств, женить или сделать «беременным».' });
   if (c.bc) out.push({ name: '📣 Клич', text: c.bc.map(effText).join(' ') });
   if (c.fx) out.push({ name: '✨ Эффект', text: c.fx.map(effText).join(' ') });

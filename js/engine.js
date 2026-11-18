@@ -564,6 +564,26 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       if (src && P.board.some((m) => m !== src && m.id === f.id)) { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); }
       break;
     case 'chance': if (Math.random() < f.p) await runFx(s, pIdx, f.fx, null, ctx, src); break;
+    case 'destroyFemale': {
+      const victims = s.players.flatMap((p) => p.board.filter((m) => m.female && m !== src));
+      victims.forEach((m) => { m.dead = true; });
+      if (victims.length) { ctx.log(`«Бывшие не возвращаются» — стёрто: ${victims.map(q).join(', ')}`); fx(ctx, 'doom', {}); }
+      break;
+    }
+    case 'purify':
+      P.board.forEach((m) => {
+        m.frozen = false;
+        delete m.debt;
+        if (m.preg) { m.atk += 2; delete m.preg; }
+        if (m.spouse) {
+          const f2 = findChar(s, m.spouse);
+          if (f2 && f2.m) delete f2.m.spouse;
+          delete m.spouse;
+        }
+      });
+      fx(ctx, 'heal', { id: heroId(pIdx), n: 0 });
+      break;
+    case 'dmgHero': damage(s, heroId(enemy), f.n, ctx, src); break;
     case 'unstun': P.board.forEach((m) => { m.frozen = false; }); break;
     case 'marryRandom': {
       const free = shuffle(E.board.filter((m) => m.hp > 0 && !m.spouse && !m.resist));

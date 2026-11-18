@@ -105,6 +105,7 @@ function minionHTML(s, m, o) {
   if (m.enrage) icons.push('💢');
   if (m.spellDiscount) icons.push('🏷️');
   if (m.cantAttack) icons.push('⛔');
+  if (m.female) icons.push('♀');
   const status = [m.spouse ? '💍' : '', m.preg ? '🤰' : '', m.debt ? '📜' : ''].join('');
   const sleepy = m.owner === s.current && m.sleeping && !m.cantAttack && s.phase === 'play';
   const def = defOf(m.id);
