@@ -7,6 +7,9 @@
 
 let UID_SEQ = 1;
 
+/** Сообщает интерфейсу о событии для анимаций и звуков (в расчётах ИИ не используется). */
+const fx = (ctx, type, d) => { if (ctx && ctx.fx) ctx.fx(type, d || {}); };
+
 const has = (c, a) => !!(c && c.abil && c.abil.indexOf(a) !== -1);
 const isHero = (c) => has(c, 'hero');
 const isUnit = (c) => !!c && c.type === 'unit';
@@ -210,6 +213,7 @@ function absorb(s, side, row, ctx) {
   const R = s.players[side].rows[row];
   if (!R.shield) return false;
   ctx.log(`${q(R.shield)} принимает удар на себя`);
+  fx(ctx, 'absorb', { side, row });
   toGrave(s, R.shield);
   R.shield = null;
   return true;
@@ -228,7 +232,11 @@ function unshielded(s, items, ctx) {
 function destroy(s, items, ctx, why) {
   items = unshielded(s, items, ctx);
   if (!items.length) return;
-  for (const it of items) { removeFromBoard(s, it.card); toGrave(s, it.card); }
+  for (const it of items) {
+    fx(ctx, 'kill', { side: it.side, row: it.row, uid: it.card.uid, big: true });
+    removeFromBoard(s, it.card);
+    toGrave(s, it.card);
+  }
   ctx.log(`${why ? why + ': ' : ''}уничтожено — ${items.map((it) => q(it.card)).join(', ')}`);
 }
 
@@ -250,7 +258,9 @@ function damageUnit(s, item, dmg, ctx) {
   const c = item.card;
   if (isHero(c)) return;
   c.power -= dmg;
+  fx(ctx, 'hit', { side: item.side, row: item.row, uid: c.uid, dmg });
   if (c.power <= 0) {
+    fx(ctx, 'kill', { side: item.side, row: item.row, uid: c.uid });
     removeFromBoard(s, c);
     toGrave(s, c);
     ctx.log(`${q(c)} погибает`);
@@ -285,6 +295,7 @@ async function performAction(s, pIdx, a, ctx) {
   if (a.type === 'pass') {
     P.passed = true;
     ctx.log(`${who(s, pIdx)}: пас`);
+    fx(ctx, 'pass', { pIdx });
     return;
   }
   if (a.type === 'leader') { await useLeader(s, pIdx, ctx); return; }
@@ -306,6 +317,7 @@ async function resolveCard(s, pIdx, card, target, ctx) {
     return;
   }
   ctx.log(`${who(s, pIdx)}: ${q(card)}`);
+  fx(ctx, 'special', { pIdx, kind: card.kind, wrow: card.wrow, row: target && target.row, side: target && target.side });
   switch (card.kind) {
     case 'weather':
       if (s.weather[card.wrow]) toGrave(s, card);
@@ -338,7 +350,7 @@ async function resolveCard(s, pIdx, card, target, ctx) {
       destroy(s, strongest(all), ctx, 'Пожар');
       for (const p of s.players) {
         for (const r of ROWS) {
-          if (p.rows[r].fort) { ctx.log(`${q(p.rows[r].fort)} сгорает`); toGrave(s, p.rows[r].fort); p.rows[r].fort = null; }
+          if (p.rows[r].fort) { ctx.log(`${q(p.rows[r].fort)} сгорает`); fx(ctx, 'burn', { side: p.idx, row: r }); toGrave(s, p.rows[r].fort); p.rows[r].fort = null; }
         }
       }
       toGrave(s, card);
@@ -484,6 +496,7 @@ async function placeUnit(s, pIdx, card, row, ctx) {
   card.placed = row;
   s.players[side].rows[row].cards.push(card);
   ctx.log(`${who(s, pIdx)}: ${q(card)} → ${ROW_NAMES[row]}${spy ? ' (к противнику)' : ''}`);
+  fx(ctx, 'place', { pIdx, side, row, uid: card.uid, hero: isHero(card) });
 
   if (spy) {
     const n = drawCards(P, 2);
@@ -583,6 +596,7 @@ async function useLeader(s, pIdx, ctx) {
   const L = P.leader;
   L.used = true;
   ctx.log(`${who(s, pIdx)}: лидер ${L.name}`);
+  fx(ctx, 'leader', { pIdx });
   switch (L.ability) {
     case 'hornSiege': {
       const h = makeCard(LEADER_HORN_DEF, pIdx);

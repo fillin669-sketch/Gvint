@@ -1,0 +1,277 @@
+'use strict';
+/* =====================================================================
+   ВИЗУАЛЬНЫЕ ЭФФЕКТЫ
+   - анимированная погода на рядах (canvas)
+   - искры, угли, обломки
+   - «сгорание» уничтоженных карт, всплывающие числа, тряска стола
+   Все координаты — в системе #stage (1600×900).
+   ===================================================================== */
+
+const FX = (() => {
+  let cv = null, cx = null, layer = null;
+  let rows = {};                                  // 'side:row' → rect
+  const level = { melee: 0, ranged: 0, siege: 0 }; // текущая сила погоды 0..1
+  let target = { melee: false, ranged: false, siege: false };
+  let parts = [];
+  let raf = 0, last = 0, t = 0;
+  const MAX_PARTS = 420;
+
+  function init() {
+    cv = document.getElementById('fx-canvas');
+    cx = cv.getContext('2d');
+    layer = document.getElementById('fx-layer');
+  }
+
+  function stageScale() {
+    const sr = document.getElementById('stage').getBoundingClientRect();
+    return { sr, k: sr.width / 1600 || 1 };
+  }
+
+  function toStage(el, cache) {
+    const { sr, k } = cache || stageScale();
+    const r = el.getBoundingClientRect();
+    return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k };
+  }
+
+  function setRows() {
+    const c = stageScale();
+    rows = {};
+    document.querySelectorAll('#board .row').forEach((el) => { rows[el.dataset.side + ':' + el.dataset.row] = toStage(el, c); });
+  }
+
+  function setWeather(w) {
+    target = Object.assign({}, w);
+    kick();
+  }
+
+  function clearAll() {
+    parts = [];
+    target = { melee: false, ranged: false, siege: false };
+    ROWS.forEach((r) => { level[r] = 0; });
+    if (cx) cx.clearRect(0, 0, 1600, 900);
+    if (layer) layer.innerHTML = '';
+  }
+
+  /* ---------------- частицы ---------------- */
+  function add(p) {
+    if (parts.length >= MAX_PARTS) return;
+    p.age = 0;
+    parts.push(p);
+  }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  /** Взрыв частиц в точке. kind: ember | debris | spark | heal | shield | dust */
+  function burst(x, y, kind, n) {
+    for (let i = 0; i < (n || 20); i++) {
+      const a = rand(0, Math.PI * 2), sp = rand(60, 260);
+      const p = { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.5, 1.1), kind };
+      if (kind === 'ember')  { p.vy -= 120; p.g = -40; p.r = rand(1.5, 3.5); p.col = pickRandom(['#ffb347', '#ff7b2b', '#ffd36b', '#ff4b1f']); }
+      if (kind === 'debris') { p.g = 700; p.r = rand(3, 7); p.rot = rand(0, 6); p.vr = rand(-12, 12); p.col = pickRandom(['#6b4a2a', '#8a6a44', '#4a3a2a', '#9a8a70']); p.vy -= 200; }
+      if (kind === 'spark')  { p.g = 300; p.r = rand(1, 2.5); p.col = pickRandom(['#fff3c4', '#ffd36b', '#ffffff']); p.life = rand(0.3, 0.7); }
+      if (kind === 'heal')   { p.vx *= 0.25; p.vy = rand(-90, -40); p.g = 0; p.r = rand(2, 4); p.col = pickRandom(['#8dff8d', '#d8ffb0', '#5fe08a']); p.cross = true; }
+      if (kind === 'shield') { p.g = 0; p.r = rand(1.5, 3); p.col = pickRandom(['#9ed8ff', '#e6f6ff', '#5aa0f0']); p.life = rand(0.4, 0.8); }
+      if (kind === 'dust')   { p.vy = rand(-40, 10); p.vx *= 0.6; p.g = 30; p.r = rand(4, 9); p.col = 'rgba(200,180,140,.35)'; p.soft = true; p.life = rand(0.4, 0.8); }
+      add(p);
+    }
+    kick();
+  }
+
+  function burstRect(r, kind, n) { burst(r.x + r.w / 2, r.y + r.h / 2, kind, n); }
+
+  /* ---------------- погода ---------------- */
+  // ближний бой — «кишечная» зелено-бурая муть с пузырями
+  // дальний бой — ливень
+  // осада — пьяный угар: янтарно-лиловая дымка и пена
+  const FOG = {
+    melee:  ['rgba(110,140,40,', 'rgba(120,90,30,'],
+    ranged: ['rgba(150,170,200,', 'rgba(110,130,160,'],
+    siege:  ['rgba(200,140,40,', 'rgba(150,60,170,'],
+  };
+
+  function spawnWeather(dt) {
+    for (const r of ROWS) {
+      const L = level[r];
+      if (L < 0.02) continue;
+      for (const side of [0, 1]) {
+        const R = rows[side + ':' + r];
+        if (!R) continue;
+        if (r === 'ranged') {
+          const n = Math.round(L * 90 * dt * 10) / 10 + (Math.random() < (L * 90 * dt) % 1 ? 1 : 0);
+          for (let i = 0; i < n; i++) {
+            add({ kind: 'rain', x: rand(R.x - 30, R.x + R.w), y: R.y - 10, vx: 120, vy: rand(650, 800), life: 1, bottom: R.y + R.h - 4, R });
+          }
+        } else if (r === 'melee') {
+          if (Math.random() < L * 18 * dt) {
+            add({ kind: 'bubble', x: rand(R.x + 10, R.x + R.w - 10), y: R.y + R.h - 6, vx: 0, vy: rand(-45, -20), life: rand(1.4, 2.6), r: rand(3, 9),
+              col: pickRandom(['rgba(150,180,60,', 'rgba(140,100,40,']), top: R.y + 6, wob: rand(0, 6) });
+          }
+        } else if (Math.random() < L * 14 * dt) {
+          add({ kind: 'bubble', x: rand(R.x + 10, R.x + R.w - 10), y: R.y + R.h - 6, vx: rand(-10, 10), vy: rand(-35, -15), life: rand(1.6, 3), r: rand(2, 6),
+            col: pickRandom(['rgba(255,240,200,', 'rgba(255,200,120,', 'rgba(220,170,255,']), top: R.y + 6, wob: rand(0, 6) });
+        }
+      }
+    }
+  }
+
+  function drawFog() {
+    for (const r of ROWS) {
+      const L = level[r];
+      if (L < 0.02) continue;
+      for (const side of [0, 1]) {
+        const R = rows[side + ':' + r];
+        if (!R) continue;
+        cx.save();
+        cx.beginPath();
+        cx.rect(R.x, R.y, R.w, R.h);
+        cx.clip();
+        const cols = FOG[r];
+        for (let i = 0; i < 5; i++) {
+          const speed = r === 'ranged' ? 40 : 18;
+          const span = R.w + 320;
+          const x = R.x - 160 + ((t * speed * (i % 2 ? 1 : -0.7) + i * 230) % span + span) % span;
+          const y = R.y + R.h * (0.3 + 0.4 * Math.sin(t * 0.6 + i * 1.7) * 0.5 + 0.2);
+          const rad = 90 + 30 * Math.sin(t + i);
+          const g = cx.createRadialGradient(x, y, 0, x, y, rad);
+          const a = (r === 'ranged' ? 0.18 : 0.24) * L;
+          g.addColorStop(0, cols[i % 2] + a + ')');
+          g.addColorStop(1, cols[i % 2] + '0)');
+          cx.fillStyle = g;
+          cx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+        }
+        if (r === 'ranged') { // тёмная пелена дождя
+          cx.fillStyle = `rgba(20,30,50,${0.25 * L})`;
+          cx.fillRect(R.x, R.y, R.w, R.h);
+        }
+        cx.restore();
+      }
+    }
+  }
+
+  /* ---------------- цикл ---------------- */
+  function busy() {
+    return parts.length > 0 || ROWS.some((r) => level[r] > 0.01 || target[r]);
+  }
+
+  function kick() {
+    if (!raf && cx) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    t += dt;
+    for (const r of ROWS) {
+      const goal = target[r] ? 1 : 0;
+      level[r] += (goal - level[r]) * Math.min(1, dt * 1.6);
+      if (!target[r] && level[r] < 0.01) level[r] = 0;
+    }
+    spawnWeather(dt);
+    cx.clearRect(0, 0, 1600, 900);
+    drawFog();
+
+    const alive = [];
+    for (const p of parts) {
+      p.age += dt;
+      if (p.kind === 'rain') {
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        if (p.y >= p.bottom) {
+          for (let i = 0; i < 2; i++) add({ kind: 'splash', x: p.x, y: p.bottom, vx: rand(-60, 60), vy: rand(-120, -60), g: 500, life: 0.25, r: 1.2, col: '#bcd6ff' });
+          continue;
+        }
+        if (p.x > p.R.x + p.R.w) continue;
+        cx.strokeStyle = 'rgba(190,215,255,.55)';
+        cx.lineWidth = 1.3;
+        cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(p.x - p.vx * 0.02, p.y - p.vy * 0.02); cx.stroke();
+        alive.push(p);
+        continue;
+      }
+      if (p.age >= p.life) continue;
+      const k = 1 - p.age / p.life;
+      if (p.kind === 'bubble') {
+        p.y += p.vy * dt;
+        const x = p.x + Math.sin(t * 3 + p.wob) * 4;
+        if (p.y < p.top) { add({ kind: 'spark', x, y: p.y, vx: rand(-30, 30), vy: rand(-30, 10), g: 0, life: 0.2, r: 1, col: '#fff' }); continue; }
+        cx.strokeStyle = p.col + (0.75 * k) + ')';
+        cx.fillStyle = p.col + (0.25 * k) + ')';
+        cx.lineWidth = 1.2;
+        cx.beginPath(); cx.arc(x, p.y, p.r, 0, Math.PI * 2); cx.fill(); cx.stroke();
+        alive.push(p);
+        continue;
+      }
+      p.vy += (p.g || 0) * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.kind !== 'debris') { p.vx *= 0.97; if (p.kind !== 'heal') p.vy *= 0.98; }
+      cx.globalAlpha = Math.max(0, k);
+      cx.fillStyle = p.col;
+      if (p.kind === 'debris') {
+        p.rot += p.vr * dt;
+        cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.7); cx.restore();
+      } else if (p.cross) {
+        cx.fillRect(p.x - p.r, p.y - p.r / 3, p.r * 2, p.r / 1.5);
+        cx.fillRect(p.x - p.r / 3, p.y - p.r, p.r / 1.5, p.r * 2);
+      } else {
+        if (p.kind === 'ember' || p.kind === 'spark') { cx.shadowColor = p.col; cx.shadowBlur = 8; }
+        cx.beginPath(); cx.arc(p.x, p.y, p.r * (p.soft ? 1 + p.age * 2 : 1), 0, Math.PI * 2); cx.fill();
+        cx.shadowBlur = 0;
+      }
+      cx.globalAlpha = 1;
+      alive.push(p);
+    }
+    parts = alive;
+
+    if (busy()) raf = requestAnimationFrame(frame);
+    else { raf = 0; cx.clearRect(0, 0, 1600, 900); }
+  }
+
+  /* ---------------- DOM-эффекты ---------------- */
+  function temp(el, ms) {
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), ms);
+  }
+
+  /** Сгорающая копия уничтоженной карты */
+  function ghost(html, r) {
+    const g = document.createElement('div');
+    g.className = 'ghost';
+    g.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;
+    g.innerHTML = html;
+    temp(g, 1000);
+    burstRect(r, 'ember', 26);
+    burstRect(r, 'spark', 10);
+  }
+
+  function float(text, r, cls) {
+    const f = document.createElement('div');
+    f.className = 'float ' + (cls || '');
+    f.textContent = text;
+    f.style.left = (r.x + r.w / 2) + 'px';
+    f.style.top = (r.y + r.h * 0.3) + 'px';
+    temp(f, 1200);
+  }
+
+  /** Вспышка поверх ряда */
+  function flash(r, cls) {
+    const f = document.createElement('div');
+    f.className = 'rowflash ' + (cls || '');
+    f.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;
+    temp(f, 900);
+  }
+
+  function quake() {
+    const g = document.getElementById('game');
+    g.classList.remove('quake');
+    void g.offsetWidth;
+    g.classList.add('quake');
+    setTimeout(() => g.classList.remove('quake'), 600);
+  }
+
+  /** Золотые искры по всему полю (очищение) */
+  function sparkle() {
+    Object.values(rows).forEach((R) => {
+      for (let i = 0; i < 6; i++) burst(rand(R.x, R.x + R.w), rand(R.y, R.y + R.h), 'spark', 3);
+    });
+  }
+
+  return { init, setRows, setWeather, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, toStage, rowRect: (side, row) => rows[side + ':' + row] };
+})();

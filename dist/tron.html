@@ -95,6 +95,7 @@ button { font-family: inherit; }
 .faction-tile p { margin: 4px 0; font-size: 16px; color: #e9dcc2; line-height: 1.3; }
 .faction-tile .perk { color: #ffe39a; }
 .faction-tile .ldr { color: #cfe3ff; }
+.faction-tile .loc { color: #f0d9a8; opacity: .85; }
 .opp-pick { margin: 26px 0 0; font-size: 20px; display: flex; gap: 12px; justify-content: center; align-items: center; }
 .extra-pick { margin-left: 18px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .extra-pick input { width: 20px; height: 20px; accent-color: var(--gold); }
@@ -168,8 +169,29 @@ button { font-family: inherit; }
 .card.sm .nm { display: none; }
 .card.token { opacity: .92; border-style: dashed; }
 .card.used { filter: grayscale(1) brightness(.6); }
-.card.fresh { animation: drop .35s ease-out; }
-@keyframes drop { from { transform: translateY(-30px) scale(1.15); opacity: 0; } to { transform: none; opacity: 1; } }
+.card.fresh.from-me { animation: slamUp .6s cubic-bezier(.2,1.3,.4,1) backwards; }
+.card.fresh.from-op { animation: slamDown .6s cubic-bezier(.2,1.3,.4,1) backwards; }
+.card.fresh.hero { animation-duration: .9s; }
+@keyframes slamUp {
+  0%   { transform: translateY(170px) scale(1.7) rotate(-10deg); opacity: 0; filter: brightness(2.6); }
+  55%  { transform: translateY(-6px) scale(1.06); opacity: 1; box-shadow: 0 0 34px 12px rgba(255,214,120,.9); }
+  100% { transform: none; filter: none; }
+}
+@keyframes slamDown {
+  0%   { transform: translateY(-170px) scale(1.7) rotate(10deg); opacity: 0; filter: brightness(2.6); }
+  55%  { transform: translateY(6px) scale(1.06); opacity: 1; box-shadow: 0 0 34px 12px rgba(255,110,90,.85); }
+  100% { transform: none; filter: none; }
+}
+.card.hit { animation: hitShake .5s; }
+@keyframes hitShake {
+  0%, 100% { transform: none; }
+  15% { transform: translateX(-6px) rotate(-3deg); filter: brightness(2) sepia(1) saturate(6) hue-rotate(-45deg); }
+  35% { transform: translateX(5px) rotate(2deg); }
+  55% { transform: translateX(-3px); filter: brightness(1.3) sepia(1) saturate(4) hue-rotate(-45deg); }
+  75% { transform: translateX(2px); }
+}
+#hand .card.drawn { animation: drawIn .55s cubic-bezier(.2,1,.4,1) backwards; }
+@keyframes drawIn { from { transform: translate(520px, 80px) rotate(25deg) scale(.6); opacity: 0; } }
 
 /* ---------------- игра: левая колонка ---------------- */
 #left { position: absolute; left: 14px; top: 12px; width: 276px; height: 876px; display: flex; flex-direction: column; gap: 12px; }
@@ -223,13 +245,128 @@ button { font-family: inherit; }
 
 /* ---------------- поле ---------------- */
 #board { position: absolute; left: 302px; top: 10px; width: 998px; height: 668px; display: flex; flex-direction: column; gap: 5px; }
-.divider { height: 8px; margin: 1px 0; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: .5; border-radius: 4px; }
+.divider { height: 8px; margin: 1px 0; position: relative; background: linear-gradient(90deg, transparent, rgba(217,180,90,.55), transparent); border-radius: 4px; z-index: 3; }
+.torch { position: absolute; top: -20px; font-size: 30px; animation: torch 1.1s infinite alternate ease-in-out; filter: drop-shadow(0 0 12px rgba(255,150,40,.9)); pointer-events: none; }
+.torch.l { left: -24px; } .torch.r { right: -24px; animation-delay: -.5s; }
+@keyframes torch { 0% { transform: scale(1) rotate(-4deg); opacity: .9; } 50% { transform: scale(1.12, .95) rotate(3deg); opacity: 1; } 100% { transform: scale(.95, 1.08) rotate(-2deg); opacity: .85; } }
+
+/* ---------------- поля фракций ---------------- */
+.half { position: relative; display: flex; flex-direction: column; gap: 5px; border-radius: 12px; padding: 0; box-shadow: inset 0 0 40px rgba(0,0,0,.6); }
+.half::before {
+  content: attr(data-emblem); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 230px; opacity: .07; pointer-events: none; filter: grayscale(.4);
+}
+.field-iron {
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.38) 0 2px, transparent 2px 54px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.3) 0 2px, transparent 2px 108px),
+    radial-gradient(ellipse at 50% 50%, rgba(140,160,190,.18), transparent 70%),
+    linear-gradient(180deg, #3b4352, #222833);
+}
+.field-forest {
+  background:
+    radial-gradient(circle at 18% 30%, rgba(110,160,60,.35), transparent 22%),
+    radial-gradient(circle at 72% 68%, rgba(70,120,40,.4), transparent 28%),
+    radial-gradient(circle at 46% 52%, rgba(130,95,45,.28), transparent 18%),
+    radial-gradient(circle at 88% 20%, rgba(150,200,90,.2), transparent 15%),
+    repeating-linear-gradient(100deg, rgba(0,0,0,.12) 0 3px, transparent 3px 41px),
+    linear-gradient(180deg, #27401d, #13200d);
+}
+.field-dark {
+  background:
+    radial-gradient(circle at 28% 40%, rgba(170,20,35,.35), transparent 30%),
+    radial-gradient(circle at 80% 62%, rgba(100,0,50,.45), transparent 34%),
+    repeating-linear-gradient(115deg, rgba(0,0,0,.3) 0 1px, transparent 1px 37px),
+    repeating-linear-gradient(35deg, rgba(255,60,60,.05) 0 1px, transparent 1px 53px),
+    linear-gradient(180deg, #2e0d15, #130509);
+}
+.field-sea {
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.42) 0 3px, transparent 3px 66px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 11px),
+    radial-gradient(ellipse at 50% 120%, rgba(40,140,160,.35), transparent 60%),
+    linear-gradient(180deg, #4b3826, #2a1d11);
+}
+.half.side1 { box-shadow: inset 0 0 40px rgba(0,0,0,.6), inset 0 -3px 0 rgba(255,90,70,.25); }
+.half.side0 { box-shadow: inset 0 0 40px rgba(0,0,0,.6), inset 0 3px 0 rgba(90,160,255,.25); }
+
+/* фон локации (поле вашей фракции) */
+#game::before { content: ''; position: absolute; inset: 0; pointer-events: none; transition: background .8s; }
+#game.loc-iron::before   { background: radial-gradient(ellipse at 50% 40%, rgba(80,110,160,.22), transparent 65%); }
+#game.loc-forest::before { background: radial-gradient(ellipse at 50% 40%, rgba(70,130,50,.24), transparent 65%); }
+#game.loc-dark::before   { background: radial-gradient(ellipse at 50% 40%, rgba(150,20,40,.26), transparent 65%); }
+#game.loc-sea::before    { background: radial-gradient(ellipse at 50% 40%, rgba(30,120,140,.24), transparent 65%); }
+
+/* ---------------- разрушаемое окружение ---------------- */
+.prop { flex: none; width: 54px; height: 88px; position: relative; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; }
+.prop .pi { font-size: 40px; line-height: 1; filter: drop-shadow(0 5px 5px rgba(0,0,0,.8)); transition: transform .5s, filter .5s; }
+.prop .php { position: absolute; left: 8px; right: 8px; bottom: 3px; height: 4px; border-radius: 2px; background: rgba(0,0,0,.6); overflow: hidden; }
+.prop .php i { display: block; height: 100%; background: linear-gradient(90deg, #c33, #e9b04a); transition: width .4s; }
+.prop::after { content: ''; position: absolute; left: 10px; right: 10px; top: 22px; bottom: 16px; pointer-events: none; opacity: 0; }
+.prop.d1::after, .prop.d2::after, .prop.d3::after { opacity: 1; background:
+  linear-gradient(62deg, transparent 46%, rgba(0,0,0,.85) 47% 51%, transparent 52%); }
+.prop.d2::after { background:
+  linear-gradient(62deg, transparent 46%, rgba(0,0,0,.85) 47% 51%, transparent 52%),
+  linear-gradient(-35deg, transparent 47%, rgba(0,0,0,.85) 48% 51%, transparent 52%); }
+.prop.d3::after { background:
+  linear-gradient(62deg, transparent 46%, rgba(0,0,0,.85) 47% 51%, transparent 52%),
+  linear-gradient(-35deg, transparent 47%, rgba(0,0,0,.85) 48% 51%, transparent 52%),
+  linear-gradient(10deg, transparent 48%, rgba(0,0,0,.85) 49% 52%, transparent 53%); }
+.prop.d2 .pi { filter: drop-shadow(0 5px 5px rgba(0,0,0,.8)) brightness(.85); transform: rotate(-4deg); }
+.prop.d3 .pi { filter: drop-shadow(0 5px 5px rgba(0,0,0,.8)) brightness(.7) sepia(.4); transform: rotate(7deg) translateY(3px); }
+.prop.broken .pi { transform: rotate(82deg) translate(18px, 4px) scale(.82); filter: grayscale(1) brightness(.4); }
+.prop.broken::before { content: ''; position: absolute; left: 4px; right: 4px; bottom: 9px; height: 10px; pointer-events: none;
+  background: radial-gradient(circle at 20% 60%, #5a4a3a 0 3px, transparent 4px), radial-gradient(circle at 45% 40%, #6b5a48 0 4px, transparent 5px),
+    radial-gradient(circle at 70% 70%, #4a3a2a 0 3px, transparent 4px), radial-gradient(circle at 88% 45%, #5a4a3a 0 2px, transparent 3px); }
+.prop.broken .php { display: none; }
+.prop.shake { animation: propShake .45s; }
+@keyframes propShake { 20% { transform: translateX(-5px) rotate(-6deg); } 45% { transform: translateX(4px) rotate(4deg); } 70% { transform: translateX(-2px); } }
+
+/* ---------------- освещение ---------------- */
+#light, #fx-canvas, #fx-layer { position: absolute; inset: 0; pointer-events: none; }
+#light { z-index: 20; }
+#fx-canvas { z-index: 21; width: 1600px; height: 900px; }
+#fx-layer { z-index: 22; }
+#light > div { position: absolute; inset: 0; transition: opacity .9s ease; opacity: 0; }
+#light .l-me { background:
+  linear-gradient(180deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,.18) 38%, transparent 55%),
+  radial-gradient(ellipse at 50% 100%, rgba(255,190,90,.18), transparent 55%); }
+#light .l-op { background:
+  linear-gradient(0deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,.2) 40%, transparent 58%),
+  radial-gradient(ellipse at 50% 0%, rgba(255,70,50,.16), transparent 55%); }
+#light .l-flicker { opacity: 1; mix-blend-mode: screen; animation: flicker 3.2s infinite;
+  background: radial-gradient(circle at 19% 50%, rgba(255,140,40,.12), transparent 18%), radial-gradient(circle at 81% 50%, rgba(255,140,40,.12), transparent 18%); }
+@keyframes flicker { 0%, 100% { opacity: .8; } 12% { opacity: 1; } 20% { opacity: .65; } 33% { opacity: .95; } 52% { opacity: .75; } 70% { opacity: 1; } 85% { opacity: .7; } }
+#game.turn-me #light .l-me { opacity: 1; }
+#game.turn-op #light .l-op { opacity: 1; }
+#game.turn-none #light .l-me, #game.turn-none #light .l-op { opacity: .5; }
+#game.stormy #light::after { content: ''; position: absolute; inset: 0; background: rgba(20,30,60,.16); animation: storm 7s infinite; }
+@keyframes storm { 0%, 88%, 100% { background: rgba(20,30,60,.16); } 90% { background: rgba(200,220,255,.18); } 92% { background: rgba(20,30,60,.16); } 94% { background: rgba(200,220,255,.12); } }
+
+/* ---------------- DOM-эффекты ---------------- */
+.ghost { position: absolute; animation: burnAway .95s ease-in forwards; }
+.ghost .card { cursor: default; }
+@keyframes burnAway {
+  0%   { transform: scale(1.12); filter: brightness(3); }
+  30%  { transform: scale(1.05) rotate(-3deg); filter: sepia(1) saturate(7) hue-rotate(-35deg) brightness(1.4); }
+  100% { transform: scale(.55) translateY(-26px) rotate(12deg); filter: brightness(0) blur(4px); opacity: 0; }
+}
+.float { position: absolute; transform: translate(-50%, 0); font-weight: 700; font-size: 36px; pointer-events: none;
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(0,0,0,.9); animation: floatUp 1.15s ease-out forwards; }
+.float.down { color: #ff6b5b; }
+.float.up { color: #7dff8a; }
+@keyframes floatUp { 0% { transform: translate(-50%, 10px) scale(.6); opacity: 0; } 20% { transform: translate(-50%, -6px) scale(1.25); opacity: 1; } 100% { transform: translate(-50%, -60px) scale(1); opacity: 0; } }
+.rowflash { position: absolute; border-radius: 10px; animation: rowFlash .85s ease-out forwards; }
+.rowflash.gold  { box-shadow: inset 0 0 40px rgba(255,210,110,.9); background: rgba(255,210,110,.15); }
+.rowflash.blue  { box-shadow: inset 0 0 40px rgba(120,190,255,.9); background: rgba(120,190,255,.15); }
+.rowflash.curse { box-shadow: inset 0 0 40px rgba(170,60,230,.95); background: rgba(120,30,160,.22); }
+@keyframes rowFlash { from { opacity: 1; } to { opacity: 0; } }
+#game.quake { animation: quake .55s; }
+@keyframes quake { 10% { transform: translate(-7px, 3px); } 25% { transform: translate(6px, -4px); } 40% { transform: translate(-5px, -2px); } 55% { transform: translate(4px, 3px); } 75% { transform: translate(-2px, 1px); } }
 .row {
   position: relative; height: 104px; display: flex; align-items: center; gap: 8px;
-  background: rgba(0,0,0,.32); border: 1px solid rgba(217,180,90,.18); border-radius: 10px; padding: 0 8px;
+  background: rgba(0,0,0,.26); border: 1px solid rgba(217,180,90,.18); border-radius: 10px; padding: 0 8px;
 }
-.row.side1 { background: rgba(60,10,10,.25); }
-.row.side0 { background: rgba(10,25,50,.25); }
 .rscore {
   flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 20px; background: radial-gradient(circle at 35% 30%, #4c3a22, #1a1208); border: 1px solid var(--gold-soft);
@@ -245,11 +382,11 @@ button { font-family: inherit; }
 .rslot.many .card { --cw: 30px; }
 .rcards { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; min-width: 0; }
 .rcards .card + .card { margin-left: var(--gap, 4px); }
-.rlabel { position: absolute; right: 8px; top: 4px; font-size: 16px; opacity: .45; pointer-events: none; }
+.rlabel { position: absolute; right: 62px; top: 4px; font-size: 16px; opacity: .45; pointer-events: none; }
 .row .wfx { position: absolute; inset: 0; border-radius: 10px; pointer-events: none; }
-.row.w-melee .wfx  { background: linear-gradient(180deg, rgba(120,90,40,.35), rgba(90,60,20,.15)); box-shadow: inset 0 0 30px rgba(140,100,40,.6); }
-.row.w-ranged .wfx { background: linear-gradient(180deg, rgba(200,200,210,.28), rgba(160,160,170,.12)); box-shadow: inset 0 0 30px rgba(220,220,230,.5); }
-.row.w-siege .wfx  { background: linear-gradient(180deg, rgba(60,120,60,.3), rgba(30,80,30,.12)); box-shadow: inset 0 0 30px rgba(80,160,80,.5); }
+.row.w-melee .wfx  { box-shadow: inset 0 0 26px rgba(120,140,40,.45); }
+.row.w-ranged .wfx { box-shadow: inset 0 0 26px rgba(160,190,230,.45); }
+.row.w-siege .wfx  { box-shadow: inset 0 0 26px rgba(210,140,50,.45); }
 .row.cursed { box-shadow: inset 0 0 26px rgba(170,60,220,.55); }
 .row.target { border: 2px solid var(--gold); box-shadow: 0 0 18px rgba(217,180,90,.45); cursor: pointer; animation: pulse 1.4s infinite; }
 .card.target-unit { box-shadow: 0 0 0 3px #ff6b5b, 0 0 16px rgba(255,107,91,.9); animation: pulse 1.2s infinite; }
@@ -374,6 +511,7 @@ button { font-family: inherit; }
           <button class="btn btn-gold" id="btn-start">⚔ В бой</button>
           <button class="btn" id="btn-gallery">🃏 Коллекция карт</button>
           <button class="btn" id="btn-rules">📜 Правила</button>
+          <button class="btn btn-sound" title="Звук">🔊</button>
         </div>
       </div>
     </section>
@@ -395,10 +533,15 @@ button { font-family: inherit; }
         <div id="preview" class="preview"></div>
         <div class="right-buttons">
           <button class="btn btn-pass" id="btn-pass">Пас</button>
+          <button class="btn btn-small btn-sound" title="Звук">🔊</button>
           <button class="btn btn-small" id="btn-menu" title="В меню">☰</button>
         </div>
         <div class="piles" id="piles0"></div>
       </div>
+
+      <div id="light"><div class="l-me"></div><div class="l-op"></div><div class="l-flicker"></div></div>
+      <canvas id="fx-canvas" width="1600" height="900"></canvas>
+      <div id="fx-layer"></div>
     </section>
 
     <!-- ================= КОЛЛЕКЦИЯ ================= -->
@@ -803,6 +946,9 @@ function allCardDefs() {
 
 let UID_SEQ = 1;
 
+/** Сообщает интерфейсу о событии для анимаций и звуков (в расчётах ИИ не используется). */
+const fx = (ctx, type, d) => { if (ctx && ctx.fx) ctx.fx(type, d || {}); };
+
 const has = (c, a) => !!(c && c.abil && c.abil.indexOf(a) !== -1);
 const isHero = (c) => has(c, 'hero');
 const isUnit = (c) => !!c && c.type === 'unit';
@@ -1006,6 +1152,7 @@ function absorb(s, side, row, ctx) {
   const R = s.players[side].rows[row];
   if (!R.shield) return false;
   ctx.log(`${q(R.shield)} принимает удар на себя`);
+  fx(ctx, 'absorb', { side, row });
   toGrave(s, R.shield);
   R.shield = null;
   return true;
@@ -1024,7 +1171,11 @@ function unshielded(s, items, ctx) {
 function destroy(s, items, ctx, why) {
   items = unshielded(s, items, ctx);
   if (!items.length) return;
-  for (const it of items) { removeFromBoard(s, it.card); toGrave(s, it.card); }
+  for (const it of items) {
+    fx(ctx, 'kill', { side: it.side, row: it.row, uid: it.card.uid, big: true });
+    removeFromBoard(s, it.card);
+    toGrave(s, it.card);
+  }
   ctx.log(`${why ? why + ': ' : ''}уничтожено — ${items.map((it) => q(it.card)).join(', ')}`);
 }
 
@@ -1046,7 +1197,9 @@ function damageUnit(s, item, dmg, ctx) {
   const c = item.card;
   if (isHero(c)) return;
   c.power -= dmg;
+  fx(ctx, 'hit', { side: item.side, row: item.row, uid: c.uid, dmg });
   if (c.power <= 0) {
+    fx(ctx, 'kill', { side: item.side, row: item.row, uid: c.uid });
     removeFromBoard(s, c);
     toGrave(s, c);
     ctx.log(`${q(c)} погибает`);
@@ -1081,6 +1234,7 @@ async function performAction(s, pIdx, a, ctx) {
   if (a.type === 'pass') {
     P.passed = true;
     ctx.log(`${who(s, pIdx)}: пас`);
+    fx(ctx, 'pass', { pIdx });
     return;
   }
   if (a.type === 'leader') { await useLeader(s, pIdx, ctx); return; }
@@ -1102,6 +1256,7 @@ async function resolveCard(s, pIdx, card, target, ctx) {
     return;
   }
   ctx.log(`${who(s, pIdx)}: ${q(card)}`);
+  fx(ctx, 'special', { pIdx, kind: card.kind, wrow: card.wrow, row: target && target.row, side: target && target.side });
   switch (card.kind) {
     case 'weather':
       if (s.weather[card.wrow]) toGrave(s, card);
@@ -1134,7 +1289,7 @@ async function resolveCard(s, pIdx, card, target, ctx) {
       destroy(s, strongest(all), ctx, 'Пожар');
       for (const p of s.players) {
         for (const r of ROWS) {
-          if (p.rows[r].fort) { ctx.log(`${q(p.rows[r].fort)} сгорает`); toGrave(s, p.rows[r].fort); p.rows[r].fort = null; }
+          if (p.rows[r].fort) { ctx.log(`${q(p.rows[r].fort)} сгорает`); fx(ctx, 'burn', { side: p.idx, row: r }); toGrave(s, p.rows[r].fort); p.rows[r].fort = null; }
         }
       }
       toGrave(s, card);
@@ -1280,6 +1435,7 @@ async function placeUnit(s, pIdx, card, row, ctx) {
   card.placed = row;
   s.players[side].rows[row].cards.push(card);
   ctx.log(`${who(s, pIdx)}: ${q(card)} → ${ROW_NAMES[row]}${spy ? ' (к противнику)' : ''}`);
+  fx(ctx, 'place', { pIdx, side, row, uid: card.uid, hero: isHero(card) });
 
   if (spy) {
     const n = drawCards(P, 2);
@@ -1379,6 +1535,7 @@ async function useLeader(s, pIdx, ctx) {
   const L = P.leader;
   L.used = true;
   ctx.log(`${who(s, pIdx)}: лидер ${L.name}`);
+  fx(ctx, 'leader', { pIdx });
   switch (L.ability) {
     case 'hornSiege': {
       const h = makeCard(LEADER_HORN_DEF, pIdx);
@@ -1623,6 +1780,494 @@ const AI = (() => {
 <script>
 'use strict';
 /* =====================================================================
+   ЗВУК — синтезируется через Web Audio, без аудиофайлов.
+   Sound.play('hit') — короткий эффект.
+   Sound.setLocation('sea') — фоновые звуки локации (поля фракции).
+   ===================================================================== */
+
+const LOCATIONS = {
+  tavern: { name: 'Трактир' },
+  iron:   { name: 'Крепостной двор' },
+  forest: { name: 'Лесная поляна' },
+  dark:   { name: 'Проклятый склеп' },
+  sea:    { name: 'Пристань' },
+};
+
+const Sound = (() => {
+  let ac = null, master, sfx, amb, noiseBuf;
+  let muted = false;
+  try { muted = localStorage.getItem('tron-muted') === '1'; } catch (e) { /* нет хранилища */ }
+  let current = null;      // { key, nodes: [], timers: [] }
+  let wanted = 'tavern';
+
+  function init() {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return true; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ac = new AC();
+    master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ac.destination);
+    sfx = ac.createGain(); sfx.gain.value = 0.75; sfx.connect(master);
+    amb = ac.createGain(); amb.gain.value = 0.45; amb.connect(master);
+    noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    setLocation(wanted);
+    return true;
+  }
+
+  const now = () => ac.currentTime;
+
+  function env(g, t, vol, attack, dur) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0002), t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  }
+
+  /** Тон: freq → slide за dur секунд */
+  function tone(freq, dur, o) {
+    if (!ac) return;
+    o = o || {};
+    const t = now() + (o.delay || 0);
+    const osc = ac.createOscillator();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
+    if (o.detune) osc.detune.value = o.detune;
+    const g = ac.createGain();
+    env(g, t, o.vol || 0.3, o.attack || 0.005, dur);
+    let node = osc;
+    if (o.lp) { const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; osc.connect(f); node = f; }
+    node.connect(g); g.connect(o.dest || sfx);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+
+  /** Шум через фильтр */
+  function noise(dur, o) {
+    if (!ac) return;
+    o = o || {};
+    const t = now() + (o.delay || 0);
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuf;
+    src.playbackRate.value = o.rate || 1;
+    const f = ac.createBiquadFilter();
+    f.type = o.filter || 'lowpass';
+    f.frequency.setValueAtTime(o.freq || 1000, t);
+    if (o.slide) f.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
+    f.Q.value = o.q || 1;
+    const g = ac.createGain();
+    env(g, t, o.vol || 0.3, o.attack || 0.005, dur);
+    src.connect(f); f.connect(g); g.connect(o.dest || sfx);
+    src.start(t, Math.random()); src.stop(t + dur + 0.05);
+  }
+
+  const chord = (notes, step, o) => notes.forEach((n, i) => tone(n, o.dur || 0.5, Object.assign({}, o, { delay: (o.delay || 0) + i * step })));
+
+  const SFX = {
+    place()   { tone(140, 0.25, { slide: 55, vol: 0.5 }); noise(0.08, { freq: 2500, vol: 0.15 }); },
+    hero()    { SFX.place(); chord([523, 659, 784, 1047], 0.06, { type: 'triangle', vol: 0.12, dur: 0.6 }); },
+    special() { chord([880, 1175, 1568], 0.05, { type: 'triangle', vol: 0.1, dur: 0.4 }); noise(0.4, { filter: 'highpass', freq: 5000, vol: 0.05, attack: 0.1 }); },
+    hit()     { noise(0.18, { filter: 'bandpass', freq: 900, q: 2, vol: 0.45 }); tone(110, 0.18, { slide: 50, vol: 0.4 }); },
+    kill()    { noise(0.6, { freq: 3000, slide: 200, vol: 0.5 }); tone(200, 0.5, { type: 'sawtooth', slide: 40, vol: 0.18, lp: 900 }); },
+    quake()   { noise(1.2, { freq: 400, slide: 60, vol: 0.7, attack: 0.02 }); tone(60, 1, { slide: 30, vol: 0.5 }); },
+    burn()    { noise(0.9, { filter: 'bandpass', freq: 1200, slide: 3000, q: 0.8, vol: 0.35, attack: 0.1 }); },
+    absorb()  { tone(1400, 0.3, { type: 'square', slide: 900, vol: 0.06 }); noise(0.15, { filter: 'highpass', freq: 3000, vol: 0.2 }); },
+    horn()    { tone(220, 0.7, { type: 'sawtooth', vol: 0.18, lp: 1200, attack: 0.05 }); tone(330, 0.9, { type: 'sawtooth', vol: 0.16, lp: 1400, attack: 0.05, delay: 0.25 }); },
+    weather_melee()  { for (let i = 0; i < 6; i++) tone(90 + Math.random() * 60, 0.25, { slide: 40, vol: 0.25, delay: i * 0.12, lp: 400 }); },
+    weather_ranged() { noise(1.6, { filter: 'bandpass', freq: 5000, slide: 2500, q: 0.6, vol: 0.3, attack: 0.3 }); },
+    weather_siege()  { chord([392, 330, 262, 196], 0.12, { type: 'triangle', vol: 0.12, dur: 0.3 }); tone(160, 0.35, { slide: 90, vol: 0.25, delay: 0.5, type: 'sawtooth', lp: 600 }); },
+    clear()   { chord([784, 988, 1175, 1568, 1976], 0.07, { type: 'sine', vol: 0.15, dur: 0.8 }); },
+    heal()    { chord([523, 784, 1047], 0.1, { type: 'sine', vol: 0.14, dur: 0.6 }); },
+    draw()    { noise(0.12, { filter: 'highpass', freq: 3000, slide: 6000, vol: 0.12 }); },
+    pass()    { tone(196, 0.5, { type: 'triangle', vol: 0.15 }); },
+    turn()    { tone(660, 0.12, { vol: 0.07 }); tone(990, 0.15, { vol: 0.05, delay: 0.08 }); },
+    leader()  { chord([262, 330, 392, 523], 0.09, { type: 'sawtooth', vol: 0.1, dur: 0.7, lp: 1600 }); },
+    crack()   { noise(0.12, { filter: 'highpass', freq: 1800, vol: 0.4 }); tone(300, 0.1, { slide: 120, vol: 0.2, type: 'square', lp: 900 }); },
+    smash()   { SFX.crack(); noise(0.7, { freq: 1500, slide: 100, vol: 0.45, delay: 0.05 }); for (let i = 0; i < 4; i++) tone(500 + Math.random() * 900, 0.08, { vol: 0.08, delay: 0.1 + i * 0.07, type: 'triangle' }); },
+    win()     { chord([392, 494, 587, 784], 0.13, { type: 'sawtooth', vol: 0.12, dur: 0.9, lp: 2200 }); },
+    lose()    { chord([392, 349, 311, 262], 0.18, { type: 'triangle', vol: 0.14, dur: 0.9 }); },
+  };
+
+  function play(name) {
+    if (!ac || muted) return;
+    try { (SFX[name] || (() => {}))(); } catch (e) { if (window.DEBUG_SOUND) throw e; /* звук не обязателен */ }
+  }
+
+  /* ---------------- фоновые звуки локаций ---------------- */
+  function loopNoise(cur, o) {
+    const src = ac.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const f = ac.createBiquadFilter(); f.type = o.filter || 'lowpass'; f.frequency.value = o.freq; f.Q.value = o.q || 0.7;
+    const g = ac.createGain(); g.gain.value = o.vol;
+    if (o.lfo) {
+      const l = ac.createOscillator(); l.frequency.value = o.lfo;
+      const lg = ac.createGain(); lg.gain.value = o.vol * (o.depth || 0.8);
+      l.connect(lg); lg.connect(g.gain); l.start(); cur.nodes.push(l);
+    }
+    src.connect(f); f.connect(g); g.connect(cur.out); src.start();
+    cur.nodes.push(src);
+  }
+  function drone(cur, freqs, vol, lp) {
+    const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp;
+    const g = ac.createGain(); g.gain.value = vol;
+    f.connect(g); g.connect(cur.out);
+    freqs.forEach((fr) => { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.connect(f); o.start(); cur.nodes.push(o); });
+  }
+  /** Случайно повторяющееся событие */
+  function every(cur, minS, maxS, fn) {
+    const tick = () => {
+      if (current !== cur) return;
+      if (!muted) { try { fn(cur.out); } catch (e) { /* ignore */ } }
+      cur.timers.push(setTimeout(tick, (minS + Math.random() * (maxS - minS)) * 1000));
+    };
+    cur.timers.push(setTimeout(tick, (minS * 0.5 + Math.random() * minS) * 1000));
+  }
+
+  const BUILD = {
+    tavern(c) {
+      loopNoise(c, { freq: 300, vol: 0.12, lfo: 0.3, depth: 0.3 });
+      every(c, 0.05, 0.4, (o) => noise(0.03, { filter: 'bandpass', freq: 2000 + Math.random() * 3000, q: 3, vol: 0.1 + Math.random() * 0.2, dest: o }));
+      every(c, 6, 14, (o) => { tone(1900, 0.25, { vol: 0.05, dest: o, type: 'triangle' }); tone(2500, 0.3, { vol: 0.04, delay: 0.05, dest: o }); });
+    },
+    iron(c) {
+      loopNoise(c, { freq: 420, vol: 0.18, lfo: 0.07, depth: 0.7 });
+      every(c, 3, 6, (o) => { tone(75, 0.45, { slide: 40, vol: 0.4, dest: o }); tone(75, 0.45, { slide: 40, vol: 0.3, delay: 0.35, dest: o }); });
+      every(c, 7, 15, (o) => { tone(2400, 0.3, { type: 'triangle', vol: 0.05, dest: o }); tone(3300, 0.4, { vol: 0.03, delay: 0.02, dest: o }); });
+    },
+    forest(c) {
+      loopNoise(c, { freq: 900, vol: 0.09, lfo: 0.1, depth: 0.6 });
+      every(c, 1.5, 4.5, (o) => {
+        const base = 2200 + Math.random() * 1600, n = 2 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < n; i++) tone(base, 0.08, { slide: base * 1.4, vol: 0.06, delay: i * 0.12, dest: o });
+      });
+      every(c, 14, 28, (o) => { tone(390, 0.35, { slide: 350, vol: 0.12, dest: o, attack: 0.05 }); tone(390, 0.5, { slide: 340, vol: 0.12, delay: 0.5, dest: o, attack: 0.05 }); });
+    },
+    dark(c) {
+      drone(c, [55, 55.6, 82.4], 0.05, 220);
+      loopNoise(c, { freq: 250, vol: 0.06, lfo: 0.05, depth: 0.8 });
+      every(c, 8, 15, (o) => { tone(196, 3.5, { vol: 0.12, dest: o }); tone(466, 3, { vol: 0.04, dest: o }); tone(587, 2.5, { vol: 0.03, dest: o }); });
+      every(c, 6, 12, (o) => noise(1.2, { filter: 'bandpass', freq: 1200, slide: 2200, q: 6, vol: 0.12, attack: 0.4, dest: o }));
+    },
+    sea(c) {
+      loopNoise(c, { freq: 650, vol: 0.22, lfo: 0.12, depth: 0.9 });
+      every(c, 4, 9, (o) => { tone(1500, 0.28, { slide: 950, vol: 0.06, dest: o }); tone(1300, 0.32, { slide: 850, vol: 0.05, delay: 0.32, dest: o }); });
+      every(c, 7, 13, (o) => tone(95, 0.6, { type: 'sawtooth', slide: 70, vol: 0.06, lp: 400, attack: 0.15, dest: o }));
+    },
+  };
+
+  function stopLocation() {
+    if (!current) return;
+    const old = current;
+    current = null;
+    old.timers.forEach(clearTimeout);
+    const t = now();
+    old.out.gain.setTargetAtTime(0.0001, t, 0.4);
+    setTimeout(() => { old.nodes.forEach((n) => { try { n.stop(); } catch (e) { /* ignore */ } }); old.out.disconnect(); }, 2500);
+  }
+
+  function setLocation(key) {
+    wanted = key;
+    if (!ac || (current && current.key === key)) return;
+    stopLocation();
+    const out = ac.createGain();
+    out.gain.value = 0.0001;
+    out.connect(amb);
+    out.gain.setTargetAtTime(1, now(), 0.8);
+    current = { key, nodes: [], timers: [], out };
+    (BUILD[key] || BUILD.tavern)(current);
+  }
+
+  function setMuted(m) {
+    muted = m;
+    try { localStorage.setItem('tron-muted', m ? '1' : '0'); } catch (e) { /* ignore */ }
+    if (ac) master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.1);
+  }
+
+  return { init, play, setLocation, setMuted, isMuted: () => muted };
+})();
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   ВИЗУАЛЬНЫЕ ЭФФЕКТЫ
+   - анимированная погода на рядах (canvas)
+   - искры, угли, обломки
+   - «сгорание» уничтоженных карт, всплывающие числа, тряска стола
+   Все координаты — в системе #stage (1600×900).
+   ===================================================================== */
+
+const FX = (() => {
+  let cv = null, cx = null, layer = null;
+  let rows = {};                                  // 'side:row' → rect
+  const level = { melee: 0, ranged: 0, siege: 0 }; // текущая сила погоды 0..1
+  let target = { melee: false, ranged: false, siege: false };
+  let parts = [];
+  let raf = 0, last = 0, t = 0;
+  const MAX_PARTS = 420;
+
+  function init() {
+    cv = document.getElementById('fx-canvas');
+    cx = cv.getContext('2d');
+    layer = document.getElementById('fx-layer');
+  }
+
+  function stageScale() {
+    const sr = document.getElementById('stage').getBoundingClientRect();
+    return { sr, k: sr.width / 1600 || 1 };
+  }
+
+  function toStage(el, cache) {
+    const { sr, k } = cache || stageScale();
+    const r = el.getBoundingClientRect();
+    return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k };
+  }
+
+  function setRows() {
+    const c = stageScale();
+    rows = {};
+    document.querySelectorAll('#board .row').forEach((el) => { rows[el.dataset.side + ':' + el.dataset.row] = toStage(el, c); });
+  }
+
+  function setWeather(w) {
+    target = Object.assign({}, w);
+    kick();
+  }
+
+  function clearAll() {
+    parts = [];
+    target = { melee: false, ranged: false, siege: false };
+    ROWS.forEach((r) => { level[r] = 0; });
+    if (cx) cx.clearRect(0, 0, 1600, 900);
+    if (layer) layer.innerHTML = '';
+  }
+
+  /* ---------------- частицы ---------------- */
+  function add(p) {
+    if (parts.length >= MAX_PARTS) return;
+    p.age = 0;
+    parts.push(p);
+  }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  /** Взрыв частиц в точке. kind: ember | debris | spark | heal | shield | dust */
+  function burst(x, y, kind, n) {
+    for (let i = 0; i < (n || 20); i++) {
+      const a = rand(0, Math.PI * 2), sp = rand(60, 260);
+      const p = { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.5, 1.1), kind };
+      if (kind === 'ember')  { p.vy -= 120; p.g = -40; p.r = rand(1.5, 3.5); p.col = pickRandom(['#ffb347', '#ff7b2b', '#ffd36b', '#ff4b1f']); }
+      if (kind === 'debris') { p.g = 700; p.r = rand(3, 7); p.rot = rand(0, 6); p.vr = rand(-12, 12); p.col = pickRandom(['#6b4a2a', '#8a6a44', '#4a3a2a', '#9a8a70']); p.vy -= 200; }
+      if (kind === 'spark')  { p.g = 300; p.r = rand(1, 2.5); p.col = pickRandom(['#fff3c4', '#ffd36b', '#ffffff']); p.life = rand(0.3, 0.7); }
+      if (kind === 'heal')   { p.vx *= 0.25; p.vy = rand(-90, -40); p.g = 0; p.r = rand(2, 4); p.col = pickRandom(['#8dff8d', '#d8ffb0', '#5fe08a']); p.cross = true; }
+      if (kind === 'shield') { p.g = 0; p.r = rand(1.5, 3); p.col = pickRandom(['#9ed8ff', '#e6f6ff', '#5aa0f0']); p.life = rand(0.4, 0.8); }
+      if (kind === 'dust')   { p.vy = rand(-40, 10); p.vx *= 0.6; p.g = 30; p.r = rand(4, 9); p.col = 'rgba(200,180,140,.35)'; p.soft = true; p.life = rand(0.4, 0.8); }
+      add(p);
+    }
+    kick();
+  }
+
+  function burstRect(r, kind, n) { burst(r.x + r.w / 2, r.y + r.h / 2, kind, n); }
+
+  /* ---------------- погода ---------------- */
+  // ближний бой — «кишечная» зелено-бурая муть с пузырями
+  // дальний бой — ливень
+  // осада — пьяный угар: янтарно-лиловая дымка и пена
+  const FOG = {
+    melee:  ['rgba(110,140,40,', 'rgba(120,90,30,'],
+    ranged: ['rgba(150,170,200,', 'rgba(110,130,160,'],
+    siege:  ['rgba(200,140,40,', 'rgba(150,60,170,'],
+  };
+
+  function spawnWeather(dt) {
+    for (const r of ROWS) {
+      const L = level[r];
+      if (L < 0.02) continue;
+      for (const side of [0, 1]) {
+        const R = rows[side + ':' + r];
+        if (!R) continue;
+        if (r === 'ranged') {
+          const n = Math.round(L * 90 * dt * 10) / 10 + (Math.random() < (L * 90 * dt) % 1 ? 1 : 0);
+          for (let i = 0; i < n; i++) {
+            add({ kind: 'rain', x: rand(R.x - 30, R.x + R.w), y: R.y - 10, vx: 120, vy: rand(650, 800), life: 1, bottom: R.y + R.h - 4, R });
+          }
+        } else if (r === 'melee') {
+          if (Math.random() < L * 18 * dt) {
+            add({ kind: 'bubble', x: rand(R.x + 10, R.x + R.w - 10), y: R.y + R.h - 6, vx: 0, vy: rand(-45, -20), life: rand(1.4, 2.6), r: rand(3, 9),
+              col: pickRandom(['rgba(150,180,60,', 'rgba(140,100,40,']), top: R.y + 6, wob: rand(0, 6) });
+          }
+        } else if (Math.random() < L * 14 * dt) {
+          add({ kind: 'bubble', x: rand(R.x + 10, R.x + R.w - 10), y: R.y + R.h - 6, vx: rand(-10, 10), vy: rand(-35, -15), life: rand(1.6, 3), r: rand(2, 6),
+            col: pickRandom(['rgba(255,240,200,', 'rgba(255,200,120,', 'rgba(220,170,255,']), top: R.y + 6, wob: rand(0, 6) });
+        }
+      }
+    }
+  }
+
+  function drawFog() {
+    for (const r of ROWS) {
+      const L = level[r];
+      if (L < 0.02) continue;
+      for (const side of [0, 1]) {
+        const R = rows[side + ':' + r];
+        if (!R) continue;
+        cx.save();
+        cx.beginPath();
+        cx.rect(R.x, R.y, R.w, R.h);
+        cx.clip();
+        const cols = FOG[r];
+        for (let i = 0; i < 5; i++) {
+          const speed = r === 'ranged' ? 40 : 18;
+          const span = R.w + 320;
+          const x = R.x - 160 + ((t * speed * (i % 2 ? 1 : -0.7) + i * 230) % span + span) % span;
+          const y = R.y + R.h * (0.3 + 0.4 * Math.sin(t * 0.6 + i * 1.7) * 0.5 + 0.2);
+          const rad = 90 + 30 * Math.sin(t + i);
+          const g = cx.createRadialGradient(x, y, 0, x, y, rad);
+          const a = (r === 'ranged' ? 0.18 : 0.24) * L;
+          g.addColorStop(0, cols[i % 2] + a + ')');
+          g.addColorStop(1, cols[i % 2] + '0)');
+          cx.fillStyle = g;
+          cx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+        }
+        if (r === 'ranged') { // тёмная пелена дождя
+          cx.fillStyle = `rgba(20,30,50,${0.25 * L})`;
+          cx.fillRect(R.x, R.y, R.w, R.h);
+        }
+        cx.restore();
+      }
+    }
+  }
+
+  /* ---------------- цикл ---------------- */
+  function busy() {
+    return parts.length > 0 || ROWS.some((r) => level[r] > 0.01 || target[r]);
+  }
+
+  function kick() {
+    if (!raf && cx) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    t += dt;
+    for (const r of ROWS) {
+      const goal = target[r] ? 1 : 0;
+      level[r] += (goal - level[r]) * Math.min(1, dt * 1.6);
+      if (!target[r] && level[r] < 0.01) level[r] = 0;
+    }
+    spawnWeather(dt);
+    cx.clearRect(0, 0, 1600, 900);
+    drawFog();
+
+    const alive = [];
+    for (const p of parts) {
+      p.age += dt;
+      if (p.kind === 'rain') {
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        if (p.y >= p.bottom) {
+          for (let i = 0; i < 2; i++) add({ kind: 'splash', x: p.x, y: p.bottom, vx: rand(-60, 60), vy: rand(-120, -60), g: 500, life: 0.25, r: 1.2, col: '#bcd6ff' });
+          continue;
+        }
+        if (p.x > p.R.x + p.R.w) continue;
+        cx.strokeStyle = 'rgba(190,215,255,.55)';
+        cx.lineWidth = 1.3;
+        cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(p.x - p.vx * 0.02, p.y - p.vy * 0.02); cx.stroke();
+        alive.push(p);
+        continue;
+      }
+      if (p.age >= p.life) continue;
+      const k = 1 - p.age / p.life;
+      if (p.kind === 'bubble') {
+        p.y += p.vy * dt;
+        const x = p.x + Math.sin(t * 3 + p.wob) * 4;
+        if (p.y < p.top) { add({ kind: 'spark', x, y: p.y, vx: rand(-30, 30), vy: rand(-30, 10), g: 0, life: 0.2, r: 1, col: '#fff' }); continue; }
+        cx.strokeStyle = p.col + (0.75 * k) + ')';
+        cx.fillStyle = p.col + (0.25 * k) + ')';
+        cx.lineWidth = 1.2;
+        cx.beginPath(); cx.arc(x, p.y, p.r, 0, Math.PI * 2); cx.fill(); cx.stroke();
+        alive.push(p);
+        continue;
+      }
+      p.vy += (p.g || 0) * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.kind !== 'debris') { p.vx *= 0.97; if (p.kind !== 'heal') p.vy *= 0.98; }
+      cx.globalAlpha = Math.max(0, k);
+      cx.fillStyle = p.col;
+      if (p.kind === 'debris') {
+        p.rot += p.vr * dt;
+        cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.7); cx.restore();
+      } else if (p.cross) {
+        cx.fillRect(p.x - p.r, p.y - p.r / 3, p.r * 2, p.r / 1.5);
+        cx.fillRect(p.x - p.r / 3, p.y - p.r, p.r / 1.5, p.r * 2);
+      } else {
+        if (p.kind === 'ember' || p.kind === 'spark') { cx.shadowColor = p.col; cx.shadowBlur = 8; }
+        cx.beginPath(); cx.arc(p.x, p.y, p.r * (p.soft ? 1 + p.age * 2 : 1), 0, Math.PI * 2); cx.fill();
+        cx.shadowBlur = 0;
+      }
+      cx.globalAlpha = 1;
+      alive.push(p);
+    }
+    parts = alive;
+
+    if (busy()) raf = requestAnimationFrame(frame);
+    else { raf = 0; cx.clearRect(0, 0, 1600, 900); }
+  }
+
+  /* ---------------- DOM-эффекты ---------------- */
+  function temp(el, ms) {
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), ms);
+  }
+
+  /** Сгорающая копия уничтоженной карты */
+  function ghost(html, r) {
+    const g = document.createElement('div');
+    g.className = 'ghost';
+    g.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;
+    g.innerHTML = html;
+    temp(g, 1000);
+    burstRect(r, 'ember', 26);
+    burstRect(r, 'spark', 10);
+  }
+
+  function float(text, r, cls) {
+    const f = document.createElement('div');
+    f.className = 'float ' + (cls || '');
+    f.textContent = text;
+    f.style.left = (r.x + r.w / 2) + 'px';
+    f.style.top = (r.y + r.h * 0.3) + 'px';
+    temp(f, 1200);
+  }
+
+  /** Вспышка поверх ряда */
+  function flash(r, cls) {
+    const f = document.createElement('div');
+    f.className = 'rowflash ' + (cls || '');
+    f.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;
+    temp(f, 900);
+  }
+
+  function quake() {
+    const g = document.getElementById('game');
+    g.classList.remove('quake');
+    void g.offsetWidth;
+    g.classList.add('quake');
+    setTimeout(() => g.classList.remove('quake'), 600);
+  }
+
+  /** Золотые искры по всему полю (очищение) */
+  function sparkle() {
+    Object.values(rows).forEach((R) => {
+      for (let i = 0; i < 6; i++) burst(rand(R.x, R.x + R.w), rand(R.y, R.y + R.h), 'spark', 3);
+    });
+  }
+
+  return { init, setRows, setWeather, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, toStage, rowRect: (side, row) => rows[side + ':' + row] };
+})();
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
    ИНТЕРФЕЙС И ИГРОВОЙ ЦИКЛ
    ===================================================================== */
 
@@ -1643,6 +2288,10 @@ const App = {
   seen: new Set(),
   logLines: [],
   galTab: 'shared',
+  fxq: [],            // события для анимаций и звуков
+  prevPow: new Map(), // сила карт на прошлой отрисовке
+  handSeen: new Set(),
+  props: null,        // разрушаемое окружение
   extra: true,        // добавлять в колоду новые карты без картинок
 };
 
@@ -1801,6 +2450,7 @@ function addLog(msg) {
 const CTX = {
   sim: false,
   log: addLog,
+  fx(type, d) { App.fxq.push(Object.assign({ type }, d)); },
   choose(pIdx, cards, title, canSkip) {
     if (pIdx !== 0) return Promise.resolve(AI.pickBest(cards));
     render();
@@ -1819,9 +2469,121 @@ function overlapGap(n, avail, cw, gap) {
   return Math.floor((avail - cw) / (n - 1) - cw);
 }
 
+/* ---------------------- окружение поля ---------------------- */
+const FIELD = {
+  iron:   { melee: ['🛡️', 'Стойка со щитами'], ranged: ['🎯', 'Мишень'], siege: ['🛢️', 'Пороховая бочка'] },
+  forest: { melee: ['🪵', 'Бревно'], ranged: ['🍄', 'Мухомор'], siege: ['🌳', 'Старый дуб'] },
+  dark:   { melee: ['🕯️', 'Свечи'], ranged: ['💀', 'Череп'], siege: ['⚱️', 'Урна с прахом'] },
+  sea:    { melee: ['⚓', 'Якорь'], ranged: ['🧭', 'Компас'], siege: ['📦', 'Ящик с грузом'] },
+};
+const PROP_HP = 4;
+
+function makeProps(s) {
+  return [0, 1].map((side) => {
+    const f = FIELD[s.players[side].faction];
+    const o = {};
+    ROWS.forEach((r) => { o[r] = { icon: f[r][0], name: f[r][1], hp: PROP_HP }; });
+    return o;
+  });
+}
+
+function propHTML(side, r) {
+  const P = App.props && App.props[side][r];
+  if (!P) return '';
+  const d = P.hp <= 0 ? 'broken' : P.hp < PROP_HP ? 'd' + Math.min(3, PROP_HP - P.hp) : '';
+  return `<div class="prop ${d}" title="${esc(P.name)}${P.hp <= 0 ? ' (разрушено)' : ''}" data-prop="${side}:${r}">
+    <span class="pi">${P.icon}</span><span class="php"><i style="width:${Math.max(0, P.hp) / PROP_HP * 100}%"></i></span></div>`;
+}
+
+/** Применяет события к окружению до отрисовки, возвращает что анимировать после. */
+function damageProps(events) {
+  const out = [];
+  if (!App.props) return out;
+  for (const e of events) {
+    const dmg = e.type === 'hit' ? 1 : e.type === 'kill' ? 1 : e.type === 'burn' ? 2 : 0;
+    if (!dmg || e.side == null || !e.row) continue;
+    const P = App.props[e.side][e.row];
+    if (!P || P.hp <= 0) continue;
+    P.hp = Math.max(0, P.hp - dmg);
+    out.push({ side: e.side, row: e.row, broken: P.hp === 0 });
+  }
+  return out;
+}
+
+function snapshotBoard() {
+  const snap = new Map();
+  document.querySelectorAll('#board .card[data-uid]').forEach((el) => snap.set(+el.dataset.uid, { rect: FX.toStage(el), html: el.outerHTML }));
+  return snap;
+}
+
+const SPECIAL_SOUND = { weather: null, clear: 'clear', horn: 'horn', fort: 'horn', heal: 'heal', healOne: 'heal', revive: 'heal',
+  draw2: 'draw', shop: 'draw', tax: 'draw', shield: 'absorb' };
+
+/** Звуки и эффекты после отрисовки */
+function playFx(events, snap, propHits) {
+  const sounds = new Set();
+  let kills = 0;
+  const elOf = (uid) => document.querySelector(`#board .card[data-uid="${uid}"]`);
+  for (const e of events) {
+    switch (e.type) {
+      case 'place': {
+        sounds.add(e.hero ? 'hero' : 'place');
+        const el = elOf(e.uid);
+        if (el) setTimeout(() => FX.burstRect(FX.toStage(el), e.hero ? 'spark' : 'dust', e.hero ? 30 : 14), 280);
+        break;
+      }
+      case 'special':
+        if (e.kind === 'weather') sounds.add('weather_' + e.wrow);
+        else sounds.add(SPECIAL_SOUND[e.kind] || 'special');
+        if (e.kind === 'clear') FX.sparkle();
+        if ((e.kind === 'heal' || e.kind === 'healOne') && FX.rowRect(e.pIdx, 'melee')) {
+          ROWS.forEach((r) => FX.burstRect(FX.rowRect(e.pIdx, r), 'heal', e.kind === 'heal' ? 14 : 5));
+        }
+        if (e.row && e.side != null && FX.rowRect(e.side, e.row)) {
+          const cls = { curse: 'curse', rowdmg: 'curse', story: 'curse', horn: 'gold', fort: 'gold', shield: 'blue' }[e.kind];
+          if (cls) FX.flash(FX.rowRect(e.side, e.row), cls);
+        }
+        if (e.kind === 'scorch' || e.kind === 'kill2' || e.kind === 'aoe') FX.quake();
+        break;
+      case 'hit': {
+        sounds.add('hit');
+        const el = elOf(e.uid);
+        if (el) { el.classList.add('hit'); FX.burstRect(FX.toStage(el), 'spark', 12); }
+        break;
+      }
+      case 'kill': {
+        kills++;
+        const g = snap.get(e.uid);
+        if (g) FX.ghost(g.html, g.rect);
+        break;
+      }
+      case 'absorb': sounds.add('absorb'); if (FX.rowRect(e.side, e.row)) { FX.flash(FX.rowRect(e.side, e.row), 'blue'); FX.burstRect(FX.rowRect(e.side, e.row), 'shield', 30); } break;
+      case 'burn': sounds.add('burn'); break;
+      case 'pass': sounds.add('pass'); break;
+      case 'leader': sounds.add('leader'); break;
+    }
+  }
+  if (kills) { sounds.add('kill'); if (kills >= 2) { sounds.add('quake'); FX.quake(); } }
+  for (const ph of propHits) {
+    const el = document.querySelector(`[data-prop="${ph.side}:${ph.row}"]`);
+    if (!el) continue;
+    el.classList.add('shake');
+    const r = FX.toStage(el);
+    FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'debris', ph.broken ? 28 : 8);
+    if (ph.broken) { FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'dust', 16); sounds.add('smash'); } else sounds.add('crack');
+  }
+  sounds.forEach((n) => Sound.play(n));
+}
+
 function render() {
   const s = App.s;
   if (!s) return;
+  const snap = snapshotBoard();
+  const events = App.fxq.splice(0);
+  const propHits = damageProps(events);
+  const placedBy = new Map(events.filter((e) => e.type === 'place').map((e) => [e.uid, e.pIdx]));
+  let freshN = 0;
+  const floats = [];
   if (App.sel && !s.players[0].hand.includes(App.sel)) App.sel = null;
   App.targets = App.sel && canAct() ? legalTargets(s, 0, App.sel) : [];
   const tRows = new Set(App.targets.filter((t) => t.type === 'row').map((t) => t.side + ':' + t.row));
@@ -1832,13 +2594,22 @@ function render() {
   const rowHTML = (side, r) => {
     const row = s.players[side].rows[r];
     const n = row.cards.length;
-    const gap = overlapGap(n, 846, 66, 4);
+    const gap = overlapGap(n, 790, 66, 4);
     const cards = row.cards.map((c) => {
       newSeen.add(c.uid);
       const extra = [];
-      if (!App.seen.has(c.uid)) extra.push('fresh');
+      const pw = cardPower(s, side, r, c);
+      let style = '';
+      if (!App.seen.has(c.uid)) {
+        const by = placedBy.has(c.uid) ? placedBy.get(c.uid) : c.owner;
+        extra.push('fresh', by === 0 ? 'from-me' : 'from-op');
+        style = `animation-delay:${Math.min(freshN++, 6) * 90}ms`;
+      } else if (c.type === 'unit' && App.prevPow.has(c.uid) && App.prevPow.get(c.uid) !== pw) {
+        floats.push({ uid: c.uid, d: pw - App.prevPow.get(c.uid) });
+      }
+      App.prevPow.set(c.uid, pw);
       if (tUnits.has(c.uid)) extra.push('target-unit', side === 0 ? 'mine' : '');
-      return cardHTML(c, { power: cardPower(s, side, r, c), cls: 'sm ' + extra.join(' ') });
+      return cardHTML(c, { power: pw, cls: 'sm ' + extra.join(' ') }).replace('<div class="card', `<div style="${style}" class="card`);
     }).join('');
     const slot = SLOT_KEYS.map((k) => row[k]).filter(Boolean);
     const slotHTML = slot.length ? slot.map((c) => cardHTML(c, { cls: 'sm' })).join('') : `<span class="slot-ic">${side === 0 ? '📯' : ''}</span>`;
@@ -1850,14 +2621,20 @@ function render() {
       <div class="rscore">${rowScore(s, side, r)}</div>
       <div class="rslot ${slot.length > 2 ? 'many' : slot.length > 1 ? 'two' : ''}">${slotHTML}</div>
       <div class="rcards" style="--gap:${gap}px">${cards}</div>
+      ${propHTML(side, r)}
       <div class="rlabel">${ROW_ICONS[r]}</div><div class="wfx"></div></div>`;
+  };
+  const half = (side, order) => {
+    const fk = s.players[side].faction;
+    return `<div class="half field-${fk} side${side}" data-emblem="${FACTIONS[fk].emblem}">${order.map((r) => rowHTML(side, r)).join('')}</div>`;
   };
 
   $('#board').innerHTML =
-    ['siege', 'ranged', 'melee'].map((r) => rowHTML(1, r)).join('') +
-    '<div class="divider"></div>' +
-    ['melee', 'ranged', 'siege'].map((r) => rowHTML(0, r)).join('');
+    half(1, ['siege', 'ranged', 'melee']) +
+    '<div class="divider"><span class="torch l">🔥</span><span class="torch r">🔥</span></div>' +
+    half(0, ['melee', 'ranged', 'siege']);
   App.seen = newSeen;
+  for (const uid of App.prevPow.keys()) if (!newSeen.has(uid)) App.prevPow.delete(uid);
 
   // рука
   const me = s.players[0];
@@ -1871,9 +2648,18 @@ function render() {
   const handEl = $('#hand');
   handEl.style.setProperty('--gap', hgap + 'px');
   handEl.classList.toggle('locked', !canAct());
+  let drawnN = 0;
+  const newHand = new Set();
   handEl.innerHTML = hand.length
-    ? hand.map((c) => cardHTML(c, { cls: 'md' + (c === App.sel ? ' sel' : '') })).join('')
+    ? hand.map((c) => {
+      newHand.add(c.uid);
+      const drawn = !App.handSeen.has(c.uid);
+      const html = cardHTML(c, { cls: 'md' + (c === App.sel ? ' sel' : '') + (drawn ? ' drawn' : '') });
+      return drawn ? html.replace('<div class="card', `<div style="animation-delay:${Math.min(drawnN++, 10) * 70}ms" class="card`) : html;
+    }).join('')
     : '<div class="hand-empty">Рука пуста</div>';
+  if (drawnN && App.handSeen.size) Sound.play('draw');
+  App.handSeen = newHand;
 
   // погода
   const wEl = $('#weather');
@@ -1917,6 +2703,24 @@ function render() {
   passBtn.textContent = App.passArm ? 'Точно пас?' : 'Пас';
 
   if (!App.hovering) $('#preview').innerHTML = previewHTML(App.sel);
+
+  // освещение зависит от того, чей ход
+  const g = $('#game');
+  const turn = s.phase !== 'play' ? 'none' : s.current === 0 ? 'me' : 'op';
+  g.classList.toggle('turn-me', turn === 'me');
+  g.classList.toggle('turn-op', turn === 'op');
+  g.classList.toggle('turn-none', turn === 'none');
+  g.classList.toggle('stormy', ROWS.some((r) => s.weather[r]));
+
+  FX.setRows();
+  FX.setWeather(s.weather);
+  for (const f of floats) {
+    const el = document.querySelector(`#board .card[data-uid="${f.uid}"]`);
+    if (!el) continue;
+    if (f.d < 0) el.classList.add('hit');
+    FX.float((f.d > 0 ? '+' : '') + f.d, FX.toStage(el), f.d > 0 ? 'up' : 'down');
+  }
+  playFx(events, snap, propHits);
 }
 
 /* ---------------------- баннер и модальные окна ---------------------- */
@@ -2126,6 +2930,7 @@ async function loop() {
       render();
       if (App.lastActor === 1 && !s.players[1].passed) {
         App.lastActor = 0;
+        Sound.play('turn');
         banner('Ваш ход', '', 650);
       }
       return;
@@ -2147,7 +2952,9 @@ async function finishRound() {
   const sub = `${r.scores[0]} : ${r.scores[1]}${r.tieBreak ? ' — ничья в пользу Морских Кланов' : ''}`;
   addLog(`Итог раунда ${roundNo}: ${sub}`);
   App.seen = new Set();
+  App.prevPow = new Map();
   render();
+  Sound.play(r.winner === 0 ? 'win' : 'lose');
   await banner(title, sub, 1900);
   if (s.phase === 'over') return;
   App.lastActor = null;
@@ -2157,19 +2964,26 @@ async function finishRound() {
 function showGameOver() {
   const s = App.s;
   const title = s.winner === 0 ? '🏆 Победа!' : s.winner === 1 ? 'Поражение' : 'Ничья';
+  Sound.play(s.winner === 0 ? 'win' : 'lose');
   const rows = s.history.map((h) => `<tr><td>Раунд ${h.round}</td>
     <td class="${h.winner === 0 ? 'w' : ''}">${h.scores[0]}</td><td class="${h.winner === 1 ? 'w' : ''}">${h.scores[1]}</td></tr>`).join('');
   modal(`<h2>${title}</h2>
     <table class="result-table"><tr><th></th><th>Вы</th><th>Противник</th></tr>${rows}</table>
     <div class="mbtns"><button class="btn btn-gold" data-v="again">Ещё партию</button><button class="btn" data-v="menu">В меню</button></div>`)
-    .then((v) => { if (v === 'again') startGame(); else { App.s = null; show('menu'); } });
+    .then((v) => { if (v === 'again') startGame(); else goMenu(); });
 }
 
 async function leaveToMenu() {
   const ok = await confirmModal('Выйти в меню?', 'Текущая партия будет потеряна.', 'Выйти');
   if (!ok) return;
-  App.s = null;
   $('#banner').classList.add('hidden');
+  goMenu();
+}
+
+function goMenu() {
+  App.s = null;
+  FX.clearAll();
+  Sound.setLocation('tavern');
   show('menu');
 }
 
@@ -2180,6 +2994,13 @@ async function startGame() {
   App.s = s;
   App.sel = null;
   App.seen = new Set();
+  App.prevPow = new Map();
+  App.handSeen = new Set();
+  App.fxq = [];
+  App.props = makeProps(s);
+  FX.clearAll();
+  Sound.setLocation(App.myFaction);
+  ['iron', 'forest', 'dark', 'sea'].forEach((k) => $('#game').classList.toggle('loc-' + k, k === App.myFaction));
   App.logLines = [];
   App.lastActor = null;
   App.busy = true;
@@ -2207,7 +3028,7 @@ async function startGame() {
   s.current = first;
   s.phase = 'play';
   render();
-  await banner('Раунд 1', first === 0 ? 'Вы ходите первым' : 'Первым ходит противник', 1500);
+  await banner('Раунд 1', `Локация: ${LOCATIONS[App.myFaction].name} · ${first === 0 ? 'вы ходите первым' : 'первым ходит противник'}`, 1700);
   App.busy = false;
   loop();
 }
@@ -2220,7 +3041,8 @@ function renderMenu() {
       <div class="fe">${f.emblem}</div><h4>${f.name}</h4>
       <p>${f.desc}</p>
       <p class="perk">✦ ${f.perk}</p>
-      <p class="ldr">👑 ${f.leader.name}: ${f.leader.desc}</p></div>`;
+      <p class="ldr">👑 ${f.leader.name}: ${f.leader.desc}</p>
+      <p class="loc">🗺️ Поле: ${LOCATIONS[k].name}</p></div>`;
   }).join('');
   $('#opp-select').innerHTML = `<option value="random">Случайная фракция</option>` +
     Object.keys(FACTIONS).map((k) => `<option value="${k}" ${App.oppFaction === k ? 'selected' : ''}>${FACTIONS[k].name}</option>`).join('');
@@ -2268,8 +3090,24 @@ function renderGallery() {
 }
 
 /* ---------------------- инициализация ---------------------- */
+function updateSoundBtns() {
+  document.querySelectorAll('.btn-sound').forEach((b) => { b.textContent = Sound.isMuted() ? '🔇' : '🔊'; });
+}
+
 function init() {
   fit();
+  FX.init();
+  updateSoundBtns();
+  // браузер разрешает звук только после первого касания
+  document.addEventListener('pointerdown', () => Sound.init(), { capture: true });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.btn-sound')) return;
+    e.stopPropagation();
+    Sound.init();
+    Sound.setMuted(!Sound.isMuted());
+    updateSoundBtns();
+  }, { capture: true });
+  window.addEventListener('resize', () => { if (App.s) FX.setRows(); });
   renderMenu();
 
   $('#faction-list').addEventListener('click', (e) => {

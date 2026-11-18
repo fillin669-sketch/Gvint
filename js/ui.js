@@ -20,6 +20,10 @@ const App = {
   seen: new Set(),
   logLines: [],
   galTab: 'shared',
+  fxq: [],            // события для анимаций и звуков
+  prevPow: new Map(), // сила карт на прошлой отрисовке
+  handSeen: new Set(),
+  props: null,        // разрушаемое окружение
   extra: true,        // добавлять в колоду новые карты без картинок
 };
 
@@ -178,6 +182,7 @@ function addLog(msg) {
 const CTX = {
   sim: false,
   log: addLog,
+  fx(type, d) { App.fxq.push(Object.assign({ type }, d)); },
   choose(pIdx, cards, title, canSkip) {
     if (pIdx !== 0) return Promise.resolve(AI.pickBest(cards));
     render();
@@ -196,9 +201,121 @@ function overlapGap(n, avail, cw, gap) {
   return Math.floor((avail - cw) / (n - 1) - cw);
 }
 
+/* ---------------------- окружение поля ---------------------- */
+const FIELD = {
+  iron:   { melee: ['🛡️', 'Стойка со щитами'], ranged: ['🎯', 'Мишень'], siege: ['🛢️', 'Пороховая бочка'] },
+  forest: { melee: ['🪵', 'Бревно'], ranged: ['🍄', 'Мухомор'], siege: ['🌳', 'Старый дуб'] },
+  dark:   { melee: ['🕯️', 'Свечи'], ranged: ['💀', 'Череп'], siege: ['⚱️', 'Урна с прахом'] },
+  sea:    { melee: ['⚓', 'Якорь'], ranged: ['🧭', 'Компас'], siege: ['📦', 'Ящик с грузом'] },
+};
+const PROP_HP = 4;
+
+function makeProps(s) {
+  return [0, 1].map((side) => {
+    const f = FIELD[s.players[side].faction];
+    const o = {};
+    ROWS.forEach((r) => { o[r] = { icon: f[r][0], name: f[r][1], hp: PROP_HP }; });
+    return o;
+  });
+}
+
+function propHTML(side, r) {
+  const P = App.props && App.props[side][r];
+  if (!P) return '';
+  const d = P.hp <= 0 ? 'broken' : P.hp < PROP_HP ? 'd' + Math.min(3, PROP_HP - P.hp) : '';
+  return `<div class="prop ${d}" title="${esc(P.name)}${P.hp <= 0 ? ' (разрушено)' : ''}" data-prop="${side}:${r}">
+    <span class="pi">${P.icon}</span><span class="php"><i style="width:${Math.max(0, P.hp) / PROP_HP * 100}%"></i></span></div>`;
+}
+
+/** Применяет события к окружению до отрисовки, возвращает что анимировать после. */
+function damageProps(events) {
+  const out = [];
+  if (!App.props) return out;
+  for (const e of events) {
+    const dmg = e.type === 'hit' ? 1 : e.type === 'kill' ? 1 : e.type === 'burn' ? 2 : 0;
+    if (!dmg || e.side == null || !e.row) continue;
+    const P = App.props[e.side][e.row];
+    if (!P || P.hp <= 0) continue;
+    P.hp = Math.max(0, P.hp - dmg);
+    out.push({ side: e.side, row: e.row, broken: P.hp === 0 });
+  }
+  return out;
+}
+
+function snapshotBoard() {
+  const snap = new Map();
+  document.querySelectorAll('#board .card[data-uid]').forEach((el) => snap.set(+el.dataset.uid, { rect: FX.toStage(el), html: el.outerHTML }));
+  return snap;
+}
+
+const SPECIAL_SOUND = { weather: null, clear: 'clear', horn: 'horn', fort: 'horn', heal: 'heal', healOne: 'heal', revive: 'heal',
+  draw2: 'draw', shop: 'draw', tax: 'draw', shield: 'absorb' };
+
+/** Звуки и эффекты после отрисовки */
+function playFx(events, snap, propHits) {
+  const sounds = new Set();
+  let kills = 0;
+  const elOf = (uid) => document.querySelector(`#board .card[data-uid="${uid}"]`);
+  for (const e of events) {
+    switch (e.type) {
+      case 'place': {
+        sounds.add(e.hero ? 'hero' : 'place');
+        const el = elOf(e.uid);
+        if (el) setTimeout(() => FX.burstRect(FX.toStage(el), e.hero ? 'spark' : 'dust', e.hero ? 30 : 14), 280);
+        break;
+      }
+      case 'special':
+        if (e.kind === 'weather') sounds.add('weather_' + e.wrow);
+        else sounds.add(SPECIAL_SOUND[e.kind] || 'special');
+        if (e.kind === 'clear') FX.sparkle();
+        if ((e.kind === 'heal' || e.kind === 'healOne') && FX.rowRect(e.pIdx, 'melee')) {
+          ROWS.forEach((r) => FX.burstRect(FX.rowRect(e.pIdx, r), 'heal', e.kind === 'heal' ? 14 : 5));
+        }
+        if (e.row && e.side != null && FX.rowRect(e.side, e.row)) {
+          const cls = { curse: 'curse', rowdmg: 'curse', story: 'curse', horn: 'gold', fort: 'gold', shield: 'blue' }[e.kind];
+          if (cls) FX.flash(FX.rowRect(e.side, e.row), cls);
+        }
+        if (e.kind === 'scorch' || e.kind === 'kill2' || e.kind === 'aoe') FX.quake();
+        break;
+      case 'hit': {
+        sounds.add('hit');
+        const el = elOf(e.uid);
+        if (el) { el.classList.add('hit'); FX.burstRect(FX.toStage(el), 'spark', 12); }
+        break;
+      }
+      case 'kill': {
+        kills++;
+        const g = snap.get(e.uid);
+        if (g) FX.ghost(g.html, g.rect);
+        break;
+      }
+      case 'absorb': sounds.add('absorb'); if (FX.rowRect(e.side, e.row)) { FX.flash(FX.rowRect(e.side, e.row), 'blue'); FX.burstRect(FX.rowRect(e.side, e.row), 'shield', 30); } break;
+      case 'burn': sounds.add('burn'); break;
+      case 'pass': sounds.add('pass'); break;
+      case 'leader': sounds.add('leader'); break;
+    }
+  }
+  if (kills) { sounds.add('kill'); if (kills >= 2) { sounds.add('quake'); FX.quake(); } }
+  for (const ph of propHits) {
+    const el = document.querySelector(`[data-prop="${ph.side}:${ph.row}"]`);
+    if (!el) continue;
+    el.classList.add('shake');
+    const r = FX.toStage(el);
+    FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'debris', ph.broken ? 28 : 8);
+    if (ph.broken) { FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'dust', 16); sounds.add('smash'); } else sounds.add('crack');
+  }
+  sounds.forEach((n) => Sound.play(n));
+}
+
 function render() {
   const s = App.s;
   if (!s) return;
+  const snap = snapshotBoard();
+  const events = App.fxq.splice(0);
+  const propHits = damageProps(events);
+  const placedBy = new Map(events.filter((e) => e.type === 'place').map((e) => [e.uid, e.pIdx]));
+  let freshN = 0;
+  const floats = [];
   if (App.sel && !s.players[0].hand.includes(App.sel)) App.sel = null;
   App.targets = App.sel && canAct() ? legalTargets(s, 0, App.sel) : [];
   const tRows = new Set(App.targets.filter((t) => t.type === 'row').map((t) => t.side + ':' + t.row));
@@ -209,13 +326,22 @@ function render() {
   const rowHTML = (side, r) => {
     const row = s.players[side].rows[r];
     const n = row.cards.length;
-    const gap = overlapGap(n, 846, 66, 4);
+    const gap = overlapGap(n, 790, 66, 4);
     const cards = row.cards.map((c) => {
       newSeen.add(c.uid);
       const extra = [];
-      if (!App.seen.has(c.uid)) extra.push('fresh');
+      const pw = cardPower(s, side, r, c);
+      let style = '';
+      if (!App.seen.has(c.uid)) {
+        const by = placedBy.has(c.uid) ? placedBy.get(c.uid) : c.owner;
+        extra.push('fresh', by === 0 ? 'from-me' : 'from-op');
+        style = `animation-delay:${Math.min(freshN++, 6) * 90}ms`;
+      } else if (c.type === 'unit' && App.prevPow.has(c.uid) && App.prevPow.get(c.uid) !== pw) {
+        floats.push({ uid: c.uid, d: pw - App.prevPow.get(c.uid) });
+      }
+      App.prevPow.set(c.uid, pw);
       if (tUnits.has(c.uid)) extra.push('target-unit', side === 0 ? 'mine' : '');
-      return cardHTML(c, { power: cardPower(s, side, r, c), cls: 'sm ' + extra.join(' ') });
+      return cardHTML(c, { power: pw, cls: 'sm ' + extra.join(' ') }).replace('<div class="card', `<div style="${style}" class="card`);
     }).join('');
     const slot = SLOT_KEYS.map((k) => row[k]).filter(Boolean);
     const slotHTML = slot.length ? slot.map((c) => cardHTML(c, { cls: 'sm' })).join('') : `<span class="slot-ic">${side === 0 ? '📯' : ''}</span>`;
@@ -227,14 +353,20 @@ function render() {
       <div class="rscore">${rowScore(s, side, r)}</div>
       <div class="rslot ${slot.length > 2 ? 'many' : slot.length > 1 ? 'two' : ''}">${slotHTML}</div>
       <div class="rcards" style="--gap:${gap}px">${cards}</div>
+      ${propHTML(side, r)}
       <div class="rlabel">${ROW_ICONS[r]}</div><div class="wfx"></div></div>`;
+  };
+  const half = (side, order) => {
+    const fk = s.players[side].faction;
+    return `<div class="half field-${fk} side${side}" data-emblem="${FACTIONS[fk].emblem}">${order.map((r) => rowHTML(side, r)).join('')}</div>`;
   };
 
   $('#board').innerHTML =
-    ['siege', 'ranged', 'melee'].map((r) => rowHTML(1, r)).join('') +
-    '<div class="divider"></div>' +
-    ['melee', 'ranged', 'siege'].map((r) => rowHTML(0, r)).join('');
+    half(1, ['siege', 'ranged', 'melee']) +
+    '<div class="divider"><span class="torch l">🔥</span><span class="torch r">🔥</span></div>' +
+    half(0, ['melee', 'ranged', 'siege']);
   App.seen = newSeen;
+  for (const uid of App.prevPow.keys()) if (!newSeen.has(uid)) App.prevPow.delete(uid);
 
   // рука
   const me = s.players[0];
@@ -248,9 +380,18 @@ function render() {
   const handEl = $('#hand');
   handEl.style.setProperty('--gap', hgap + 'px');
   handEl.classList.toggle('locked', !canAct());
+  let drawnN = 0;
+  const newHand = new Set();
   handEl.innerHTML = hand.length
-    ? hand.map((c) => cardHTML(c, { cls: 'md' + (c === App.sel ? ' sel' : '') })).join('')
+    ? hand.map((c) => {
+      newHand.add(c.uid);
+      const drawn = !App.handSeen.has(c.uid);
+      const html = cardHTML(c, { cls: 'md' + (c === App.sel ? ' sel' : '') + (drawn ? ' drawn' : '') });
+      return drawn ? html.replace('<div class="card', `<div style="animation-delay:${Math.min(drawnN++, 10) * 70}ms" class="card`) : html;
+    }).join('')
     : '<div class="hand-empty">Рука пуста</div>';
+  if (drawnN && App.handSeen.size) Sound.play('draw');
+  App.handSeen = newHand;
 
   // погода
   const wEl = $('#weather');
@@ -294,6 +435,24 @@ function render() {
   passBtn.textContent = App.passArm ? 'Точно пас?' : 'Пас';
 
   if (!App.hovering) $('#preview').innerHTML = previewHTML(App.sel);
+
+  // освещение зависит от того, чей ход
+  const g = $('#game');
+  const turn = s.phase !== 'play' ? 'none' : s.current === 0 ? 'me' : 'op';
+  g.classList.toggle('turn-me', turn === 'me');
+  g.classList.toggle('turn-op', turn === 'op');
+  g.classList.toggle('turn-none', turn === 'none');
+  g.classList.toggle('stormy', ROWS.some((r) => s.weather[r]));
+
+  FX.setRows();
+  FX.setWeather(s.weather);
+  for (const f of floats) {
+    const el = document.querySelector(`#board .card[data-uid="${f.uid}"]`);
+    if (!el) continue;
+    if (f.d < 0) el.classList.add('hit');
+    FX.float((f.d > 0 ? '+' : '') + f.d, FX.toStage(el), f.d > 0 ? 'up' : 'down');
+  }
+  playFx(events, snap, propHits);
 }
 
 /* ---------------------- баннер и модальные окна ---------------------- */
@@ -503,6 +662,7 @@ async function loop() {
       render();
       if (App.lastActor === 1 && !s.players[1].passed) {
         App.lastActor = 0;
+        Sound.play('turn');
         banner('Ваш ход', '', 650);
       }
       return;
@@ -524,7 +684,9 @@ async function finishRound() {
   const sub = `${r.scores[0]} : ${r.scores[1]}${r.tieBreak ? ' — ничья в пользу Морских Кланов' : ''}`;
   addLog(`Итог раунда ${roundNo}: ${sub}`);
   App.seen = new Set();
+  App.prevPow = new Map();
   render();
+  Sound.play(r.winner === 0 ? 'win' : 'lose');
   await banner(title, sub, 1900);
   if (s.phase === 'over') return;
   App.lastActor = null;
@@ -534,19 +696,26 @@ async function finishRound() {
 function showGameOver() {
   const s = App.s;
   const title = s.winner === 0 ? '🏆 Победа!' : s.winner === 1 ? 'Поражение' : 'Ничья';
+  Sound.play(s.winner === 0 ? 'win' : 'lose');
   const rows = s.history.map((h) => `<tr><td>Раунд ${h.round}</td>
     <td class="${h.winner === 0 ? 'w' : ''}">${h.scores[0]}</td><td class="${h.winner === 1 ? 'w' : ''}">${h.scores[1]}</td></tr>`).join('');
   modal(`<h2>${title}</h2>
     <table class="result-table"><tr><th></th><th>Вы</th><th>Противник</th></tr>${rows}</table>
     <div class="mbtns"><button class="btn btn-gold" data-v="again">Ещё партию</button><button class="btn" data-v="menu">В меню</button></div>`)
-    .then((v) => { if (v === 'again') startGame(); else { App.s = null; show('menu'); } });
+    .then((v) => { if (v === 'again') startGame(); else goMenu(); });
 }
 
 async function leaveToMenu() {
   const ok = await confirmModal('Выйти в меню?', 'Текущая партия будет потеряна.', 'Выйти');
   if (!ok) return;
-  App.s = null;
   $('#banner').classList.add('hidden');
+  goMenu();
+}
+
+function goMenu() {
+  App.s = null;
+  FX.clearAll();
+  Sound.setLocation('tavern');
   show('menu');
 }
 
@@ -557,6 +726,13 @@ async function startGame() {
   App.s = s;
   App.sel = null;
   App.seen = new Set();
+  App.prevPow = new Map();
+  App.handSeen = new Set();
+  App.fxq = [];
+  App.props = makeProps(s);
+  FX.clearAll();
+  Sound.setLocation(App.myFaction);
+  ['iron', 'forest', 'dark', 'sea'].forEach((k) => $('#game').classList.toggle('loc-' + k, k === App.myFaction));
   App.logLines = [];
   App.lastActor = null;
   App.busy = true;
@@ -584,7 +760,7 @@ async function startGame() {
   s.current = first;
   s.phase = 'play';
   render();
-  await banner('Раунд 1', first === 0 ? 'Вы ходите первым' : 'Первым ходит противник', 1500);
+  await banner('Раунд 1', `Локация: ${LOCATIONS[App.myFaction].name} · ${first === 0 ? 'вы ходите первым' : 'первым ходит противник'}`, 1700);
   App.busy = false;
   loop();
 }
@@ -597,7 +773,8 @@ function renderMenu() {
       <div class="fe">${f.emblem}</div><h4>${f.name}</h4>
       <p>${f.desc}</p>
       <p class="perk">✦ ${f.perk}</p>
-      <p class="ldr">👑 ${f.leader.name}: ${f.leader.desc}</p></div>`;
+      <p class="ldr">👑 ${f.leader.name}: ${f.leader.desc}</p>
+      <p class="loc">🗺️ Поле: ${LOCATIONS[k].name}</p></div>`;
   }).join('');
   $('#opp-select').innerHTML = `<option value="random">Случайная фракция</option>` +
     Object.keys(FACTIONS).map((k) => `<option value="${k}" ${App.oppFaction === k ? 'selected' : ''}>${FACTIONS[k].name}</option>`).join('');
@@ -645,8 +822,24 @@ function renderGallery() {
 }
 
 /* ---------------------- инициализация ---------------------- */
+function updateSoundBtns() {
+  document.querySelectorAll('.btn-sound').forEach((b) => { b.textContent = Sound.isMuted() ? '🔇' : '🔊'; });
+}
+
 function init() {
   fit();
+  FX.init();
+  updateSoundBtns();
+  // браузер разрешает звук только после первого касания
+  document.addEventListener('pointerdown', () => Sound.init(), { capture: true });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.btn-sound')) return;
+    e.stopPropagation();
+    Sound.init();
+    Sound.setMuted(!Sound.isMuted());
+    updateSoundBtns();
+  }, { capture: true });
+  window.addEventListener('resize', () => { if (App.s) FX.setRows(); });
   renderMenu();
 
   $('#faction-list').addEventListener('click', (e) => {

@@ -32,6 +32,7 @@
           <button class="btn btn-gold" id="btn-start">⚔ В бой</button>
           <button class="btn" id="btn-gallery">🃏 Коллекция карт</button>
           <button class="btn" id="btn-rules">📜 Правила</button>
+          <button class="btn btn-sound" title="Звук">🔊</button>
         </div>
       </div>
     </section>
@@ -53,10 +54,15 @@
         <div id="preview" class="preview"></div>
         <div class="right-buttons">
           <button class="btn btn-pass" id="btn-pass">Пас</button>
+          <button class="btn btn-small btn-sound" title="Звук">🔊</button>
           <button class="btn btn-small" id="btn-menu" title="В меню">☰</button>
         </div>
         <div class="piles" id="piles0"></div>
       </div>
+
+      <div id="light"><div class="l-me"></div><div class="l-op"></div><div class="l-flicker"></div></div>
+      <canvas id="fx-canvas" width="1600" height="900"></canvas>
+      <div id="fx-layer"></div>
     </section>
 
     <!-- ================= КОЛЛЕКЦИЯ ================= -->
@@ -80,6 +86,8 @@
 <script src="js/cards.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
 <script src="js/ui.js"></script>
 </body>
 </html>
