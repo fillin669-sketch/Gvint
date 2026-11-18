@@ -713,7 +713,7 @@ async function performAction(s, a, ctx) {
       P.mana -= costOf(s, pIdx, c);
       P.hand.splice(P.hand.indexOf(c), 1);
       ctx.log(`${P.name}: ${q(c)}`);
-      fx(ctx, 'play', { pIdx, uid: c.uid, id: c.id, type: c.type, storm: c.storm, target });
+      fx(ctx, 'play', { pIdx, uid: c.uid, id: c.id, ctype: c.type, storm: c.storm, target });
       if (c.type === 'minion') {
         const m = placeMinion(s, pIdx, c, a.pos, ctx);
         if (m && P.artifact === 'key' && !P.keyUsed) {

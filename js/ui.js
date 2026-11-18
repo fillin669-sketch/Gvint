@@ -93,7 +93,7 @@ function hcardHTML(c, o) {
 
 function minionHTML(s, m, o) {
   const cls = ['minion'];
-  if (m.rarity === 'legendary') cls.push('legendary');
+  if (m.rarity === 'legendary' || m.rarity === 'epic' || m.rarity === 'rare') cls.push(m.rarity);
   ['taunt', 'shield', 'stealth'].forEach((k) => { if (hasKw(m, k)) cls.push(k); });
   if (m.frozen) cls.push('frozen');
   if (o.extra) cls.push(o.extra);
@@ -508,6 +508,57 @@ function render() {
   Tut.decorate();
 }
 
+/* ---------------------- эффекты по редкости ---------------------- */
+const RARITY_VFX = {
+  legendary: { color: '#ffd36b', burst: 'gold' },
+  epic:      { color: '#b16cff', burst: 'arcane' },
+  rare:      { color: '#5aa0f0', burst: 'blue' },
+};
+// «фирменные» частицы легенд
+const SIGNATURE = {
+  gigaslav: '☀️', gigaslav_pro: '👼', dragon_ass: '🔥', gus: '🪶', enot: '❄️', bard: '🎵', govnomet: '💩', shaman: '💩',
+  kreditor: '🪙', baba_snaryad: '🍺', mantikora: '🚕', wife: '💍', realtor: '🏠', cheetah: '🍼', granny: '⏳',
+  magnat: '💶', boroda: '🧔', pisyunchik_zol: '🐾', ohotniki: '🦌', bolno: '🪓', tescha: '👵', batya: '🩳',
+  gibel: '💀', kaka: '🔥', spid: '☣️', srachka: '💩', yager: '🦌', tobi: '🔥', mihail: '🐍', pisyunchik_zametil: '🐾',
+};
+const sigOf = (c) => SIGNATURE[c.id] || c.icon || '✨';
+const rarityOf = (id) => {
+  const ch = App.s && findChar(App.s, id);
+  return ch && ch.kind === 'minion' ? ch.m : null;
+};
+
+/** Розыгрыш карты: заставка для легенд, руны для эпиков, искры для редких */
+function playRarityFx(e, sounds) {
+  const c = defOf(e.id);
+  if (!c || c.token) return;
+  const V = RARITY_VFX[c.rarity];
+  if (!V) return;
+  const el = e.ctype === 'minion' ? elOf(e.uid) : elOf('h' + e.pIdx);
+  const r = el ? FX.toStage(el) : null;
+  if (c.rarity === 'legendary') {
+    FX.legendIntro(c, artOf(c, true));
+    sounds.add('legend');
+    setTimeout(() => {
+      if (r) { FX.ring(r, V.color); FX.burstRect(r, 'gold', 50); FX.burstRect(r, 'emoji', 10, { ch: sigOf(c) }); }
+      FX.quake();
+    }, 1100);
+  } else if (c.rarity === 'epic') {
+    sounds.add('epic');
+    if (r) { FX.runeCircle(r, V.color); FX.burstRect(r, 'arcane', 36); }
+  } else if (r) {
+    FX.burstRect(r, 'blue', 22);
+  }
+}
+
+/** Получение урона: барьер цвета редкости */
+function defendRarityFx(m, r, sounds) {
+  const V = m && RARITY_VFX[m.rarity];
+  if (!V || !r) return;
+  FX.barrier(r, V.color);
+  FX.burstRect(r, V.burst, m.rarity === 'legendary' ? 24 : 14);
+  if (m.rarity === 'legendary') sounds.add('ringHit');
+}
+
 /* ---------------------- звуки и эффекты событий ---------------------- */
 const STORM_SOUND = { toxic: 'weather_melee', rain: 'weather_ranged', haze: 'weather_siege', gold: 'clear' };
 
@@ -518,8 +569,9 @@ function playFx(events, snap, propHits) {
   for (const e of events) {
     switch (e.type) {
       case 'play':
-        sounds.add(e.type === 'minion' ? 'place' : 'special');
+        sounds.add(e.ctype === 'minion' ? 'place' : 'special');
         if (e.storm) { FX.storm(e.storm, 3600); sounds.add(STORM_SOUND[e.storm]); }
+        playRarityFx(e, sounds);
         break;
       case 'summon': {
         sounds.add('place');
@@ -530,6 +582,7 @@ function playFx(events, snap, propHits) {
       case 'dmg': {
         const r = rectOf(e.id);
         if (r) FX.burstRect(r, 'spark', 12);
+        if (typeof e.id === 'number' && e.n > 0) defendRarityFx(rarityOf(e.id), r, sounds);
         sounds.add(typeof e.id === 'string' ? 'heroHit' : 'hit');
         break;
       }
@@ -548,7 +601,7 @@ function playFx(events, snap, propHits) {
       case 'dodge': { const r = rectOf(e.id); if (r) { FX.float('💨 мимо!', r, 'icon'); } sounds.add('attack'); break; }
       case 'gold': { const r = rectOf('h' + e.pIdx); if (r) FX.float('🪙+' + e.n, r, 'up'); sounds.add('mana'); break; }
       case 'shop': sounds.add('draw'); break;
-      case 'saved': { const r = rectOf(e.id); if (r) { FX.float('❤️ Упрямство!', r, 'up'); FX.burstRect(r, 'spark', 40); } sounds.add('clear'); break; }
+      case 'saved': { const r = rectOf(e.id); if (r) { FX.float('🐏 Упрямство!', r, 'up'); FX.burstRect(r, 'spark', 40); } sounds.add('clear'); break; }
       case 'armor': { const r = rectOf(e.id); if (r) FX.float('🛡️+' + e.n, r, 'up'); sounds.add('absorb'); break; }
       case 'mana': sounds.add('mana'); break;
       case 'aoe':
@@ -584,6 +637,16 @@ async function lunge(uid, target) {
   const dx = (rt.x + rt.w / 2 - ra.x - ra.w / 2) * 0.82, dy = (rt.y + rt.h / 2 - ra.y - ra.h / 2) * 0.82;
   a.style.zIndex = 10;
   Sound.play('attack');
+  const m = rarityOf(uid);
+  const V = m && RARITY_VFX[m.rarity];
+  if (V) {
+    FX.trail(ra, { x: rt.x + (rt.w - ra.w) / 2, y: rt.y + (rt.h - ra.h) / 2 }, V.color, m.rarity === 'legendary' ? 8 : m.rarity === 'epic' ? 6 : 3);
+    setTimeout(() => {
+      FX.ring(rt, V.color);
+      if (m.rarity === 'legendary') { FX.burstRect(rt, 'emoji', 6, { ch: sigOf(m) }); FX.burstRect(rt, 'gold', 30); Sound.play('ringHit'); }
+      else if (m.rarity === 'epic') FX.burstRect(rt, 'arcane', 24);
+    }, 280);
+  }
   a.animate([{ transform: 'none' }, { transform: `translate(${dx * 0.15}px, ${dy * 0.15 - 20}px) scale(1.12)`, offset: 0.35 },
     { transform: `translate(${dx}px, ${dy}px) scale(1.08)` }], { duration: 300, easing: 'ease-in', fill: 'forwards' });
   await sleep(300);
@@ -957,6 +1020,45 @@ function renderGallery() {
   $('#gal-preview').innerHTML = '<div class="pv-empty">Нажмите на карту, чтобы рассмотреть её.<br><br>Под каждой картой — её id (имя файла картинки).</div>';
 }
 
+/* ---------------------- версия и обновления ---------------------- */
+const GAME_VERSION = '3.2';
+const SITE_URL = 'https://fillin669-sketch.github.io/Gvint/';
+const CHANGELOG = [
+  'Легендарные карты выходят с золотой заставкой, эпические — с рунным кругом',
+  'Свои эффекты атаки и защиты у легендарных, эпических и редких карт',
+  'Новые значки натур: 🐏 Упрямство, 🥧 Доброта, 🍺 Наглость, 🎣 Терпение, 💰 Жадность',
+  'Игра теперь обновляется сама при запуске (нужен интернет)',
+];
+
+function showVersionBadge() {
+  const online = location.protocol.startsWith('http');
+  const el = $('#version-badge');
+  if (el) el.textContent = `Версия ${GAME_VERSION} · ${online ? 'онлайн, обновляется сама' : 'офлайн'}`;
+}
+
+async function checkUpdates() {
+  const params = new URLSearchParams(location.search);
+  const apk = +params.get('apk') || 0;
+  let seen = null;
+  try { seen = localStorage.getItem('tron-seen-version'); } catch (e) { /* ignore */ }
+  if (seen && seen !== GAME_VERSION) {
+    modal(`<h2>Что нового в версии ${GAME_VERSION}</h2><ul class="news">${CHANGELOG.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>
+      <div class="mbtns"><button class="btn btn-gold" data-v="ok">Отлично</button></div>`);
+  }
+  try { localStorage.setItem('tron-seen-version', GAME_VERSION); } catch (e) { /* ignore */ }
+  if (!apk) return;   // открыто в браузере, а не в приложении
+  try {
+    const r = await fetch(SITE_URL + 'version.json?t=' + Date.now(), { cache: 'no-store' });
+    const v = await r.json();
+    if (v.apk > apk) {
+      await sleep(1200);
+      modal(`<h2>Вышла новая версия приложения</h2><p>Скачайте её и установите поверх — прогресс не пропадёт.</p>
+        <ul class="news">${(v.notes || []).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>
+        <div class="mbtns"><a class="btn btn-gold" href="${esc(v.apkUrl)}">⬇ Скачать обновление</a><button class="btn" data-v="later">Позже</button></div>`);
+    }
+  } catch (e) { /* нет сети — ничего страшного */ }
+}
+
 /* ---------------------- инициализация ---------------------- */
 function updateSoundBtns() {
   document.querySelectorAll('.btn-sound').forEach((b) => { b.textContent = Sound.isMuted() ? '🔇' : '🔊'; });
@@ -970,6 +1072,8 @@ function init() {
   renderMenu();
   updateSoundBtns();
   showPreview(null);
+  showVersionBadge();
+  checkUpdates();
 
   document.addEventListener('pointerdown', () => Sound.init(), { capture: true });
   document.addEventListener('click', (e) => {

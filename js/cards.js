@@ -301,19 +301,19 @@ EXTRA_CARDS.push(
    ===================================================================== */
 /* Натура героя: сила (раз в ход) и постоянный бонус */
 const SOULS = {
-  stubborn: { name: 'Упрямство', icon: '❤️', color: '#e0453a', hue: 0,
+  stubborn: { name: 'Упрямство', icon: '🐏', color: '#e0453a', hue: 0,
     passive: 'Один раз за игру смертельный удар оставляет героя с 1 здоровьем. Старт с 3 бронёй.',
     power: { name: 'Стойка', cost: 2, icon: '🛡️', fx: [{ e: 'armor', n: 3 }], desc: 'Получите 3 брони.' } },
-  kind: { name: 'Доброта', icon: '💚', color: '#4fd06a', hue: 110,
+  kind: { name: 'Доброта', icon: '🥧', color: '#4fd06a', hue: 110,
     passive: 'Герой начинает игру с 35 здоровья.',
     power: { name: 'Подорожник', cost: 2, icon: '🌿', fx: [{ e: 'heal', n: 4, t: 'any' }], desc: 'Восстановите 4 здоровья любому персонажу.' } },
-  brave: { name: 'Наглость', icon: '🧡', color: '#ff9a2e', hue: 25,
+  brave: { name: 'Наглость', icon: '🍺', color: '#ff9a2e', hue: 25,
     passive: 'Ваши существа с Рывком или Спешкой имеют +1 к атаке.',
     power: { name: 'Удар по столу', cost: 2, icon: '✊', fx: [{ e: 'dmg', n: 1, t: 'any' }], desc: 'Нанесите 1 урон любому персонажу.' } },
-  patient: { name: 'Терпение', icon: '💙', color: '#4aa3ff', hue: 200,
+  patient: { name: 'Терпение', icon: '🎣', color: '#4aa3ff', hue: 200,
     passive: 'В стартовой руке на 1 карту больше.',
     power: { name: 'Выжидание', cost: 3, icon: '⏳', fx: [{ e: 'buffRandomFriendly', a: 0, h: 2 }], desc: 'Случайное ваше существо получает +0/+2.' } },
-  greedy: { name: 'Жадность', icon: '💛', color: '#f2c14e', hue: 45,
+  greedy: { name: 'Жадность', icon: '💰', color: '#f2c14e', hue: 45,
     passive: 'За каждого убитого врага — 2 золота вместо 1. Лавка дешевле на 1.',
     power: { name: 'Заначка', cost: 1, icon: '🪙', fx: [{ e: 'gold', n: 1 }], desc: 'Получите 1 золото.' } },
 };

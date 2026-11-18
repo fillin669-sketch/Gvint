@@ -78,3 +78,16 @@ bash android/build_apk.sh        # → dist/tron.apk
 APK подписывается ключом `android/debug.keystore` (пароль `android`). Ключ лежит в репозитории
 специально: обновлённый APK ставится поверх старого, только если подписан тем же ключом.
 Для публикации в Google Play нужен отдельный ключ, который хранят в секрете.
+
+## Обновления внутри приложения
+
+Приложение при запуске открывает онлайн-версию игры с GitHub Pages
+(`https://fillin669-sketch.github.io/Gvint/`), поэтому новые карты и правки приходят сами.
+Без интернета — встроенная копия. Если в `version.json` номер `apk` больше, чем у установленного
+приложения, игра предложит скачать новый APK.
+
+Чтобы это работало, репозиторий должен быть публичным, а GitHub Pages включён:
+Settings → Pages → Deploy from a branch → `ccr-ed511808-3mdvrp` / `(root)`.
+
+Выпуск обновления: поправить `GAME_VERSION` и `CHANGELOG` в `js/ui.js`, `version.json`;
+для новой оболочки — ещё `versionCode` в `android/AndroidManifest.xml` и `APK_VERSION` в `MainActivity.java`.

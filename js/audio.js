@@ -117,6 +117,10 @@ const Sound = (() => {
     buff()    { chord([523, 659, 784], 0.04, { type: 'triangle', vol: 0.08, dur: 0.3 }); },
     debuff()  { chord([392, 311, 247], 0.05, { type: 'sawtooth', vol: 0.06, dur: 0.35, lp: 1200 }); },
     doom()    { tone(55, 2, { type: 'sawtooth', vol: 0.3, lp: 300, attack: 0.1 }); noise(1.8, { freq: 800, slide: 80, vol: 0.4, attack: 0.2 }); },
+    legend()  { tone(98, 1.4, { type: 'sawtooth', vol: 0.18, lp: 900, attack: 0.05 }); chord([392, 494, 587, 784, 988], 0.11, { type: 'sawtooth', vol: 0.1, dur: 1.2, lp: 2600 });
+                noise(1.2, { filter: 'highpass', freq: 6000, vol: 0.08, attack: 0.3 }); tone(60, 0.8, { slide: 35, vol: 0.5, delay: 1.05 }); },
+    epic()    { chord([440, 554, 659, 880], 0.07, { type: 'triangle', vol: 0.1, dur: 0.9 }); noise(0.8, { filter: 'bandpass', freq: 2500, slide: 6000, q: 3, vol: 0.12, attack: 0.2 }); },
+    ringHit() { tone(1568, 0.8, { type: 'sine', vol: 0.08 }); tone(2093, 0.6, { type: 'sine', vol: 0.05, delay: 0.02 }); },
     win()     { chord([392, 494, 587, 784], 0.13, { type: 'sawtooth', vol: 0.12, dur: 0.9, lp: 2200 }); },
     lose()    { chord([392, 349, 311, 262], 0.18, { type: 'triangle', vol: 0.14, dur: 0.9 }); },
   };

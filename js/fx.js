@@ -66,7 +66,7 @@ const FX = (() => {
   const rand = (a, b) => a + Math.random() * (b - a);
 
   /** Взрыв частиц в точке. kind: ember | debris | spark | heal | shield | dust */
-  function burst(x, y, kind, n) {
+  function burst(x, y, kind, n, opts) {
     for (let i = 0; i < (n || 20); i++) {
       const a = rand(0, Math.PI * 2), sp = rand(60, 260);
       const p = { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.5, 1.1), kind };
@@ -75,13 +75,17 @@ const FX = (() => {
       if (kind === 'spark')  { p.g = 300; p.r = rand(1, 2.5); p.col = pickRandom(['#fff3c4', '#ffd36b', '#ffffff']); p.life = rand(0.3, 0.7); }
       if (kind === 'heal')   { p.vx *= 0.25; p.vy = rand(-90, -40); p.g = 0; p.r = rand(2, 4); p.col = pickRandom(['#8dff8d', '#d8ffb0', '#5fe08a']); p.cross = true; }
       if (kind === 'shield') { p.g = 0; p.r = rand(1.5, 3); p.col = pickRandom(['#9ed8ff', '#e6f6ff', '#5aa0f0']); p.life = rand(0.4, 0.8); }
+      if (kind === 'emoji')  { p.vy -= 160; p.g = 260; p.r = rand(18, 30); p.ch = opts && opts.ch; p.rot = rand(-0.5, 0.5); p.vr = rand(-3, 3); p.life = rand(0.9, 1.5); }
+      if (kind === 'gold')   { p.g = 120; p.r = rand(1.5, 3.5); p.col = pickRandom(['#fff3c4', '#ffd36b', '#ffb52e', '#fff']); p.life = rand(0.6, 1.2); }
+      if (kind === 'arcane') { p.g = -30; p.r = rand(1.5, 3.2); p.col = pickRandom(['#e3b6ff', '#b16cff', '#7a3cff', '#fff']); p.life = rand(0.6, 1.1); }
+      if (kind === 'blue')   { p.g = 60; p.r = rand(1.2, 2.6); p.col = pickRandom(['#bfe3ff', '#5aa0f0', '#fff']); p.life = rand(0.4, 0.8); }
       if (kind === 'dust')   { p.vy = rand(-40, 10); p.vx *= 0.6; p.g = 30; p.r = rand(4, 9); p.col = 'rgba(200,180,140,.35)'; p.soft = true; p.life = rand(0.4, 0.8); }
       add(p);
     }
     kick();
   }
 
-  function burstRect(r, kind, n) { burst(r.x + r.w / 2, r.y + r.h / 2, kind, n); }
+  function burstRect(r, kind, n, opts) { burst(r.x + r.w / 2, r.y + r.h / 2, kind, n, opts); }
 
   /* ---------------- погода ---------------- */
   // ближний бой — «кишечная» зелено-бурая муть с пузырями
@@ -209,7 +213,12 @@ const FX = (() => {
       if (p.kind !== 'debris') { p.vx *= 0.97; if (p.kind !== 'heal') p.vy *= 0.98; }
       cx.globalAlpha = Math.max(0, k);
       cx.fillStyle = p.col;
-      if (p.kind === 'debris') {
+      if (p.ch) {
+        p.rot += p.vr * dt;
+        cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot);
+        cx.font = `${Math.round(p.r)}px serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.fillText(p.ch, 0, 0); cx.restore();
+      } else if (p.kind === 'debris') {
         p.rot += p.vr * dt;
         cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.7); cx.restore();
       } else if (p.cross) {
@@ -291,5 +300,53 @@ const FX = (() => {
     return new Promise((res) => { anim.onfinish = () => { b.remove(); burstRect(to, cls === 'heal' ? 'heal' : 'ember', 16); res(); }; });
   }
 
-  return { init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
+  /* ---------------- эффекты редкости ---------------- */
+  function dom(cls, r, ms, html) {
+    const d = document.createElement('div');
+    d.className = cls;
+    if (r) d.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;
+    if (html) d.innerHTML = html;
+    temp(d, ms);
+    return d;
+  }
+
+  /** Ударная волна-кольцо */
+  function ring(r, color) {
+    const size = Math.max(r.w, r.h) * 1.1;
+    const d = dom('shock', { x: r.x + r.w / 2 - size / 2, y: r.y + r.h / 2 - size / 2, w: size, h: size }, 700);
+    d.style.setProperty('--c', color);
+  }
+
+  /** Рунный круг под существом */
+  function runeCircle(r, color) {
+    const size = Math.max(r.w, r.h) * 1.6;
+    const d = dom('runes', { x: r.x + r.w / 2 - size / 2, y: r.y + r.h / 2 - size / 2, w: size, h: size }, 1400, '<i></i><b>ᚱ ᚢ ᚾ ᛖ ᛋ ᛏ ᚨ ᚷ</b>');
+    d.style.setProperty('--c', color);
+  }
+
+  /** Барьер при получении урона */
+  function barrier(r, color) {
+    const d = dom('barrier', { x: r.x - 10, y: r.y - 10, w: r.w + 20, h: r.h + 20 }, 650);
+    d.style.setProperty('--c', color);
+  }
+
+  /** Шлейф за атакующим: несколько «призраков» вдоль пути */
+  function trail(from, to, color, n) {
+    for (let i = 1; i <= (n || 6); i++) {
+      const k = i / ((n || 6) + 1);
+      const x = from.x + (to.x - from.x) * k * 0.8, y = from.y + (to.y - from.y) * k * 0.8;
+      setTimeout(() => {
+        const d = dom('trail', { x, y, w: from.w, h: from.h }, 450);
+        d.style.setProperty('--c', color);
+      }, k * 260);
+    }
+  }
+
+  /** Заставка легенды: затемнение, лучи, имя */
+  function legendIntro(card, src) {
+    const img = src ? `<img src="${src}" alt="">` : `<span class="li-glyph">${card.icon || '✦'}</span>`;
+    dom('legend-intro', null, 1500, `<div class="li-rays"></div><div class="li-card">${img}</div><div class="li-name">${card.name}</div><div class="li-sub">Легендарная карта</div>`);
+  }
+
+  return { ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
 })();

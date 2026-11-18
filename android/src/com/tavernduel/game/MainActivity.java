@@ -1,21 +1,40 @@
 package com.tavernduel.game;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
-/** Полноэкранное окно, в котором запускается игра из assets/game/index.html. */
+/**
+ * Полноэкранное окно с игрой.
+ * Сначала открывается онлайн-версия с GitHub Pages — так новые карты и правки приходят сами.
+ * Если сети нет или сайт недоступен — встроенная копия из assets/game.
+ */
 public class MainActivity extends Activity {
+
+    /** Адрес онлайн-версии игры */
+    private static final String ONLINE_URL = "https://fillin669-sketch.github.io/Gvint/index.html";
+    private static final String OFFLINE_URL = "file:///android_asset/game/index.html";
+    private static final int APK_VERSION = 10;      // совпадает с versionCode в манифесте
+    private static final long ONLINE_TIMEOUT_MS = 8000;
 
     private WebView web;
     private long lastBackPress;
+    private boolean usingOffline;
+    private boolean onlineLoaded;
+    private final Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle state) {
@@ -29,21 +48,82 @@ public class MainActivity extends Activity {
         web.setVerticalScrollBarEnabled(false);
         web.setHorizontalScrollBarEnabled(false);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new GameClient());
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setAllowFileAccess(true);
-        s.setTextZoom(100);            // крупный системный шрифт не ломает вёрстку
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setTextZoom(100);
         s.setSupportZoom(false);
         s.setMediaPlaybackRequiresUserGesture(false);
 
         setContentView(web);
         hideSystemBars();
 
-        if (state != null) web.restoreState(state);
-        else web.loadUrl("file:///android_asset/game/index.html");
+        if (state != null) {
+            web.restoreState(state);
+        } else {
+            loadOnline();
+        }
+    }
+
+    private void loadOnline() {
+        usingOffline = false;
+        onlineLoaded = false;
+        web.loadUrl(ONLINE_URL + "?apk=" + APK_VERSION);
+        handler.postDelayed(new Runnable() {
+            @Override public void run() {
+                if (!onlineLoaded && !usingOffline) loadOffline();
+            }
+        }, ONLINE_TIMEOUT_MS);
+    }
+
+    private void loadOffline() {
+        if (usingOffline) return;
+        usingOffline = true;
+        web.stopLoading();
+        web.loadUrl(OFFLINE_URL + "?apk=" + APK_VERSION + "&offline=1");
+    }
+
+    private class GameClient extends WebViewClient {
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            if (url != null && url.startsWith("https://")) onlineLoaded = true;
+        }
+
+        // старые Android
+        @Override
+        @SuppressWarnings("deprecation")
+        public void onReceivedError(WebView view, int code, String desc, String url) {
+            if (url != null && url.startsWith(ONLINE_URL)) loadOffline();
+        }
+
+        // Android 6+
+        @Override
+        public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
+            if (req.isForMainFrame()) loadOffline();
+        }
+
+        @Override
+        public void onReceivedHttpError(WebView view, WebResourceRequest req, WebResourceResponse resp) {
+            if (req.isForMainFrame()) loadOffline();
+        }
+
+        /** Ссылки наружу (например, скачать новый APK) открываются в браузере */
+        @Override
+        @SuppressWarnings("deprecation")
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            boolean inside = url.startsWith("file:///android_asset/") || url.startsWith(ONLINE_URL);
+            if (inside && !url.endsWith(".apk")) return false;
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        }
     }
 
     private void hideSystemBars() {
@@ -94,6 +174,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
         web.destroy();
         super.onDestroy();
     }
