@@ -27,11 +27,11 @@ const Sound = (() => {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return true; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
-    ac = new AC();
+    try { ac = lowQuality ? new AC({ sampleRate: 22050 }) : new AC(); } catch (e) { ac = new AC(); }
     master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ac.destination);
     sfx = ac.createGain(); sfx.gain.value = 0.75; sfx.connect(master);
     amb = ac.createGain(); amb.gain.value = 0.3; amb.connect(master);
-    mus = ac.createGain(); mus.gain.value = musicOn ? 0.34 : 0; mus.connect(master);
+    mus = ac.createGain(); mus.gain.value = musicOn ? 1.0 : 0; mus.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -224,14 +224,21 @@ const Sound = (() => {
     dorian: [0, 2, 3, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10],
     phrygian: [0, 1, 3, 5, 7, 8, 10], harmonic: [0, 2, 3, 5, 7, 8, 11],
   };
-  // steps — шагов в такте (восьмые), prog — ступени аккордов по тактам, drums — рисунок бубна
+  // steps — шагов в такте (восьмые), prog — ступени аккордов по тактам, drums — рисунок ударных
+  // lead — мелодия, counter — второй голос, strum/arp — аккомпанемент, bass — бас, pad — тянущийся фон
   const STYLES = {
-    tavern:  { bpm: 126, steps: 6, root: 62, mode: 'dorian', prog: [0, 0, 6, 6, 0, 0, 4, 0], drums: ['K..S..', 'K.KS.J'], lead: 'fiddle', drone: true, swing: 0 },
-    zags:    { bpm: 108, steps: 8, root: 67, mode: 'mixolydian', prog: [0, 3, 0, 4, 0, 3, 6, 0], drums: ['K...S.J.', 'K.J.S.JJ'], lead: 'flute', drone: true, swing: 0.08 },
-    office:  { bpm: 78, steps: 8, root: 57, mode: 'aeolian', prog: [0, 5, 2, 6, 0, 5, 3, 4], drums: ['K.......', 'K...S...'], lead: 'lute', drone: false, swing: 0 },
-    night:   { bpm: 140, steps: 8, root: 64, mode: 'phrygian', prog: [0, 0, 1, 0, 0, 0, 6, 1], drums: ['K.KSK.KS', 'K.KSKKSJ'], lead: 'fiddle', drone: true, swing: 0 },
-    nursery: { bpm: 96, steps: 6, root: 72, mode: 'harmonic', prog: [0, 3, 4, 0, 5, 3, 4, 0], drums: ['K.....', 'K...J.'], lead: 'box', drone: false, swing: 0 },
+    tavern:  { bpm: 124, steps: 6, root: 62, mode: 'dorian', prog: [0, 0, 6, 6, 0, 0, 4, 0], drums: ['K..S..', 'K.KS.S'],
+      lead: 'violin', counter: ['flute', 12, 0.3], strum: 'acoustic_guitar_nylon', bass: 'pizzicato_strings', pad: ['bagpipe', 0.12] },
+    zags:    { bpm: 104, steps: 8, root: 67, mode: 'mixolydian', prog: [0, 3, 0, 4, 0, 3, 6, 0], drums: ['K...S.J.', 'K.J.S.JJ'],
+      lead: 'flute', counter: ['violin', -12, 0.32], arp: 'orchestral_harp', bass: 'pizzicato_strings', pad: ['string_ensemble_1', 0.2], swing: 0.06 },
+    office:  { bpm: 76, steps: 8, root: 57, mode: 'aeolian', prog: [0, 5, 2, 6, 0, 5, 3, 4], drums: ['K.......', 'K...S...'],
+      lead: 'acoustic_guitar_nylon', bass: 'pizzicato_strings', pad: ['cello', 0.26] },
+    night:   { bpm: 138, steps: 8, root: 64, mode: 'phrygian', prog: [0, 0, 1, 0, 0, 0, 6, 1], drums: ['K.KSK.KS', 'K.KSKKSS'],
+      lead: 'violin', counter: ['cello', -12, 0.35], bass: 'pizzicato_strings', pad: ['cello', 0.22] },
+    nursery: { bpm: 92, steps: 6, root: 72, mode: 'harmonic', prog: [0, 3, 4, 0, 5, 3, 4, 0], drums: ['......', '....J.'],
+      lead: 'music_box', arp: 'orchestral_harp', pad: ['string_ensemble_1', 0.14], leadFromStart: true },
   };
+  const DRUM_KIT = ['taiko_drum', 'melodic_tom', 'tinkle_bell'];
   const RHYTHMS = {
     6: [[3, 3], [2, 1, 2, 1], [1, 1, 1, 3], [3, 1, 1, 1], [2, 1, 3], [1, 1, 1, 1, 1, 1]],
     8: [[2, 2, 2, 2], [3, 1, 2, 2], [1, 1, 2, 4], [2, 1, 1, 4], [4, 2, 2], [1, 1, 1, 1, 2, 2], [6, 2]],
@@ -281,128 +288,165 @@ const Sound = (() => {
     return bars.map((ns) => ns.map((n) => ({ ...n, midi: st.root + 12 * Math.floor(n.deg / 7) + scale[((n.deg % 7) + 7) % 7] })));
   }
 
-  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  /* ---------------- банк записей инструментов ---------------- */
+  const BANK = {};      // инструмент → [{ midi, buf }]
+  const loading = {};
+  let lowQuality = false;
+  let reverb = null;
 
-  function inst(kind, t, midi, len, dest, vol) {
-    const f = hz(midi);
-    const g = ac.createGain();
-    g.connect(dest);
-    if (kind === 'fiddle' || kind === 'flute') {
-      const o = ac.createOscillator();
-      o.type = kind === 'fiddle' ? 'sawtooth' : 'sine';
-      o.frequency.value = f;
-      const vib = ac.createOscillator(); vib.frequency.value = 5.4;
-      const vg = ac.createGain(); vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.006, t + Math.min(0.25, len));
-      vib.connect(vg); vg.connect(o.frequency);
-      let n = o;
-      if (kind === 'fiddle') {
-        const bp = ac.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 2600; bp.Q.value = 2;
-        o.connect(bp); n = bp;
-      }
-      n.connect(g);
-      const v = vol * (kind === 'fiddle' ? 0.16 : 0.32);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(v, t + (kind === 'fiddle' ? 0.05 : 0.07));
-      g.gain.setValueAtTime(v * 0.85, t + len * 0.8);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.12);
-      o.start(t); vib.start(t); o.stop(t + len + 0.2); vib.stop(t + len + 0.2);
-      if (kind === 'flute') noiseAt(t, 0.12, 'bandpass', f * 2, vol * 0.05, dest);
-    } else {
-      // лютня / музыкальная шкатулка — щипок
-      const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
-      const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * (kind === 'box' ? 4 : 2);
-      const g2 = ac.createGain(); g2.gain.value = kind === 'box' ? 0.35 : 0.2;
-      o.connect(g); o2.connect(g2); g2.connect(g);
-      const v = vol * (kind === 'box' ? 0.22 : 0.3);
-      const dec = kind === 'box' ? 1.2 : 0.7;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(v, t + 0.005);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(len, dec));
-      o.start(t); o2.start(t); o.stop(t + dec + 0.1); o2.stop(t + dec + 0.1);
-    }
-  }
-
-  function noiseAt(t, dur, type, freq, vol, dest, slide) {
-    const src = ac.createBufferSource(); src.buffer = noiseBuf;
-    const f = ac.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t);
-    if (slide) f.frequency.exponentialRampToValueAtTime(slide, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f); f.connect(g); g.connect(dest);
-    src.start(t, Math.random()); src.stop(t + dur + 0.05);
-  }
-
-  function drum(ch, t, dest) {
-    if (ch === 'K') {   // большой бубен
-      const o = ac.createOscillator(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.25);
-      const g = ac.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-      o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.4);
-      noiseAt(t, 0.08, 'lowpass', 900, 0.12, dest);
-    } else if (ch === 'S') {   // шлепок по бубну
-      noiseAt(t, 0.12, 'bandpass', 1800, 0.22, dest);
-    } else if (ch === 'J') {   // бубенцы
-      noiseAt(t, 0.16, 'highpass', 6500, 0.09, dest);
-    }
-  }
-
-  function bass(t, midi, len, dest) {
-    const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = hz(midi);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.28, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    o.connect(g); g.connect(dest); o.start(t); o.stop(t + len + 0.05);
-  }
-
-  let song = null;   // { key, st, out, timer, nextT, bar, step, melody, loops, droneNodes }
-
-  function startDrone(sg) {
-    const st = sg.st;
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 3;
-    const g = ac.createGain(); g.gain.value = 0.05;
-    // «колесо» лиры — медленная пульсация громкости
-    const lfo = ac.createOscillator(); lfo.frequency.value = st.bpm / 60 / 2;
-    const lg = ac.createGain(); lg.gain.value = 0.018;
-    lfo.connect(lg); lg.connect(g.gain);
-    lp.connect(g); g.connect(sg.out);
-    const nodes = [lfo];
-    [st.root - 24, st.root - 17, st.root - 12].forEach((m, i) => {
-      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = i * 4 - 4;
-      o.connect(lp); o.start(); nodes.push(o);
+  function ensureSamples() {
+    if (window.SAMPLES) return Promise.resolve();
+    return new Promise((res) => {
+      const sc = document.createElement('script');
+      sc.src = 'js/samples.js';
+      sc.onload = res; sc.onerror = res;
+      document.head.appendChild(sc);
     });
-    lfo.start();
-    sg.droneNodes = nodes;
   }
+
+  function b64ToBuf(b64) {
+    const bin = atob(b64);
+    const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u.buffer;
+  }
+
+  function decode(buf) {
+    return new Promise((res, rej) => {
+      const p = ac.decodeAudioData(buf, res, rej);
+      if (p && p.then) p.then(res, rej);
+    });
+  }
+
+  function loadInstrument(name) {
+    if (!name) return Promise.resolve();
+    if (BANK[name]) return Promise.resolve();
+    if (loading[name]) return loading[name];
+    const src = window.SAMPLES && window.SAMPLES[name];
+    if (!src) return Promise.resolve();
+    loading[name] = Promise.all(Object.keys(src).map((k) => decode(b64ToBuf(src[k])).then((buf) => ({ midi: +k, buf })).catch(() => null)))
+      .then((list) => { BANK[name] = list.filter(Boolean).sort((x, y) => x.midi - y.midi); delete loading[name]; });
+    return loading[name];
+  }
+
+  /** Освобождаем память от инструментов, которые не нужны текущей теме */
+  function trimBank(keep) {
+    Object.keys(BANK).forEach((k) => { if (keep.indexOf(k) < 0) delete BANK[k]; });
+  }
+
+  function instrumentsOf(st) {
+    return [st.lead, st.counter && st.counter[0], st.strum, st.arp, st.bass, st.pad && st.pad[0], ...DRUM_KIT].filter(Boolean);
+  }
+
+  /** Реверберация «каменного зала» — импульс из затухающего шума */
+  function makeReverb() {
+    const len = Math.floor(ac.sampleRate * (lowQuality ? 1.3 : 2.6));
+    const ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+    }
+    const conv = ac.createConvolver();
+    conv.buffer = ir;
+    const back = ac.createGain();
+    back.gain.value = 0.9;
+    conv.connect(back); back.connect(mus);
+    return conv;
+  }
+
+  /** Сыграть ноту записанным инструментом */
+  function voice(name, t, midi, o) {
+    const list = BANK[name];
+    if (!list || !list.length || !song) return;
+    let smp = list[0];
+    for (const x of list) if (Math.abs(x.midi - midi) < Math.abs(smp.midi - midi)) smp = x;
+    const rate = Math.pow(2, (midi - smp.midi) / 12);
+    const src = ac.createBufferSource();
+    src.buffer = smp.buf;
+    src.playbackRate.value = rate;
+    const g = ac.createGain();
+    const vol = o.vol * (0.88 + Math.random() * 0.24);          // живая неровность громкости
+    const attack = o.attack || 0.006;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    const natural = smp.buf.duration / rate;
+    let end = natural;
+    if (o.len) {
+      const rel = o.release || 0.25;
+      g.gain.setValueAtTime(vol, t + Math.max(attack, o.len));
+      g.gain.setTargetAtTime(0.0001, t + Math.max(attack, o.len), rel / 3);
+      end = Math.min(natural, o.len + rel);
+    }
+    src.connect(g);
+    g.connect(song.out);
+    if (song.send) g.connect(song.send);
+    src.start(t);
+    src.stop(t + end + 0.05);
+  }
+
+  let song = null;   // { key, st, out, send, timer, nextT, bar, step, melody, loops, ready }
 
   function scheduleStep(sg, t) {
     const st = sg.st;
     const stepDur = 60 / st.bpm / 2;
+    const barDur = stepDur * st.steps;
     const scale = MODES[st.mode];
     const bar = sg.bar % st.prog.length;
     const chord = st.prog[bar];
+    const jit = () => (Math.random() - 0.5) * 0.016;      // музыканты не играют идеально ровно
+    const deg2midi = (deg, base) => base + 12 * Math.floor(deg / 7) + scale[((deg % 7) + 7) % 7];
+    const half = st.steps / 2;
+
     // ударные
-    const pat = st.drums[(sg.bar % 4 === 3) ? 1 : 0];
-    if (pat[sg.step] && pat[sg.step] !== '.') drum(pat[sg.step], t, sg.out);
-    // бас на сильные доли
-    if (sg.step === 0 || sg.step === st.steps / 2) {
-      const m = st.root - 24 + scale[chord % 7] + (chord >= 7 ? 12 : 0);
-      bass(t, m, stepDur * st.steps / 2 * 0.95, sg.out);
+    const ch = st.drums[(sg.bar % 4 === 3) ? 1 : 0][sg.step];
+    if (ch === 'K') voice('taiko_drum', t + jit(), sg.step === 0 ? 36 : 41, { vol: sg.step === 0 ? 0.95 : 0.6 });
+    else if (ch === 'S') voice('melodic_tom', t + jit(), 62, { vol: 0.42 });
+    else if (ch === 'J') voice('tinkle_bell', t + jit(), 84 + (sg.step % 3), { vol: 0.12 });
+
+    // тянущийся фон: тоника и квинта аккорда на весь такт
+    if (st.pad && sg.step === 0) {
+      const root = deg2midi(chord, st.root - 12);
+      voice(st.pad[0], t, root, { vol: st.pad[1], attack: 0.3, len: barDur * 1.02, release: 0.7 });
+      voice(st.pad[0], t, root + 7, { vol: st.pad[1] * 0.6, attack: 0.35, len: barDur * 1.02, release: 0.7 });
     }
-    // мелодия (в первом проходе — только аккомпанемент, дальше вступает соло)
-    if (sg.loops > 0 || st.lead === 'box') {
+    // бас
+    if (st.bass && (sg.step === 0 || sg.step === half)) {
+      let m = deg2midi(chord, st.root - 24);
+      if (sg.step === half) m += 7;
+      while (m < 36) m += 12;
+      voice(st.bass, t + jit(), m, { vol: 0.75 });
+    }
+    // гитарный бой: аккорд с лёгким «раскатом» струн
+    if (st.strum && (sg.step === 0 || sg.step === half)) {
+      [chord, chord + 2, chord + 4, chord + 7].forEach((d, i) => {
+        voice(st.strum, t + i * 0.022 + jit(), deg2midi(d, st.root - 12), { vol: sg.step === 0 ? 0.32 : 0.22 });
+      });
+    }
+    // арфа: перебор по аккорду
+    if (st.arp) {
+      const seq = [chord, chord + 2, chord + 4, chord + 7, chord + 4, chord + 2];
+      voice(st.arp, t + jit(), deg2midi(seq[sg.step % seq.length], st.root - 12), { vol: 0.28 });
+    }
+    // мелодия: в первом проходе — только аккомпанемент
+    if (sg.loops > 0 || st.leadFromStart) {
       const n = sg.melody[bar].find((x) => x.step === sg.step);
       if (n && !n.rest) {
         const swing = st.swing && sg.step % 2 ? st.swing * stepDur : 0;
-        inst(st.lead, t + swing, n.midi, n.dur * stepDur * 0.95, sg.out, 1);
-        // во втором голосе — флейта октавой выше на повторах
-        if (sg.loops % 2 === 0 && st.lead === 'fiddle' && bar >= 4) inst('flute', t + swing, n.midi + 12, n.dur * stepDur * 0.9, sg.out, 0.45);
+        const plucked = ['acoustic_guitar_nylon', 'music_box', 'orchestral_harp'].indexOf(st.lead) >= 0;
+        voice(st.lead, t + swing + jit(), n.midi, plucked ? { vol: 0.8 } : { vol: 0.62, attack: 0.045, len: n.dur * stepDur * 0.96, release: 0.22 });
+        if (st.counter && sg.loops % 2 === 0 && bar >= 4) {
+          voice(st.counter[0], t + swing + jit(), n.midi + st.counter[1], { vol: st.counter[2], attack: 0.06, len: n.dur * stepDur * 0.9, release: 0.25 });
+        }
       }
     }
   }
 
   function tick() {
     const sg = song;
-    if (!sg || !ac) return;
+    if (!sg || !ac || !sg.ready) return;
     const stepDur = 60 / sg.st.bpm / 2;
-    while (sg.nextT < ac.currentTime + 0.25) {
+    if (sg.nextT < ac.currentTime) sg.nextT = ac.currentTime + 0.05;   // вкладка «спала» — не догоняем
+    while (sg.nextT < ac.currentTime + 0.3) {
       scheduleStep(sg, sg.nextT);
       sg.nextT += stepDur;
       sg.step++;
@@ -422,33 +466,47 @@ const Sound = (() => {
     const old = song;
     song = null;
     clearInterval(old.timer);
-    old.out.gain.setTargetAtTime(0.0001, now(), 0.5);
-    setTimeout(() => {
-      (old.droneNodes || []).forEach((n) => { try { n.stop(); } catch (e) { /* ignore */ } });
-      old.out.disconnect();
-    }, 3000);
+    old.out.gain.setTargetAtTime(0.0001, now(), 0.6);
+    if (old.send) old.send.gain.setTargetAtTime(0.0001, now(), 0.6);
+    setTimeout(() => { old.out.disconnect(); if (old.send) old.send.disconnect(); }, 4000);
   }
 
   function startSong(key) {
-    if (!ac) return;
+    if (!ac || !musicOn) return;
     const st = STYLES[key] || STYLES.tavern;
     if (song && song.key === key) return;
     stopSong();
+    if (!reverb) reverb = makeReverb();
     const out = ac.createGain();
     out.gain.value = 0.0001;
-    out.gain.setTargetAtTime(1, now(), 1.2);
+    out.gain.setTargetAtTime(1, now(), 1.5);
     out.connect(mus);
-    const sg = { key, st, out, nextT: now() + 0.3, bar: 0, step: 0, loops: 0, melody: compose(st, Math.floor(Math.random() * 1e9)) };
-    if (st.drone) startDrone(sg);
-    sg.timer = setInterval(tick, 60);
+    const send = ac.createGain();
+    send.gain.value = lowQuality ? 0.18 : 0.32;
+    send.connect(reverb);
+    const sg = { key, st, out, send, nextT: 0, bar: 0, step: 0, loops: 0, ready: false,
+      melody: compose(st, Math.floor(Math.random() * 1e9)) };
     song = sg;
+    const need = instrumentsOf(st);
+    ensureSamples()
+      .then(() => { trimBank(need); return Promise.all(need.map(loadInstrument)); })
+      .then(() => {
+        if (song !== sg) return;
+        sg.ready = true;
+        sg.nextT = now() + 0.15;
+        sg.timer = setInterval(tick, 70);
+      });
   }
 
   function setMusic(on) {
     musicOn = on;
     try { localStorage.setItem('tron-music', on ? '1' : '0'); } catch (e) { /* ignore */ }
-    if (ac) mus.gain.setTargetAtTime(on ? 0.34 : 0, now(), 0.3);
+    if (!ac) return;
+    mus.gain.setTargetAtTime(on ? 1.0 : 0, now(), 0.3);
+    if (on) startSong(wanted); else stopSong();
   }
+
+  function setLowQuality(v) { lowQuality = !!v; }
 
   function stopLocation() {
     if (!current) return;
@@ -479,6 +537,6 @@ const Sound = (() => {
     if (ac) master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.1);
   }
 
-  return { init, play, setLocation, setMuted, isMuted: () => muted, setMusic, isMusicOn: () => musicOn,
-    _debugSong: () => song && { key: song.key, bar: song.bar, loops: song.loops, notes: song.melody.flat().length } };
+  return { init, play, setLocation, setMuted, isMuted: () => muted, setMusic, isMusicOn: () => musicOn, setLowQuality,
+    _debugSong: () => song && { key: song.key, ready: song.ready, bar: song.bar, loops: song.loops, bank: Object.keys(BANK).length } };
 })();

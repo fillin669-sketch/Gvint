@@ -51,6 +51,9 @@ def main():
         return f'<script>\n{js}\n</script>'
 
     html = re.sub(r'<script src="(js/[^"]+)"></script>', inline, html)
+    # записи инструментов подгружаются игрой отдельно — в однофайловой версии встраиваем их сразу
+    samples = (ROOT / 'js' / 'samples.js').read_text(encoding='utf8')
+    html = html.replace('<script>\n', '<script>\n' + samples + '\n</script>\n<script>\n', 1)
     html = html.replace('<script>\n', embed + '\n<script>\n', 1)
 
     OUT.parent.mkdir(exist_ok=True)

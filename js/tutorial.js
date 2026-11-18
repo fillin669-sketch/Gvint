@@ -79,6 +79,7 @@ const Tut = (() => {
     App.busy = false;
     render();
     FX.setZones([$('#field-op'), $('#field-me')]);
+    FX.setAmbient(true);
     showPreview(null);
     banner('Обучение', 'Следуйте подсказкам', 1300);
     decorate();

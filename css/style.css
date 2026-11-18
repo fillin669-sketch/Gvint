@@ -456,3 +456,76 @@ button { font-family: inherit; }
 .version-badge { margin-top: 12px; color: var(--ink-dim); font-size: 15px; opacity: .8; }
 .mbox ul.news { text-align: left; font-size: 20px; line-height: 1.5; margin: 12px 0; padding-left: 26px; color: var(--ink); }
 a.btn { text-decoration: none; display: inline-block; }
+
+/* =====================================================================
+   УЛУЧШЕННАЯ ГРАФИКА (всё статичное, анимируются только transform/opacity)
+   ===================================================================== */
+.tex #stage {
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(120,80,40,.28), transparent 60%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.7) 100%),
+    var(--tex-wood) center / 512px 256px,
+    #1a120a;
+}
+/* резная рама вокруг стола */
+.table-frame { position: absolute; left: 270px; top: 0; width: 1060px; height: 900px; pointer-events: none; z-index: 4; }
+.table-frame::before, .table-frame::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 16px;
+  background: linear-gradient(90deg, #120a04, #5a3a1c 30%, #8a6030 50%, #5a3a1c 70%, #120a04), var(--tex-wood);
+  box-shadow: 0 0 18px rgba(0,0,0,.9);
+}
+.table-frame::before { left: 0; border-right: 2px solid #d9b45a; }
+.table-frame::after { right: 0; border-left: 2px solid #d9b45a; }
+/* мягкие лучи света сверху */
+.god-rays { position: absolute; left: 284px; top: 0; width: 1032px; height: 900px; pointer-events: none; z-index: 1; opacity: .5;
+  background: conic-gradient(from 180deg at 50% -10%, transparent 0deg, rgba(255,220,150,.10) 8deg, transparent 14deg, rgba(255,220,150,.07) 22deg, transparent 30deg,
+    transparent 330deg, rgba(255,220,150,.07) 338deg, transparent 346deg, rgba(255,220,150,.10) 352deg, transparent 360deg); }
+/* зерно на полях */
+.tex .field::after { content: ''; position: absolute; inset: 0; background: var(--tex-noise); opacity: .5; mix-blend-mode: overlay; pointer-events: none; }
+/* «ковры» под существами */
+.lane { z-index: 1; }
+.lane::before { content: ''; position: absolute; left: 4%; right: 4%; top: 8%; bottom: 8%; border-radius: 50%; z-index: -1;
+  background: radial-gradient(ellipse, rgba(0,0,0,.32), rgba(0,0,0,.12) 55%, transparent 72%); }
+
+/* существа: тень, объём, корона, камень редкости */
+.minion .m-shadow { position: absolute; left: 8%; right: 8%; bottom: -16px; height: 22px; border-radius: 50%; background: radial-gradient(ellipse, rgba(0,0,0,.65), transparent 70%); z-index: -1; }
+.minion .m-frame::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 0 2px rgba(255,235,180,.22), inset 0 -18px 26px rgba(0,0,0,.55), inset 0 12px 18px rgba(255,255,255,.08); }
+.minion .m-crown { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); font-size: 24px; z-index: 3; filter: drop-shadow(0 2px 3px #000); }
+.gem { position: absolute; width: 18px; height: 18px; transform: rotate(45deg); border-radius: 3px; z-index: 3; border: 1px solid rgba(255,255,255,.7); }
+.gem.g-rare { background: radial-gradient(circle at 30% 30%, #e6f4ff, #3b8fe8 55%, #123f7a); }
+.gem.g-epic { background: radial-gradient(circle at 30% 30%, #f6e6ff, #a95cff 55%, #4a1680); }
+.gem.g-legendary { background: radial-gradient(circle at 30% 30%, #fff8dc, #ffb52e 55%, #8a5208); box-shadow: 0 0 10px rgba(255,190,60,.8); }
+.minion .m-gem { left: 50%; bottom: 0; margin-left: -9px; }
+.hcard .hc-gem { left: 50%; top: 74px; margin-left: -9px; }
+
+/* карты в руке: объём, рамка, веер */
+.hcard { box-shadow: inset 0 0 0 1px rgba(255,230,160,.3), inset 0 0 18px rgba(0,0,0,.6), 0 8px 18px rgba(0,0,0,.85); }
+.hcard .hc-text { border-radius: 6px; padding: 2px 3px; background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.35)); }
+.tex .hcard .hc-text { background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.35)), var(--tex-noise); }
+.hcard .hc-art::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 -16px 18px rgba(0,0,0,.55); pointer-events: none; }
+#hand .hcard { transform: translateY(var(--y, 0px)) rotate(var(--r, 0deg)); transform-origin: 50% 130%; }
+#hand .hcard:hover { transform: translateY(-34px) scale(1.12); }
+#hand .hcard.sel { transform: translateY(-44px) scale(1.16); }
+
+/* портреты героев: золотое кольцо */
+.hero::before { content: ''; position: absolute; inset: -7px; z-index: -1; border-radius: 50% 50% 22px 22px / 40% 40% 22px 22px;
+  background: conic-gradient(from 0deg, #7a5418, #ffe39a, #a8741c, #fff3c4, #7a5418, #ffd36b, #7a5418); box-shadow: 0 6px 22px rgba(0,0,0,.85); }
+/* кнопка конца хода — объёмная */
+.btn-end { overflow: hidden; }
+.btn-end::after { content: ''; position: absolute; left: 6%; right: 6%; top: 4px; height: 42%; border-radius: 40px; background: linear-gradient(180deg, rgba(255,255,255,.25), transparent); pointer-events: none; }
+.gfx-pick { margin-left: 18px; display: flex; align-items: center; gap: 8px; }
+.gfx-pick select { font: inherit; font-size: 18px; padding: 4px 8px; border-radius: 6px; background: #22180d; color: var(--ink); border: 1px solid var(--gold-soft); }
+#light .l-flicker { will-change: opacity; }
+
+/* ---------------- экономный режим для слабых телефонов ---------------- */
+.lowfx #light .l-flicker, .lowfx .god-rays, .lowfx .field::before, .lowfx .field::after { display: none !important; }
+.lowfx .minion.legendary .m-frame::after, .lowfx .minion.stealth::before { display: none; }
+.lowfx .torch, .lowfx .li-rays, .lowfx .runes b, .lowfx .minion .m-zz { animation: none !important; }
+.lowfx .glyph, .lowfx .prop .pi, .lowfx .torch, .lowfx .m-crown { filter: none !important; }
+.lowfx .crystal.full, .lowfx .gem.g-legendary { box-shadow: none; }
+.lowfx .minion .m-frame, .lowfx .minion.legendary .m-frame, .lowfx .minion.epic .m-frame { box-shadow: 0 4px 8px rgba(0,0,0,.6) !important; }
+.lowfx .hcard { box-shadow: 0 4px 10px rgba(0,0,0,.7); }
+.lowfx .hcard.playable { box-shadow: 0 0 0 3px #7dff8a; }
+.lowfx .legend-intro { background: rgba(0,0,0,.75); }
+.lowfx .table-frame::before, .lowfx .table-frame::after { box-shadow: none; }

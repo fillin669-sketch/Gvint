@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
     /** Адрес онлайн-версии игры */
     private static final String ONLINE_URL = "https://fillin669-sketch.github.io/Gvint/index.html";
     private static final String OFFLINE_URL = "file:///android_asset/game/index.html";
-    private static final int APK_VERSION = 10;      // совпадает с versionCode в манифесте
+    private static final int APK_VERSION = 11;      // совпадает с versionCode в манифесте
     private static final long ONLINE_TIMEOUT_MS = 8000;
 
     private WebView web;

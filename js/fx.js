@@ -16,12 +16,44 @@ const FX = (() => {
   const timers = {};
   let parts = [];
   let raf = 0, last = 0, t = 0;
-  const MAX_PARTS = 420;
+  let MAX_PARTS = 420;
+  // качество: high — всё; low — меньше частиц, без тумана и атмосферы, холст в половинном разрешении
+  const Q = { name: 'high', mult: 1, fog: true, ambient: true };
+  let ambientOn = false;
 
   function init() {
     cv = document.getElementById('fx-canvas');
     cx = cv.getContext('2d');
     layer = document.getElementById('fx-layer');
+  }
+
+  function setQuality(q) {
+    const low = q === 'low';
+    Q.name = q; Q.mult = low ? 0.4 : 1; Q.fog = !low; Q.ambient = !low;
+    MAX_PARTS = low ? 160 : 420;
+    if (!cv) return;
+    const k = low ? 0.5 : 1;
+    cv.width = 1600 * k; cv.height = 900 * k;
+    cx = cv.getContext('2d');
+    cx.setTransform(k, 0, 0, k, 0, 0);
+    if (!low && ambientOn) kick();
+  }
+
+  /** Атмосфера: угольки и пылинки над столом, пока идёт партия */
+  function setAmbient(on) {
+    ambientOn = on;
+    if (on) kick();
+  }
+
+  function spawnAmbient() {
+    if (!ambientOn || !Q.ambient || !zones.length) return;
+    let n = 0;
+    for (const p of parts) if (p.kind === 'mote') n++;
+    if (n >= 26 || Math.random() > 0.35) return;
+    const R = pickRandom(zones);
+    const ember = Math.random() < 0.45;
+    add({ kind: 'mote', x: rand(R.x, R.x + R.w), y: R.y + R.h + 10, vx: rand(-8, 8), vy: rand(-28, -12), g: 0, life: rand(6, 11),
+      r: ember ? rand(1.2, 2.2) : rand(0.8, 1.6), col: ember ? pickRandom(['#ffb347', '#ff8a3d', '#ffd36b']) : 'rgba(255,240,210,.8)', wob: rand(0, 6), ember });
   }
 
   function stageScale() {
@@ -67,7 +99,8 @@ const FX = (() => {
 
   /** Взрыв частиц в точке. kind: ember | debris | spark | heal | shield | dust */
   function burst(x, y, kind, n, opts) {
-    for (let i = 0; i < (n || 20); i++) {
+    const count = Math.max(1, Math.round((n || 20) * Q.mult));
+    for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2), sp = rand(60, 260);
       const p = { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.5, 1.1), kind };
       if (kind === 'ember')  { p.vy -= 120; p.g = -40; p.r = rand(1.5, 3.5); p.col = pickRandom(['#ffb347', '#ff7b2b', '#ffd36b', '#ff4b1f']); }
@@ -159,7 +192,7 @@ const FX = (() => {
 
   /* ---------------- цикл ---------------- */
   function busy() {
-    return parts.length > 0 || KINDS.some((r) => level[r] > 0.01 || target[r]);
+    return (ambientOn && Q.ambient) || parts.length > 0 || KINDS.some((r) => level[r] > 0.01 || target[r]);
   }
 
   function kick() {
@@ -176,8 +209,9 @@ const FX = (() => {
       if (!target[r] && level[r] < 0.01) level[r] = 0;
     }
     spawnWeather(dt);
+    spawnAmbient();
     cx.clearRect(0, 0, 1600, 900);
-    drawFog();
+    if (Q.fog) drawFog();
 
     const alive = [];
     for (const p of parts) {
@@ -197,6 +231,17 @@ const FX = (() => {
       }
       if (p.age >= p.life) continue;
       const k = 1 - p.age / p.life;
+      if (p.kind === 'mote') {
+        p.x += (p.vx + Math.sin(t * 1.3 + p.wob) * 10) * dt; p.y += p.vy * dt;
+        const a = Math.min(1, p.age * 1.5) * k * (p.ember ? 0.9 : 0.45) * (0.7 + 0.3 * Math.sin(t * 6 + p.wob));
+        cx.globalAlpha = a;
+        cx.fillStyle = p.col;
+        cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, Math.PI * 2); cx.fill();
+        if (p.ember) { cx.globalAlpha = a * 0.25; cx.beginPath(); cx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2); cx.fill(); }
+        cx.globalAlpha = 1;
+        alive.push(p);
+        continue;
+      }
       if (p.kind === 'bubble') {
         p.y += p.vy * dt;
         const x = p.x + Math.sin(t * 3 + p.wob) * 4;
@@ -348,5 +393,5 @@ const FX = (() => {
     dom('legend-intro', null, 1500, `<div class="li-rays"></div><div class="li-card">${img}</div><div class="li-name">${card.name}</div><div class="li-sub">Легендарная карта</div>`);
   }
 
-  return { ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
+  return { setQuality, setAmbient, quality: () => Q.name, ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
 })();

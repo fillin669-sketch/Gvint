@@ -85,7 +85,7 @@ function hcardHTML(c, o) {
   const data = c.uid ? `data-h="${c.uid}"` : `data-gid="${esc(c.id)}"`;
   const stats = c.type === 'minion' ? `<div class="hc-atk">${c.atk}</div><div class="hc-hp">${c.hp}</div>` : '';
   return `<div class="${cls.join(' ')}" ${data} ${o.style ? `style="${o.style}"` : ''}>
-    <div class="hc-art">${artHTML(c)}</div>
+    <div class="hc-art">${artHTML(c)}</div>${c.rarity && c.rarity !== 'common' ? `<div class="gem g-${c.rarity} hc-gem"></div>` : ''}
     <div class="hc-cost ${cost < c.cost ? 'cheap' : ''}">${cost}</div>
     <div class="hc-name">${esc(c.name)}</div>
     <div class="hc-text">${esc(cardShortText(c))}</div>${stats}</div>`;
@@ -112,7 +112,8 @@ function minionHTML(s, m, o) {
   const def = defOf(m.id);
   const baseAtk = def ? def.atk : m.atk;
   return `<div class="${cls.join(' ')}" data-t="${m.uid}" ${o.style ? `style="${o.style}"` : ''}>
-    <div class="m-frame"><div class="m-art">${artHTML(m)}</div></div>
+    <div class="m-shadow"></div>${m.rarity === 'legendary' ? '<div class="m-crown">👑</div>' : ''}
+    <div class="m-frame"><div class="m-art">${artHTML(m)}</div></div>${m.rarity && m.rarity !== 'common' ? `<div class="gem g-${m.rarity} m-gem"></div>` : ''}
     <div class="m-icons">${icons.slice(0, 4).map((x) => `<span>${x}</span>`).join('')}</div>
     ${status ? `<div class="m-status">${status}</div>` : ''}
     ${sleepy ? '<div class="m-zz">💤</div>' : ''}
@@ -437,14 +438,17 @@ function render() {
   handEl.classList.toggle('locked', !canAct());
   let drawnN = 0;
   const newHand = new Set();
-  handEl.innerHTML = me.hand.map((c) => {
+  const mid = (n - 1) / 2;
+  handEl.innerHTML = me.hand.map((c, i) => {
     newHand.add(c.uid);
+    const off = i - mid;
+    const fan = `--r:${(off * Math.min(3.5, 22 / Math.max(1, n))).toFixed(1)}deg;--y:${(off * off * 0.9 - 8).toFixed(1)}px;`;
     const extra = [];
     if (canAct() && canPlay(s, 0, c)) extra.push('playable');
     if (App.sel && App.sel.uid === c.uid && (App.sel.kind === 'card' || App.sel.kind === 'bc')) extra.push('sel');
     let style = '';
     if (!App.handSeen.has(c.uid)) { extra.push('drawn'); style = `animation-delay:${Math.min(drawnN++, 6) * 90}ms`; }
-    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style });
+    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style });
   }).join('');
   if (drawnN && App.handSeen.size) Sound.play('draw');
   App.handSeen = newHand;
@@ -914,6 +918,8 @@ async function startGame() {
   addLog(`Битва за Трон. Поле: ${FIELDS[App.myField].name}`);
   render();
   FX.setZones([$('#field-op'), $('#field-me')]);
+  FX.setAmbient(true);
+  watchFps();
   showPreview(null);
   await banner('Битва за Трон', `Поле: ${FIELDS[App.myField].name}`, 1600);
   if (s !== App.s) return;
@@ -949,6 +955,7 @@ function gameOver() {
 function goMenu() {
   Tut.stop();
   App.s = null;
+  FX.setAmbient(false);
   FX.clearAll();
   $('#banner').classList.add('hidden');
   Sound.setLocation('tavern');
@@ -1005,6 +1012,8 @@ function showRules() {
       <li><b>🗡️ Добивание</b> — срабатывает, когда существо убивает врага в атаке.</li>
     </ul>
     <h3>Управление</h3><p><b>🔍 Долгое нажатие на любую карту</b> (или правая кнопка мыши) открывает её крупно — с оригинальной картинкой и описанием. Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
+    <h3>Авторы</h3><p>Музыка сочиняется игрой на ходу. Записи инструментов: FluidR3_GM SoundFont (Frank Wen),
+      лицензия Creative Commons Attribution 3.0, через проект midi-js-soundfonts (Benjamin Gleitzman). Шрифт Philosopher — SIL Open Font License.</p>
     <div class="mbtns"><button class="btn btn-gold" data-v="ok">Понятно</button></div>`, null, 'rules');
 }
 
@@ -1020,14 +1029,78 @@ function renderGallery() {
   $('#gal-preview').innerHTML = '<div class="pv-empty">Нажмите на карту, чтобы рассмотреть её.<br><br>Под каждой картой — её id (имя файла картинки).</div>';
 }
 
+/* ---------------------- качество графики ---------------------- */
+function detectQuality() {
+  const mem = navigator.deviceMemory || 4;
+  const cores = navigator.hardwareConcurrency || 4;
+  return mem <= 2 || cores <= 4 ? 'low' : 'high';
+}
+
+function gfxSetting() {
+  try { return localStorage.getItem('tron-gfx') || 'auto'; } catch (e) { return 'auto'; }
+}
+
+function applyQuality(q) {
+  App.quality = q;
+  document.body.classList.toggle('lowfx', q === 'low');
+  FX.setQuality(q);
+  Sound.setLowQuality(q === 'low');
+}
+
+/** Замер плавности в начале партии: если телефон не тянет — экономный режим */
+function watchFps() {
+  if (gfxSetting() !== 'auto' || App.quality === 'low') return;
+  let frames = 0;
+  const t0 = performance.now();
+  const step = (t) => {
+    frames++;
+    if (t - t0 < 5000) { requestAnimationFrame(step); return; }
+    const fps = frames * 1000 / (t - t0);
+    if (fps < 38 && App.quality !== 'low') {
+      applyQuality('low');
+      addLog(`⚙️ Графика переключена на экономную (было ${Math.round(fps)} кадров/с)`);
+    }
+  };
+  requestAnimationFrame(step);
+}
+
+/** Текстуры рисуются один раз при запуске и дальше ничего не стоят */
+function makeTextures() {
+  const mk = (w, h, draw, type) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c.toDataURL(type || 'image/png', 0.82); };
+  const wood = mk(512, 256, (g, w, h) => {
+    g.fillStyle = '#2e1c0f'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 140; i++) {
+      const y = Math.random() * h, amp = 2 + Math.random() * 6, f = 0.004 + Math.random() * 0.01, ph = Math.random() * 6;
+      g.strokeStyle = Math.random() < 0.5 ? `rgba(0,0,0,${0.08 + Math.random() * 0.18})` : `rgba(140,90,45,${0.05 + Math.random() * 0.12})`;
+      g.lineWidth = 0.6 + Math.random() * 1.8;
+      g.beginPath();
+      for (let x = 0; x <= w; x += 8) g.lineTo(x, y + Math.sin(x * f + ph) * amp);
+      g.stroke();
+    }
+    for (let i = 0; i < 6; i++) {   // сучки
+      const x = Math.random() * w, y = Math.random() * h, r = 6 + Math.random() * 10;
+      const gr = g.createRadialGradient(x, y, 1, x, y, r); gr.addColorStop(0, 'rgba(10,5,2,.7)'); gr.addColorStop(1, 'rgba(10,5,2,0)');
+      g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r * 1.8, r, 0, 0, Math.PI * 2); g.fill();
+    }
+  }, 'image/jpeg');
+  const noise = mk(128, 128, (g, w, h) => {
+    const d = g.createImageData(w, h);
+    for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 40 + Math.random() * 40; }
+    g.putImageData(d, 0, 0);
+  });
+  const root = document.documentElement.style;
+  root.setProperty('--tex-wood', `url(${wood})`);
+  root.setProperty('--tex-noise', `url(${noise})`);
+  document.body.classList.add('tex');
+}
+
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.2';
+const GAME_VERSION = '3.3';
 const SITE_URL = 'https://fillin669-sketch.github.io/Gvint/';
 const CHANGELOG = [
-  'Легендарные карты выходят с золотой заставкой, эпические — с рунным кругом',
-  'Свои эффекты атаки и защиты у легендарных, эпических и редких карт',
-  'Новые значки натур: 🐏 Упрямство, 🥧 Доброта, 🍺 Наглость, 🎣 Терпение, 💰 Жадность',
-  'Игра теперь обновляется сама при запуске (нужен интернет)',
+  'Музыка теперь играется настоящими инструментами: скрипка, флейта, гитара, арфа, виолончель, волынка, барабаны',
+  'Новая графика: деревянный стол с резной рамой, лучи света, летящие угольки, карты веером, камни редкости и короны легенд',
+  'Настройка «Графика» в меню: на слабых телефонах игра сама включает экономный режим',
 ];
 
 function showVersionBadge() {
@@ -1074,6 +1147,14 @@ function init() {
   showPreview(null);
   showVersionBadge();
   checkUpdates();
+  makeTextures();
+  const gfx = gfxSetting();
+  applyQuality(gfx === 'auto' ? detectQuality() : gfx);
+  $('#gfx-select').value = gfx;
+  $('#gfx-select').addEventListener('change', (e) => {
+    try { localStorage.setItem('tron-gfx', e.target.value); } catch (er) { /* ignore */ }
+    applyQuality(e.target.value === 'auto' ? detectQuality() : e.target.value);
+  });
 
   document.addEventListener('pointerdown', () => Sound.init(), { capture: true });
   document.addEventListener('click', (e) => {
