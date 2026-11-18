@@ -28,6 +28,7 @@ const ART_OK = new Set();
 function probeArt() {
   EXTRA_CARDS.forEach((c) => {
     if (!c.optionalArt) return;
+    if (window.EMBED_ART) { if (c.thumb.startsWith('data:')) ART_OK.add(c.id); return; }
     const im = new Image();
     im.onload = () => { ART_OK.add(c.id); };
     im.src = c.thumb;

@@ -88,7 +88,9 @@ function U(id, name, power, row, abil, icon, extra) {
 function S(id, kind, name, icon, extra) {
   return Object.assign({ id, name, type: 'special', kind, power: 0, abil: [], icon: icon || '✦', rarity: 'common' }, extra || {});
 }
-const IMG = (id) => ({ img: `img/cards/${id}.jpg`, thumb: `img/cards/thumbs/${id}.jpg` });
+// В собранной однофайловой версии картинки встроены в window.EMBED_ART
+const ARTPATH = (p) => (typeof window !== 'undefined' && window.EMBED_ART && window.EMBED_ART[p]) || p;
+const IMG = (id) => ({ img: ARTPATH(`img/cards/${id}.jpg`), thumb: ARTPATH(`img/cards/thumbs/${id}.jpg`) });
 
 /* =====================================================================
    ОБЩИЕ КАРТЫ (ваши карточки) — попадают в колоду любой фракции
@@ -359,7 +361,7 @@ const EXTRA_CARDS = [
 // Шаблон карты рога — используется способностью лидера
 const LEADER_HORN_DEF = S('leader_horn', 'horn', 'Боевой рог лидера', '📯');
 // Щит, который ставит «Кент на Подхвате»
-const COVER_SHIELD_DEF = S('cover_shield', 'shield', 'Щит кента', '🛡️', { img: 'img/cards/kent.jpg', thumb: 'img/cards/thumbs/kent.jpg' });
+const COVER_SHIELD_DEF = S('cover_shield', 'shield', 'Щит кента', '🛡️', IMG('kent'));
 
 function allCardDefs() {
   const out = [...SHARED_CARDS, ...EXTRA_CARDS];
