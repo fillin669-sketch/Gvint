@@ -73,6 +73,8 @@ button { font-family: inherit; }
 .faction-tile .perk { color: #ffe39a; }
 .faction-tile .ldr { color: #cfe3ff; }
 .opp-pick { margin: 26px 0 0; font-size: 20px; display: flex; gap: 12px; justify-content: center; align-items: center; }
+.extra-pick { margin-left: 18px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.extra-pick input { width: 20px; height: 20px; accent-color: var(--gold); }
 .opp-pick select {
   font: inherit; font-size: 19px; padding: 6px 10px; border-radius: 6px;
   background: #22180d; color: var(--ink); border: 1px solid var(--gold-soft);
@@ -111,7 +113,8 @@ button { font-family: inherit; }
   transform: scale(1.5); transform-origin: 50% 30%;   /* приближаем к портрету на карточке */
 }
 .mbox .card .art img, .gal-grid .card .art img { transform: scale(1.2); }
-.card .glyph { font-size: 3em; filter: drop-shadow(0 2px 4px rgba(0,0,0,.7)); }
+.card .art { background: radial-gradient(circle at 50% 42%, rgba(255,220,150,.28), transparent 62%); }
+.card .glyph { font-size: 3em; filter: drop-shadow(0 2px 6px rgba(0,0,0,.8)); margin-bottom: .6em; }
 .card .pw {
   position: absolute; top: .25em; left: .25em;
   min-width: 2em; height: 2em; padding: 0 .2em;

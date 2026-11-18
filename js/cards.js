@@ -270,9 +270,86 @@ const FACTIONS = {
   },
 };
 
+/* =====================================================================
+   НОВЫЕ КАРТЫ (пока без картинок — рисуется значок).
+   Чтобы дать карте картинку, положите img/cards/<id>.jpg
+   и img/cards/thumbs/<id>.jpg — игра подхватит её сама.
+   ===================================================================== */
+const ART = (id) => ({ ...IMG(id), optionalArt: true });
+const EXTRA_CARDS = [
+  // ---- Легенды ----
+  U('tescha', 'Тёща', 10, 'siege', ['hero'], '👵', { ...ART('tescha'), rarity: 'legendary',
+    quote: '«Я же говорила, что он тебе не пара!»' }),
+  U('batya', 'Батя с ремнём', 8, 'melee', ['hero', 'scorch'], '👨‍🦳', { ...ART('batya'), rarity: 'legendary',
+    quote: '«Ну всё. Сейчас кто-то получит.»' }),
+
+  // ---- Отряды ----
+  U('gop_kolyan', 'Гопник Колян', 3, 'melee', ['muster'], '🧢', { ...ART('gop_kolyan'), rarity: 'common', muster: 'gop',
+    quote: '«Слышь, есть чё?»' }),
+  U('gop_tolyan', 'Гопник Толян', 3, 'melee', ['muster'], '🧢', { ...ART('gop_tolyan'), rarity: 'common', muster: 'gop',
+    quote: '«А ты с какого района?»' }),
+  U('gop_vovan', 'Гопник Вован', 3, 'melee', ['muster'], '🧢', { ...ART('gop_vovan'), rarity: 'common', muster: 'gop',
+    quote: '«Позвонить дай, брат.»' }),
+  U('babki', 'Бабки у подъезда', 4, 'ranged', ['spy'], '👀', { ...ART('babki'), rarity: 'rare',
+    quote: '«А эта-то, с третьего этажа, опять с новым!»' }),
+  U('kachok', 'Качок из подвала', 4, 'melee', ['bond'], '🏋️', { ...ART('kachok'), rarity: 'common', count: 2,
+    quote: '«Ты ваще сколько жмёшь?»' }),
+  U('tamada', 'Тамада', 2, 'ranged', ['horn'], '🎤', { ...ART('tamada'), rarity: 'rare',
+    quote: '«А теперь — конкурс!»' }),
+  U('perforator', 'Сосед с перфоратором', 5, 'siege', ['shoot'], '🔨', { ...ART('perforator'), rarity: 'rare', value: 3,
+    quote: '«Суббота, восемь утра — самое время.»' }),
+  U('uchastkovy', 'Участковый', 6, 'melee', ['dispel'], '👮', { ...ART('uchastkovy'), rarity: 'epic',
+    quote: '«Тааак. Что тут у нас?»' }),
+  U('taksist', 'Таксист-философ', 4, 'agile', ['draw'], '🚕', { ...ART('taksist'), rarity: 'common',
+    quote: '«Я тебе так скажу, брат: жизнь — она как дорога…»' }),
+  U('garazh_muzhiki', 'Мужики из гаражей', 4, 'siege', ['reinforce'], '🔧', { ...ART('garazh_muzhiki'), rarity: 'epic',
+    quote: '«Щас мужиков позову — разберёмся.»' }),
+  U('feldsher', 'Фельдшер скорой', 3, 'siege', ['medic'], '🚑', { ...ART('feldsher'), rarity: 'rare',
+    quote: '«Ну что, опять упал? Сам упал?»' }),
+  U('rybak', 'Рыбак с байками', 3, 'ranged', ['income'], '🎣', { ...ART('rybak'), rarity: 'rare',
+    quote: '«Вот такую вчера вытащил! Не веришь?»' }),
+  U('garmonist', 'Гармонист на свадьбе', 2, 'siege', ['morale'], '🪗', { ...ART('garmonist'), rarity: 'common',
+    quote: '«Эх, раз, ещё раз!»' }),
+  U('dvorovy_pes', 'Дворовый пёс Шарик', 5, 'melee', ['stealth'], '🐕', { ...ART('dvorovy_pes'), rarity: 'rare',
+    quote: '«Его все кормят, но никто не поймает.»' }),
+
+  // ---- Особые карты ----
+  S('kirpich', 'damage', 'Кирпич с балкона', '🧱', { ...ART('kirpich'), rarity: 'rare', value: 6,
+    quote: '«Он сам выпал. Честно.»' }),
+  S('tapok', 'damage', 'Летящий тапок', '🩴', { ...ART('tapok'), rarity: 'common', value: 2, count: 2,
+    quote: '«Мать — лучший снайпер в мире.»' }),
+  S('shaurma', 'curse', 'Шаурма с вокзала', '🌯', { ...ART('shaurma'), rarity: 'epic',
+    quote: '«Пахнет вкусно. Это и подозрительно.»' }),
+  S('korporativ', 'rowdmg', 'Утро после корпоратива', '🥴', { ...ART('korporativ'), rarity: 'rare', value: 2,
+    quote: '«Кто мне вчера налил последнюю?»' }),
+  S('svadba', 'scorch', 'Драка на свадьбе', '💍', { ...ART('svadba'), rarity: 'epic',
+    quote: '«Ни одна нормальная свадьба без этого не обходится.»' }),
+  S('mama_zvonit', 'discard', 'Мама звонит', '📞', { ...ART('mama_zvonit'), rarity: 'common',
+    quote: '«Ты покушал? Шапку надел?»' }),
+  S('avans', 'draw2', 'Аванс пришёл', '💸', { ...ART('avans'), rarity: 'rare',
+    quote: '«Гуляем! До зарплаты как-нибудь доживём.»' }),
+  S('rynok', 'shop', 'Барахолка на рынке', '🧺', { ...ART('rynok'), rarity: 'common',
+    quote: '«Бери, дорогой, для тебя — скидка!»' }),
+  S('banya', 'heal', 'Банька с веником', '🧖', { ...ART('banya'), rarity: 'epic',
+    quote: '«С лёгким паром!»' }),
+  S('pirozhki', 'healOne', 'Бабушкины пирожки', '🥟', { ...ART('pirozhki'), rarity: 'common', value: 3, cleanse: true,
+    quote: '«Ешь давай, совсем худой стал.»' }),
+  S('garazh', 'fort', 'Гараж', '🏚️', { ...ART('garazh'), rarity: 'rare',
+    quote: '«Не просто гараж — мужская крепость.»' }),
+  S('sto_gramm', 'horn', 'Сто грамм для храбрости', '🥃', { ...ART('sto_gramm'), rarity: 'common',
+    quote: '«Для сугреву и для смелости.»' }),
+  S('otmazka', 'decoy', 'Отмазка', '🤷', { ...ART('otmazka'), rarity: 'common',
+    quote: '«Я вообще мимо проходил.»' }),
+  S('dozhd', 'weather', 'Ливень на шашлыках', '🌧️', { ...ART('dozhd'), rarity: 'rare', wrow: 'ranged',
+    quote: '«Каждый раз! Каждый раз на майские!»' }),
+  S('nashatyr', 'clear', 'Нашатырь', '🧪', { ...ART('nashatyr'), rarity: 'common',
+    quote: '«Нюхни — и как новенький.»' }),
+];
+
 // Служебное: проставляем принадлежность карт
 (function () {
   SHARED_CARDS.forEach((c) => { c.faction = 'shared'; });
+  EXTRA_CARDS.forEach((c) => { c.faction = 'shared'; });
   for (const k in FACTIONS) {
     FACTIONS[k].key = k;
     FACTIONS[k].cards.forEach((c) => { c.faction = k; });
@@ -285,7 +362,7 @@ const LEADER_HORN_DEF = S('leader_horn', 'horn', 'Боевой рог лидер
 const COVER_SHIELD_DEF = S('cover_shield', 'shield', 'Щит кента', '🛡️', { img: 'img/cards/kent.jpg', thumb: 'img/cards/thumbs/kent.jpg' });
 
 function allCardDefs() {
-  const out = [...SHARED_CARDS];
+  const out = [...SHARED_CARDS, ...EXTRA_CARDS];
   for (const k in FACTIONS) out.push(...FACTIONS[k].cards);
   return out;
 }

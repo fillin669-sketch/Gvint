@@ -32,8 +32,8 @@ function makeCard(def, owner) {
   return c;
 }
 
-function buildDeck(fk, owner) {
-  const defs = [...FACTIONS[fk].cards, ...SHARED_CARDS];
+function buildDeck(fk, owner, extra) {
+  const defs = [...FACTIONS[fk].cards, ...SHARED_CARDS, ...(extra ? EXTRA_CARDS : [])];
   const deck = [];
   defs.forEach((d) => { for (let i = 0; i < (d.count || 1); i++) deck.push(makeCard(d, owner)); });
   return shuffle(deck);
@@ -42,20 +42,20 @@ function buildDeck(fk, owner) {
 const emptyRow = () => ({ cards: [], horn: null, curse: null, shield: null, fort: null });
 const SLOT_KEYS = ['horn', 'curse', 'shield', 'fort'];
 
-function newPlayer(idx, fk, isAI) {
+function newPlayer(idx, fk, isAI, extra) {
   return {
     idx, faction: fk, isAI,
     name: isAI ? 'Противник' : 'Вы',
     leader: Object.assign({}, FACTIONS[fk].leader, { used: false }),
-    deck: buildDeck(fk, idx), hand: [], grave: [],
+    deck: buildDeck(fk, idx, extra), hand: [], grave: [],
     rows: { melee: emptyRow(), ranged: emptyRow(), siege: emptyRow() },
     passed: false, lives: 2,
   };
 }
 
-function createGame(f0, f1) {
+function createGame(f0, f1, extra) {
   const s = {
-    players: [newPlayer(0, f0, false), newPlayer(1, f1, true)],
+    players: [newPlayer(0, f0, false, extra), newPlayer(1, f1, true, extra)],
     weather: { melee: false, ranged: false, siege: false },
     weatherCards: [],
     round: 1, current: 0, starter: 0,

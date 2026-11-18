@@ -20,6 +20,22 @@ const App = {
   seen: new Set(),
   logLines: [],
   galTab: 'shared',
+  extra: true,        // добавлять в колоду новые карты без картинок
+};
+
+// Картинки для новых карт: показываем, только если файл реально есть
+const ART_OK = new Set();
+function probeArt() {
+  EXTRA_CARDS.forEach((c) => {
+    if (!c.optionalArt) return;
+    const im = new Image();
+    im.onload = () => { ART_OK.add(c.id); };
+    im.src = c.thumb;
+  });
+}
+const artOf = (c, full) => {
+  if (c.optionalArt && !ART_OK.has(c.id.replace(/_token$/, ''))) return null;
+  return full ? c.img : (c.thumb || c.img);
 };
 
 /* ---------------------- масштабирование ---------------------- */
@@ -50,7 +66,7 @@ function cardHTML(c, o) {
   if (isHero(c)) cls.push('hero');
   if (c.token) cls.push('token');
   if (o.cls) cls.push(o.cls);
-  const src = o.full ? c.img : (c.thumb || c.img);
+  const src = artOf(c, o.full);
   const art = src ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<span class="glyph">${c.icon || '✦'}</span>`;
   let badge = '';
   let icons = '';
@@ -93,7 +109,7 @@ function previewHTML(c, power) {
   if (!c) {
     return `<div class="pv-empty">Наведите курсор или нажмите на карту,<br>чтобы рассмотреть её.<br><br>Выберите карту в руке, затем подсвеченный ряд или цель.</div>`;
   }
-  const img = c.img ? `<img class="pv-img" src="${esc(c.img)}" alt="">` : `<div class="pv-glyph f-${c.faction || 'shared'}">${c.icon || '✦'}</div>`;
+  const img = artOf(c, true) ? `<img class="pv-img" src="${esc(c.img)}" alt="">` : `<div class="pv-glyph f-${c.faction || 'shared'}">${c.icon || '✦'}</div>`;
   let meta;
   if (c.type === 'unit') {
     const base = c.base != null ? c.base : c.power;
@@ -536,7 +552,7 @@ async function leaveToMenu() {
 async function startGame() {
   const keys = Object.keys(FACTIONS);
   const opp = App.oppFaction === 'random' ? pickRandom(keys.filter((k) => k !== App.myFaction)) : App.oppFaction;
-  const s = createGame(App.myFaction, opp);
+  const s = createGame(App.myFaction, opp, App.extra);
   App.s = s;
   App.sel = null;
   App.seen = new Set();
@@ -613,10 +629,11 @@ function galleryLeaders() {
 }
 
 function renderGallery() {
-  const tabs = [['shared', 'Ваши карты']].concat(Object.keys(FACTIONS).map((k) => [k, FACTIONS[k].name])).concat([['leaders', 'Лидеры']]);
+  const tabs = [['shared', 'Ваши карты'], ['extra', 'Новые карты']].concat(Object.keys(FACTIONS).map((k) => [k, FACTIONS[k].name])).concat([['leaders', 'Лидеры']]);
   $('#gal-tabs').innerHTML = tabs.map(([k, n]) => `<button class="btn ${App.galTab === k ? 'sel' : ''}" data-tab="${k}">${n}</button>`).join('');
   let defs;
   if (App.galTab === 'shared') defs = SHARED_CARDS;
+  else if (App.galTab === 'extra') defs = EXTRA_CARDS;
   else if (App.galTab === 'leaders') defs = galleryLeaders();
   else defs = FACTIONS[App.galTab].cards;
   $('#gal-grid').innerHTML = defs.map((d) => {
@@ -638,6 +655,8 @@ function init() {
     renderMenu();
   });
   $('#opp-select').addEventListener('change', (e) => { App.oppFaction = e.target.value; });
+  $('#extra-toggle').addEventListener('change', (e) => { App.extra = e.target.checked; });
+  probeArt();
   $('#btn-start').addEventListener('click', startGame);
   $('#btn-rules').addEventListener('click', showRules);
   $('#btn-gallery').addEventListener('click', () => { show('gallery'); renderGallery(); });
