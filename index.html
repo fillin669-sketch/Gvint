@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#120d08">
+<title>Трактирная Дуэль</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+
+    <!-- ================= МЕНЮ ================= -->
+    <section id="menu" class="screen">
+      <div class="menu-inner">
+        <h1 class="title">Трактирная Дуэль</h1>
+        <p class="subtitle">Карточная игра на трёх рядах: два выигранных раунда из трёх — победа</p>
+
+        <h3 class="menu-h">Выберите фракцию</h3>
+        <div id="faction-list" class="faction-list"></div>
+
+        <div class="opp-pick">
+          <span>Противник:</span>
+          <select id="opp-select"></select>
+        </div>
+
+        <div class="menu-buttons">
+          <button class="btn btn-gold" id="btn-start">⚔ В бой</button>
+          <button class="btn" id="btn-gallery">🃏 Коллекция карт</button>
+          <button class="btn" id="btn-rules">📜 Правила</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ИГРА ================= -->
+    <section id="game" class="screen hidden">
+      <div id="left">
+        <div class="pinfo" id="pinfo1"></div>
+        <div id="weather" class="weather"></div>
+        <div class="pinfo" id="pinfo0"></div>
+        <div id="log" class="log"></div>
+      </div>
+
+      <div id="board"></div>
+      <div id="hand"></div>
+
+      <div id="right">
+        <div class="piles" id="piles1"></div>
+        <div id="preview" class="preview"></div>
+        <div class="right-buttons">
+          <button class="btn btn-pass" id="btn-pass">Пас</button>
+          <button class="btn btn-small" id="btn-menu" title="В меню">☰</button>
+        </div>
+        <div class="piles" id="piles0"></div>
+      </div>
+    </section>
+
+    <!-- ================= КОЛЛЕКЦИЯ ================= -->
+    <section id="gallery" class="screen hidden">
+      <div class="gal-head">
+        <button class="btn btn-small" id="btn-gal-back">← Назад</button>
+        <div id="gal-tabs" class="gal-tabs"></div>
+      </div>
+      <div class="gal-body">
+        <div id="gal-grid" class="gal-grid"></div>
+        <div id="gal-preview" class="preview"></div>
+      </div>
+    </section>
+
+    <div id="banner" class="banner hidden"><div class="banner-text"></div><div class="banner-sub"></div></div>
+    <div id="modal" class="modal hidden"></div>
+  </div>
+</div>
+<div id="rotate-hint">↻ Поверните телефон горизонтально — так удобнее играть</div>
+
+<script src="js/cards.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
