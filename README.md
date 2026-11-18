@@ -4,6 +4,9 @@
 
 ## Как запустить
 
+**На Android:** установите `dist/tavern-duel.apk`. Телефон попросит разрешить установку
+из неизвестного источника — это нормально для приложений не из Google Play.
+
 Самое простое — файл `dist/tavern-duel.html`: в нём вся игра вместе с картинками.
 Скачайте его на телефон или компьютер и откройте в браузере. Интернет не нужен.
 
@@ -50,3 +53,14 @@ S('my_spell', 'damage', 'Моё заклинание', '🔥', { ...IMG('my_spel
 - `js/ai.js` — компьютерный противник
 - `js/ui.js` — интерфейс
 - `css/style.css` — оформление
+
+## Сборка APK
+
+```bash
+sudo apt-get install android-sdk-platform-23 aapt apksigner zipalign dalvik-exchange default-jdk
+bash android/build_apk.sh        # → dist/tavern-duel.apk
+```
+
+APK подписывается ключом `android/debug.keystore` (пароль `android`). Ключ лежит в репозитории
+специально: обновлённый APK ставится поверх старого, только если подписан тем же ключом.
+Для публикации в Google Play нужен отдельный ключ, который хранят в секрете.

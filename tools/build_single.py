@@ -36,6 +36,8 @@ def main():
 
     html = (ROOT / 'index.html').read_text(encoding='utf8')
     css = (ROOT / 'css' / 'style.css').read_text(encoding='utf8')
+    css = re.sub(r'url\(\.\./fonts/([^)]+)\)', lambda m: 'url(data:font/woff2;base64,' +
+                 base64.b64encode((ROOT / 'fonts' / m.group(1)).read_bytes()).decode() + ')', css)
     html = html.replace('<link rel="stylesheet" href="css/style.css">', f'<style>\n{css}\n</style>')
 
     embed = '<script>window.EMBED_ART = ' + json.dumps(art) + ';</script>'
