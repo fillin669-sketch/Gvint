@@ -960,6 +960,7 @@ function renderGallery() {
 /* ---------------------- инициализация ---------------------- */
 function updateSoundBtns() {
   document.querySelectorAll('.btn-sound').forEach((b) => { b.textContent = Sound.isMuted() ? '🔇' : '🔊'; });
+  document.querySelectorAll('.btn-music').forEach((b) => { b.textContent = '🎵'; b.style.opacity = Sound.isMusicOn() ? 1 : 0.4; b.title = Sound.isMusicOn() ? 'Музыка включена' : 'Музыка выключена'; });
 }
 
 function init() {
@@ -971,6 +972,13 @@ function init() {
   showPreview(null);
 
   document.addEventListener('pointerdown', () => Sound.init(), { capture: true });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.btn-music')) return;
+    e.stopPropagation();
+    Sound.init();
+    Sound.setMusic(!Sound.isMusicOn());
+    updateSoundBtns();
+  }, { capture: true });
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.btn-sound')) return;
     e.stopPropagation();

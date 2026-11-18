@@ -17,6 +17,9 @@ const Sound = (() => {
   let ac = null, master, sfx, amb, noiseBuf;
   let muted = false;
   try { muted = localStorage.getItem('tron-muted') === '1'; } catch (e) { /* нет хранилища */ }
+  let musicOn = true;
+  try { musicOn = localStorage.getItem('tron-music') !== '0'; } catch (e) { /* нет хранилища */ }
+  let mus = null;          // общий узел громкости музыки
   let current = null;      // { key, nodes: [], timers: [] }
   let wanted = 'tavern';
 
@@ -27,7 +30,8 @@ const Sound = (() => {
     ac = new AC();
     master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ac.destination);
     sfx = ac.createGain(); sfx.gain.value = 0.75; sfx.connect(master);
-    amb = ac.createGain(); amb.gain.value = 0.45; amb.connect(master);
+    amb = ac.createGain(); amb.gain.value = 0.3; amb.connect(master);
+    mus = ac.createGain(); mus.gain.value = musicOn ? 0.34 : 0; mus.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -206,6 +210,242 @@ const Sound = (() => {
     },
   };
 
+
+  /* =================================================================
+     МУЗЫКА — генерируется на ходу: фолк в духе тёмного средневековья.
+     Колёсная лира (бурдон), скрипка, флейта, лютня, бубен.
+     Мелодии сочиняются из случайных мотивов в ладу каждой локации.
+     ================================================================= */
+  const MODES = {
+    dorian: [0, 2, 3, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10],
+    phrygian: [0, 1, 3, 5, 7, 8, 10], harmonic: [0, 2, 3, 5, 7, 8, 11],
+  };
+  // steps — шагов в такте (восьмые), prog — ступени аккордов по тактам, drums — рисунок бубна
+  const STYLES = {
+    tavern:  { bpm: 126, steps: 6, root: 62, mode: 'dorian', prog: [0, 0, 6, 6, 0, 0, 4, 0], drums: ['K..S..', 'K.KS.J'], lead: 'fiddle', drone: true, swing: 0 },
+    zags:    { bpm: 108, steps: 8, root: 67, mode: 'mixolydian', prog: [0, 3, 0, 4, 0, 3, 6, 0], drums: ['K...S.J.', 'K.J.S.JJ'], lead: 'flute', drone: true, swing: 0.08 },
+    office:  { bpm: 78, steps: 8, root: 57, mode: 'aeolian', prog: [0, 5, 2, 6, 0, 5, 3, 4], drums: ['K.......', 'K...S...'], lead: 'lute', drone: false, swing: 0 },
+    night:   { bpm: 140, steps: 8, root: 64, mode: 'phrygian', prog: [0, 0, 1, 0, 0, 0, 6, 1], drums: ['K.KSK.KS', 'K.KSKKSJ'], lead: 'fiddle', drone: true, swing: 0 },
+    nursery: { bpm: 96, steps: 6, root: 72, mode: 'harmonic', prog: [0, 3, 4, 0, 5, 3, 4, 0], drums: ['K.....', 'K...J.'], lead: 'box', drone: false, swing: 0 },
+  };
+  const RHYTHMS = {
+    6: [[3, 3], [2, 1, 2, 1], [1, 1, 1, 3], [3, 1, 1, 1], [2, 1, 3], [1, 1, 1, 1, 1, 1]],
+    8: [[2, 2, 2, 2], [3, 1, 2, 2], [1, 1, 2, 4], [2, 1, 1, 4], [4, 2, 2], [1, 1, 1, 1, 2, 2], [6, 2]],
+  };
+
+  function rng(seed) {
+    return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+
+  /** Сочиняет 8-тактовую мелодию: мотив A, ответ A', развитие B, возврат к тонике */
+  function compose(st, seed) {
+    const R = rng(seed);
+    const pick = (a) => a[Math.floor(R() * a.length)];
+    const scale = MODES[st.mode];
+    const bar = (chord, last, rhythm) => {
+      const notes = [];
+      let deg = last;
+      let step = 0;
+      rhythm.forEach((dur, i) => {
+        const strong = step === 0 || step === st.steps / 2;
+        if (strong) {
+          const tones = [chord, chord + 2, chord + 4, chord + 7];
+          deg = tones.reduce((b, t) => (Math.abs(t - deg) < Math.abs(b - deg) ? t : b), tones[0]);
+        } else {
+          deg += pick([-2, -1, -1, 1, 1, 2, 0, 3, -3]);
+        }
+        deg = Math.max(-3, Math.min(10, deg));
+        notes.push({ step, dur, deg, rest: !strong && R() < 0.08 && i > 0 });
+        step += dur;
+      });
+      return { notes, last: deg };
+    };
+    const rA = [pick(RHYTHMS[st.steps]), pick(RHYTHMS[st.steps])];
+    const rB = [pick(RHYTHMS[st.steps]), pick(RHYTHMS[st.steps])];
+    const bars = [];
+    let last = 4;
+    st.prog.forEach((chord, i) => {
+      const rhythm = i >= 4 && i < 6 ? rB[i % 2] : rA[i % 2];
+      const b = bar(chord, last, rhythm);
+      last = b.last;
+      bars.push(b.notes);
+    });
+    // последний такт — на тонику
+    const end = bars[bars.length - 1];
+    end[end.length - 1].deg = 7;
+    end[end.length - 1].rest = false;
+    return bars.map((ns) => ns.map((n) => ({ ...n, midi: st.root + 12 * Math.floor(n.deg / 7) + scale[((n.deg % 7) + 7) % 7] })));
+  }
+
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  function inst(kind, t, midi, len, dest, vol) {
+    const f = hz(midi);
+    const g = ac.createGain();
+    g.connect(dest);
+    if (kind === 'fiddle' || kind === 'flute') {
+      const o = ac.createOscillator();
+      o.type = kind === 'fiddle' ? 'sawtooth' : 'sine';
+      o.frequency.value = f;
+      const vib = ac.createOscillator(); vib.frequency.value = 5.4;
+      const vg = ac.createGain(); vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.006, t + Math.min(0.25, len));
+      vib.connect(vg); vg.connect(o.frequency);
+      let n = o;
+      if (kind === 'fiddle') {
+        const bp = ac.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 2600; bp.Q.value = 2;
+        o.connect(bp); n = bp;
+      }
+      n.connect(g);
+      const v = vol * (kind === 'fiddle' ? 0.16 : 0.32);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(v, t + (kind === 'fiddle' ? 0.05 : 0.07));
+      g.gain.setValueAtTime(v * 0.85, t + len * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.12);
+      o.start(t); vib.start(t); o.stop(t + len + 0.2); vib.stop(t + len + 0.2);
+      if (kind === 'flute') noiseAt(t, 0.12, 'bandpass', f * 2, vol * 0.05, dest);
+    } else {
+      // лютня / музыкальная шкатулка — щипок
+      const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+      const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * (kind === 'box' ? 4 : 2);
+      const g2 = ac.createGain(); g2.gain.value = kind === 'box' ? 0.35 : 0.2;
+      o.connect(g); o2.connect(g2); g2.connect(g);
+      const v = vol * (kind === 'box' ? 0.22 : 0.3);
+      const dec = kind === 'box' ? 1.2 : 0.7;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(v, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(len, dec));
+      o.start(t); o2.start(t); o.stop(t + dec + 0.1); o2.stop(t + dec + 0.1);
+    }
+  }
+
+  function noiseAt(t, dur, type, freq, vol, dest, slide) {
+    const src = ac.createBufferSource(); src.buffer = noiseBuf;
+    const f = ac.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t);
+    if (slide) f.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(dest);
+    src.start(t, Math.random()); src.stop(t + dur + 0.05);
+  }
+
+  function drum(ch, t, dest) {
+    if (ch === 'K') {   // большой бубен
+      const o = ac.createOscillator(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.25);
+      const g = ac.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.4);
+      noiseAt(t, 0.08, 'lowpass', 900, 0.12, dest);
+    } else if (ch === 'S') {   // шлепок по бубну
+      noiseAt(t, 0.12, 'bandpass', 1800, 0.22, dest);
+    } else if (ch === 'J') {   // бубенцы
+      noiseAt(t, 0.16, 'highpass', 6500, 0.09, dest);
+    }
+  }
+
+  function bass(t, midi, len, dest) {
+    const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = hz(midi);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.28, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + len + 0.05);
+  }
+
+  let song = null;   // { key, st, out, timer, nextT, bar, step, melody, loops, droneNodes }
+
+  function startDrone(sg) {
+    const st = sg.st;
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 3;
+    const g = ac.createGain(); g.gain.value = 0.05;
+    // «колесо» лиры — медленная пульсация громкости
+    const lfo = ac.createOscillator(); lfo.frequency.value = st.bpm / 60 / 2;
+    const lg = ac.createGain(); lg.gain.value = 0.018;
+    lfo.connect(lg); lg.connect(g.gain);
+    lp.connect(g); g.connect(sg.out);
+    const nodes = [lfo];
+    [st.root - 24, st.root - 17, st.root - 12].forEach((m, i) => {
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = i * 4 - 4;
+      o.connect(lp); o.start(); nodes.push(o);
+    });
+    lfo.start();
+    sg.droneNodes = nodes;
+  }
+
+  function scheduleStep(sg, t) {
+    const st = sg.st;
+    const stepDur = 60 / st.bpm / 2;
+    const scale = MODES[st.mode];
+    const bar = sg.bar % st.prog.length;
+    const chord = st.prog[bar];
+    // ударные
+    const pat = st.drums[(sg.bar % 4 === 3) ? 1 : 0];
+    if (pat[sg.step] && pat[sg.step] !== '.') drum(pat[sg.step], t, sg.out);
+    // бас на сильные доли
+    if (sg.step === 0 || sg.step === st.steps / 2) {
+      const m = st.root - 24 + scale[chord % 7] + (chord >= 7 ? 12 : 0);
+      bass(t, m, stepDur * st.steps / 2 * 0.95, sg.out);
+    }
+    // мелодия (в первом проходе — только аккомпанемент, дальше вступает соло)
+    if (sg.loops > 0 || st.lead === 'box') {
+      const n = sg.melody[bar].find((x) => x.step === sg.step);
+      if (n && !n.rest) {
+        const swing = st.swing && sg.step % 2 ? st.swing * stepDur : 0;
+        inst(st.lead, t + swing, n.midi, n.dur * stepDur * 0.95, sg.out, 1);
+        // во втором голосе — флейта октавой выше на повторах
+        if (sg.loops % 2 === 0 && st.lead === 'fiddle' && bar >= 4) inst('flute', t + swing, n.midi + 12, n.dur * stepDur * 0.9, sg.out, 0.45);
+      }
+    }
+  }
+
+  function tick() {
+    const sg = song;
+    if (!sg || !ac) return;
+    const stepDur = 60 / sg.st.bpm / 2;
+    while (sg.nextT < ac.currentTime + 0.25) {
+      scheduleStep(sg, sg.nextT);
+      sg.nextT += stepDur;
+      sg.step++;
+      if (sg.step >= sg.st.steps) {
+        sg.step = 0;
+        sg.bar++;
+        if (sg.bar % sg.st.prog.length === 0) {
+          sg.loops++;
+          if (sg.loops % 2 === 0) sg.melody = compose(sg.st, Math.floor(Math.random() * 1e9));   // новая мелодия
+        }
+      }
+    }
+  }
+
+  function stopSong() {
+    if (!song) return;
+    const old = song;
+    song = null;
+    clearInterval(old.timer);
+    old.out.gain.setTargetAtTime(0.0001, now(), 0.5);
+    setTimeout(() => {
+      (old.droneNodes || []).forEach((n) => { try { n.stop(); } catch (e) { /* ignore */ } });
+      old.out.disconnect();
+    }, 3000);
+  }
+
+  function startSong(key) {
+    if (!ac) return;
+    const st = STYLES[key] || STYLES.tavern;
+    if (song && song.key === key) return;
+    stopSong();
+    const out = ac.createGain();
+    out.gain.value = 0.0001;
+    out.gain.setTargetAtTime(1, now(), 1.2);
+    out.connect(mus);
+    const sg = { key, st, out, nextT: now() + 0.3, bar: 0, step: 0, loops: 0, melody: compose(st, Math.floor(Math.random() * 1e9)) };
+    if (st.drone) startDrone(sg);
+    sg.timer = setInterval(tick, 60);
+    song = sg;
+  }
+
+  function setMusic(on) {
+    musicOn = on;
+    try { localStorage.setItem('tron-music', on ? '1' : '0'); } catch (e) { /* ignore */ }
+    if (ac) mus.gain.setTargetAtTime(on ? 0.34 : 0, now(), 0.3);
+  }
+
   function stopLocation() {
     if (!current) return;
     const old = current;
@@ -226,6 +466,7 @@ const Sound = (() => {
     out.gain.setTargetAtTime(1, now(), 0.8);
     current = { key, nodes: [], timers: [], out };
     (BUILD[key] || BUILD.tavern)(current);
+    startSong(key);
   }
 
   function setMuted(m) {
@@ -234,5 +475,6 @@ const Sound = (() => {
     if (ac) master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.1);
   }
 
-  return { init, play, setLocation, setMuted, isMuted: () => muted };
+  return { init, play, setLocation, setMuted, isMuted: () => muted, setMusic, isMusicOn: () => musicOn,
+    _debugSong: () => song && { key: song.key, bar: song.bar, loops: song.loops, notes: song.melody.flat().length } };
 })();
