@@ -23,15 +23,28 @@ const Sound = (() => {
   let current = null;      // { key, nodes: [], timers: [] }
   let wanted = 'tavern';
 
+  // громкость каналов 0..1 (ползунки в настройках)
+  const VOL = { music: 0.8, sfx: 0.8, amb: 0.6 };
+  try { Object.assign(VOL, JSON.parse(localStorage.getItem('tron-volume') || '{}')); } catch (e) { /* ignore */ }
+  const GAIN = { music: 1.25, sfx: 0.95, amb: 0.5 };   // множители, чтобы 100% звучало уверенно, но не хрипело
+  const chanGain = (k) => (k === 'music' && !musicOn ? 0 : VOL[k] * GAIN[k]);
+
   function init() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return true; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
-    try { ac = lowQuality ? new AC({ sampleRate: 22050 }) : new AC(); } catch (e) { ac = new AC(); }
-    master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ac.destination);
-    sfx = ac.createGain(); sfx.gain.value = 0.75; sfx.connect(master);
-    amb = ac.createGain(); amb.gain.value = 0.3; amb.connect(master);
-    mus = ac.createGain(); mus.gain.value = musicOn ? 1.0 : 0; mus.connect(master);
+    // большой буфер ('playback') — меньше треска и запинок на телефонах
+    const opts = { latencyHint: 'playback' };
+    if (lowQuality) opts.sampleRate = 22050;
+    try { ac = new AC(opts); } catch (e) { try { ac = new AC({ latencyHint: 'playback' }); } catch (e2) { ac = new AC(); } }
+    // компрессор на выходе: громкие места не хрипят
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -10; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.2;
+    comp.connect(ac.destination);
+    master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(comp);
+    sfx = ac.createGain(); sfx.gain.value = chanGain('sfx'); sfx.connect(master);
+    amb = ac.createGain(); amb.gain.value = chanGain('amb'); amb.connect(master);
+    mus = ac.createGain(); mus.gain.value = chanGain('music'); mus.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -423,7 +436,7 @@ const Sound = (() => {
       });
     }
     // арфа: перебор по аккорду
-    if (st.arp) {
+    if (st.arp && (!lowQuality || sg.step % 2 === 0)) {
       const seq = [chord, chord + 2, chord + 4, chord + 7, chord + 4, chord + 2];
       voice(st.arp, t + jit(), deg2midi(seq[sg.step % seq.length], st.root - 12), { vol: 0.28 });
     }
@@ -434,7 +447,7 @@ const Sound = (() => {
         const swing = st.swing && sg.step % 2 ? st.swing * stepDur : 0;
         const plucked = ['acoustic_guitar_nylon', 'music_box', 'orchestral_harp'].indexOf(st.lead) >= 0;
         voice(st.lead, t + swing + jit(), n.midi, plucked ? { vol: 0.8 } : { vol: 0.62, attack: 0.045, len: n.dur * stepDur * 0.96, release: 0.22 });
-        if (st.counter && sg.loops % 2 === 0 && bar >= 4) {
+        if (st.counter && !lowQuality && sg.loops % 2 === 0 && bar >= 4) {
           voice(st.counter[0], t + swing + jit(), n.midi + st.counter[1], { vol: st.counter[2], attack: 0.06, len: n.dur * stepDur * 0.9, release: 0.25 });
         }
       }
@@ -446,7 +459,7 @@ const Sound = (() => {
     if (!sg || !ac || !sg.ready) return;
     const stepDur = 60 / sg.st.bpm / 2;
     if (sg.nextT < ac.currentTime) sg.nextT = ac.currentTime + 0.05;   // вкладка «спала» — не догоняем
-    while (sg.nextT < ac.currentTime + 0.3) {
+    while (sg.nextT < ac.currentTime + (lowQuality ? 0.7 : 0.35)) {
       scheduleStep(sg, sg.nextT);
       sg.nextT += stepDur;
       sg.step++;
@@ -476,14 +489,17 @@ const Sound = (() => {
     const st = STYLES[key] || STYLES.tavern;
     if (song && song.key === key) return;
     stopSong();
-    if (!reverb) reverb = makeReverb();
+    if (!lowQuality && !reverb) reverb = makeReverb();   // на слабых телефонах без эха — оно самое тяжёлое
     const out = ac.createGain();
     out.gain.value = 0.0001;
     out.gain.setTargetAtTime(1, now(), 1.5);
     out.connect(mus);
-    const send = ac.createGain();
-    send.gain.value = lowQuality ? 0.18 : 0.32;
-    send.connect(reverb);
+    let send = null;
+    if (reverb) {
+      send = ac.createGain();
+      send.gain.value = 0.32;
+      send.connect(reverb);
+    }
     const sg = { key, st, out, send, nextT: 0, bar: 0, step: 0, loops: 0, ready: false,
       melody: compose(st, Math.floor(Math.random() * 1e9)) };
     song = sg;
@@ -502,7 +518,7 @@ const Sound = (() => {
     musicOn = on;
     try { localStorage.setItem('tron-music', on ? '1' : '0'); } catch (e) { /* ignore */ }
     if (!ac) return;
-    mus.gain.setTargetAtTime(on ? 1.0 : 0, now(), 0.3);
+    mus.gain.setTargetAtTime(chanGain('music'), now(), 0.3);
     if (on) startSong(wanted); else stopSong();
   }
 
@@ -531,6 +547,17 @@ const Sound = (() => {
     startSong(key);
   }
 
+  /** Плавно меняет громкость канала: music | sfx | amb */
+  function setVolume(kind, v) {
+    VOL[kind] = Math.max(0, Math.min(1, v));
+    try { localStorage.setItem('tron-volume', JSON.stringify(VOL)); } catch (e) { /* ignore */ }
+    if (!ac) return;
+    const node = { music: mus, sfx, amb }[kind];
+    node.gain.cancelScheduledValues(now());
+    node.gain.setTargetAtTime(chanGain(kind), now(), 0.08);
+    if (kind === 'music' && VOL.music > 0 && !musicOn) setMusic(true);
+  }
+
   function setMuted(m) {
     muted = m;
     try { localStorage.setItem('tron-muted', m ? '1' : '0'); } catch (e) { /* ignore */ }
@@ -538,5 +565,6 @@ const Sound = (() => {
   }
 
   return { init, play, setLocation, setMuted, isMuted: () => muted, setMusic, isMusicOn: () => musicOn, setLowQuality,
+    setVolume, getVolume: (k) => VOL[k],
     _debugSong: () => song && { key: song.key, ready: song.ready, bar: song.bar, loops: song.loops, bank: Object.keys(BANK).length } };
 })();

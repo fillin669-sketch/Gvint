@@ -19,11 +19,14 @@
         <h1 class="title">ТРОН</h1>
         <p class="subtitle">Битва за Трон: 30 здоровья, мана растёт каждый ход, существа бьются насмерть</p>
         <h3 class="menu-h">Поле боя</h3>
-        <div id="hero-list" class="hero-list"></div>
+        <div id="hero-list" class="pick-list"></div>
+        <div id="field-desc" class="pick-desc"></div>
         <h3 class="menu-h">Натура героя</h3>
-        <div id="soul-list" class="chip-list"></div>
+        <div id="soul-list" class="pick-list"></div>
+        <div id="soul-desc" class="pick-desc"></div>
         <h3 class="menu-h">Артефакт</h3>
-        <div id="artifact-list" class="chip-list"></div>
+        <div id="artifact-list" class="pick-list"></div>
+        <div id="art-desc" class="pick-desc"></div>
         <div class="opp-pick">
           <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок в колоде</label>
           <label class="gfx-pick">Противник:
@@ -37,7 +40,7 @@
           <button class="btn" id="btn-gallery">🃏 Коллекция</button>
           <button class="btn" id="btn-rules">📜 Правила</button>
           <button class="btn btn-sound" title="Звук">🔊</button>
-          <button class="btn btn-music" title="Музыка">🎵</button>
+          <button class="btn btn-settings" title="Настройки звука">⚙️</button>
         </div>
         <div id="version-badge" class="version-badge"></div>
       </div>
@@ -50,10 +53,8 @@
 
       <div class="table-frame"></div>
       <div class="god-rays"></div>
-      <div id="left">
-        <div id="preview" class="preview"></div>
-        <div id="log" class="log"></div>
-      </div>
+      <div id="peek" class="peek"></div>
+      <div id="log" class="hidden"></div>
 
       <div id="arena">
         <div id="op-hand"></div>
@@ -71,7 +72,8 @@
         <div id="me-info" class="info"></div>
         <div class="right-buttons">
           <button class="btn btn-small btn-sound" title="Звук">🔊</button>
-          <button class="btn btn-small btn-music" title="Музыка">🎵</button>
+          <button class="btn btn-small btn-settings" title="Настройки звука">⚙️</button>
+          <button class="btn btn-small" id="btn-log" title="Журнал ходов">📜</button>
           <button class="btn btn-small" id="btn-menu" title="В меню">☰</button>
         </div>
       </div>
@@ -80,7 +82,7 @@
       <div id="played"></div>
 
       <div id="light"><div class="l-me"></div><div class="l-op"></div><div class="l-flicker"></div></div>
-      <canvas id="fx-canvas" width="1600" height="900"></canvas>
+      <canvas id="fx-canvas" width="1280" height="640"></canvas>
       <div id="fx-layer"></div>
     </section>
 

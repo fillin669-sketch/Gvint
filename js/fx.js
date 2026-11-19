@@ -4,7 +4,7 @@
    - анимированная погода на рядах (canvas)
    - искры, угли, обломки
    - «сгорание» уничтоженных карт, всплывающие числа, тряска стола
-   Все координаты — в системе #stage (1600×900).
+   Все координаты — в системе #stage (1280×640).
    ===================================================================== */
 
 const FX = (() => {
@@ -33,7 +33,7 @@ const FX = (() => {
     MAX_PARTS = low ? 160 : 420;
     if (!cv) return;
     const k = low ? 0.5 : 1;
-    cv.width = 1600 * k; cv.height = 900 * k;
+    cv.width = 1280 * k; cv.height = 640 * k;
     cx = cv.getContext('2d');
     cx.setTransform(k, 0, 0, k, 0, 0);
     if (!low && ambientOn) kick();
@@ -58,7 +58,7 @@ const FX = (() => {
 
   function stageScale() {
     const sr = document.getElementById('stage').getBoundingClientRect();
-    return { sr, k: sr.width / 1600 || 1 };
+    return { sr, k: sr.width / 1280 || 1 };
   }
 
   function toStage(el, cache) {
@@ -84,7 +84,7 @@ const FX = (() => {
   function clearAll() {
     parts = [];
     KINDS.forEach((k) => { target[k] = false; level[k] = 0; clearTimeout(timers[k]); });
-    if (cx) cx.clearRect(0, 0, 1600, 900);
+    if (cx) cx.clearRect(0, 0, 1280, 640);
     if (layer) layer.innerHTML = '';
   }
 
@@ -210,7 +210,7 @@ const FX = (() => {
     }
     spawnWeather(dt);
     spawnAmbient();
-    cx.clearRect(0, 0, 1600, 900);
+    cx.clearRect(0, 0, 1280, 640);
     if (Q.fog) drawFog();
 
     const alive = [];
@@ -280,7 +280,7 @@ const FX = (() => {
     parts = alive;
 
     if (busy()) raf = requestAnimationFrame(frame);
-    else { raf = 0; cx.clearRect(0, 0, 1600, 900); }
+    else { raf = 0; cx.clearRect(0, 0, 1280, 640); }
   }
 
   /* ---------------- DOM-эффекты ---------------- */

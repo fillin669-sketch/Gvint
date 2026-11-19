@@ -3,6 +3,7 @@ package com.tavernduel.game;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -34,7 +35,7 @@ public class MainActivity extends Activity {
     private static final String REMOTE = "https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/";
     private static final String HOST = "tron.game";
     private static final String START = "https://" + HOST + "/index.html";
-    private static final int APK_VERSION = 15;          // совпадает с versionCode в манифесте
+    private static final int APK_VERSION = 16;          // совпадает с versionCode в манифесте
     private static final long UPDATE_LIMIT_MS = 45000;  // дольше ждать обновление не будем
 
     private static final Map<String, String> MIME = new HashMap<String, String>();
@@ -56,6 +57,7 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
                 | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         gameDir = new File(getFilesDir(), "game");
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);   // кнопки громкости регулируют звук игры, а не звонка
 
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(13, 9, 5));

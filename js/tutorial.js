@@ -34,19 +34,19 @@ const Tut = (() => {
       text: 'Кент на поле! 💤 — он спит: существа атакуют только <b>со следующего хода</b>. 🛡️ <b>Провокация</b> — враги обязаны бить сначала его. 🦏 <b>Толстокожий</b> — получает на 1 урон меньше.' },
     { want: { type: 'end' }, el: () => $('#btn-end'),
       text: 'Мана закончилась. Нажмите <b>«Конец хода»</b> — теперь ходит противник.' },
-    { next: true, afterAI: true, el: () => minionEl(1, 'semki'),
+    { pos: 'bottom', next: true, afterAI: true, el: () => minionEl(1, 'semki'),
       text: 'Противник выставил «Семки у Подъезда». <b>Жёлтый ромб</b> — атака (1), <b>красное сердце</b> — здоровье (2).' },
-    { want: { type: 'attack', id: 'kent', targetId: 'semki' }, el: () => minionEl(0, 'kent'),
+    { want: { pos: 'bottom', type: 'attack', id: 'kent', targetId: 'semki' }, el: () => minionEl(0, 'kent'),
       text: 'Ваш ход! Атакуйте: нажмите на <b>Кента</b> (у него зелёная рамка), потом на вражеские <b>Семки</b>.' },
     { next: true, el: () => minionEl(0, 'kent'),
       text: 'Существа бьют друг друга <b>одновременно</b>. Кент убил Семки, а их удар погасила Толстокожесть. За убитого врага вы получили 🪙 <b>золото</b>.' },
-    { want: { type: 'play', id: 'kirpich', target: 'h1' }, el: () => handEl('kirpich'),
+    { want: { pos: 'bottom', type: 'play', id: 'kirpich', target: 'h1' }, el: () => handEl('kirpich'),
       text: '<b>Заклинания</b> срабатывают сразу. Нажмите «Кирпич с балкона», а потом <b>вражеского героя</b> — 3 урона!' },
     { want: { type: 'end' }, el: () => $('#btn-end'),
       text: 'Осталась 1 мана — этого мало. Завершите ход.' },
-    { next: true, afterAI: true, el: () => minionEl(1, 'karlik'),
+    { pos: 'bottom', next: true, afterAI: true, el: () => minionEl(1, 'karlik'),
       text: 'Противник выставил «Горбатого Карлика». У многих карт есть 📣 <b>боевой клич</b> — эффект, который срабатывает при розыгрыше.' },
-    { want: { type: 'power' }, el: () => document.querySelector('[data-power="0"]'),
+    { want: { pos: 'bottom', type: 'power' }, el: () => document.querySelector('[data-power="0"]'),
       text: 'Круглая кнопка рядом с портретом — <b>сила героя</b> ✊. Нажмите её, затем Карлика: 1 урон. Стоит 2 маны, раз в ход.' },
     { want: 'zoom', el: () => $('#hand'),
       text: 'Любую карту можно рассмотреть крупно: <b>подержите на ней палец</b> (на компьютере — правая кнопка мыши). Закройте просмотр нажатием.' },
@@ -143,6 +143,7 @@ const Tut = (() => {
     const waiting = st && st.afterAI && s && (s.current !== 0 || App.looping);
     if (!active || free || !st || waiting || !s) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
+    box.classList.toggle('bottom', st.pos === 'bottom');
     box.querySelector('.tut-step').textContent = `Обучение · шаг ${step + 1} из ${STEPS.length}`;
     box.querySelector('.tut-text').innerHTML = st.text;
     $('#tut-next').classList.toggle('hidden', !st.next);

@@ -56,7 +56,7 @@ const artOf = (c, full) => {
 
 /* ---------------------- масштаб ---------------------- */
 function fit() {
-  const k = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+  const k = Math.min(window.innerWidth / 1280, window.innerHeight / 640);
   $('#stage').style.transform = `translate(-50%, -50%) scale(${k})`;
 }
 window.addEventListener('resize', fit);
@@ -84,38 +84,76 @@ function hcardHTML(c, o) {
   if (o.cls) cls.push(o.cls);
   const data = c.uid ? `data-h="${c.uid}"` : `data-gid="${esc(c.id)}"`;
   const stats = c.type === 'minion' ? `<div class="hc-atk">${c.atk}</div><div class="hc-hp">${c.hp}</div>` : '';
+  const kws = (c.kw || []).map((k) => KEYWORDS[k].icon).join('');
+  const fit = App.fit && App.fit[c.id];
   return `<div class="${cls.join(' ')}" ${data} ${o.style ? `style="${o.style}"` : ''}>
     <div class="hc-art">${artHTML(c)}</div>${c.rarity && c.rarity !== 'common' ? `<div class="gem g-${c.rarity} hc-gem"></div>` : ''}
     <div class="hc-cost ${cost < c.cost ? 'cheap' : ''}">${cost}</div>
+    ${kws ? `<div class="hc-kw">${kws}</div>` : ''}
     <div class="hc-name">${esc(c.name)}</div>
-    <div class="hc-text">${esc(cardShortText(c))}</div>${stats}</div>`;
+    <div class="hc-text" data-fit="${esc(c.id)}"${fit ? ` style="font-size:${fit}px"` : ''}>${esc(cardShortText(c))}</div>${stats}
+    ${o.zoom ? `<div class="hc-zoom" data-zoom="${c.uid}">🔍</div>` : ''}</div>`;
+}
+
+/** Подгоняет размер текста на картах, чтобы он не обрезался (результат запоминается) */
+function fitCardTexts(root) {
+  App.fit = App.fit || {};
+  (root || document).querySelectorAll('.hc-text[data-fit]').forEach((el) => {
+    const id = el.dataset.fit;
+    if (App.fit[id]) return;
+    let size = 15;
+    el.style.fontSize = size + 'px';
+    while (size > 10 && el.scrollHeight > el.clientHeight + 1) { size -= 0.5; el.style.fontSize = size + 'px'; }
+    App.fit[id] = size;
+  });
+}
+
+const KW_VISUAL = ['taunt', 'shield', 'stealth', 'untouchable', 'pierce', 'poison', 'thorns', 'dodge', 'tough', 'windfury', 'lifesteal', 'flying'];
+
+/** Плашки усилений и ослаблений на существе: [[вид, текст, подсказка]] */
+function effectChips(s, m) {
+  const def = defOf(m.id);
+  const baseAtk = def ? def.atk : m.atk, baseHp = def ? def.hp : m.maxHp;
+  const out = [];
+  const dA = getAtk(s, m) - baseAtk, dH = m.maxHp - baseHp;
+  if (dA > 0) out.push(['buff', `+${dA}⚔`, `Атака усилена на ${dA}`]);
+  if (dA < 0) out.push(['debuff', `${dA}⚔`, `Атака снижена на ${-dA}`]);
+  if (dH > 0) out.push(['buff', `+${dH}❤`, `Здоровье усилено на ${dH}`]);
+  if (dH < 0) out.push(['debuff', `${dH}❤`, `Здоровье снижено на ${-dH}`]);
+  if (m.frozen) out.push(['debuff', '💫', 'Оглушён: пропустит атаку']);
+  if (m.debt) out.push(['debuff', `📜${m.debt}`, `Долг: −${m.debt} атаки каждый ход`]);
+  if (m.mark) out.push(['debuff', '🎯', `На прицеле: −${m.mark.n} здоровья каждый ход`]);
+  if (m.preg) out.push(['debuff', '🤰', 'Беременность']);
+  if (m.spouse) out.push(['debuff', '💍', 'В браке']);
+  if (m.silenced) out.push(['debuff', '🤐', 'Без свойств']);
+  return out;
 }
 
 function minionHTML(s, m, o) {
   const cls = ['minion'];
   if (m.rarity === 'legendary' || m.rarity === 'epic' || m.rarity === 'rare') cls.push(m.rarity);
-  ['taunt', 'shield', 'stealth'].forEach((k) => { if (hasKw(m, k)) cls.push(k); });
+  KW_VISUAL.forEach((k) => { if (hasKw(m, k)) cls.push(k === 'taunt' || k === 'shield' || k === 'stealth' ? k : 'kw-' + k); });
   if (m.frozen) cls.push('frozen');
   if (o.extra) cls.push(o.extra);
   const atk = getAtk(s, m);
-  const icons = [];
-  ['untouchable', 'pierce', 'poison', 'windfury', 'lifesteal', 'flying', 'charge'].forEach((k) => { if (hasKw(m, k)) icons.push(KEYWORDS[k].icon); });
+  const icons = (m.kw || []).filter((k) => KEYWORDS[k]).map((k) => KEYWORDS[k].icon);
   if (m.dr) icons.push('⚰️');
   if (m.end) icons.push('🌙');
+  if (m.kill) icons.push('🗡️');
   if (m.aura) icons.push('✴️');
   if (m.enrage) icons.push('💢');
   if (m.spellDiscount) icons.push('🏷️');
   if (m.cantAttack) icons.push('⛔');
-  if (m.female) icons.push('♀');
-  const status = [m.spouse ? '💍' : '', m.preg ? '🤰' : '', m.debt ? '📜' : '', m.mark ? '🎯' : ''].join('');
+  const chips = effectChips(s, m);
   const sleepy = m.owner === s.current && m.sleeping && !m.cantAttack && s.phase === 'play';
   const def = defOf(m.id);
   const baseAtk = def ? def.atk : m.atk;
   return `<div class="${cls.join(' ')}" data-t="${m.uid}" ${o.style ? `style="${o.style}"` : ''}>
     <div class="m-shadow"></div>${m.rarity === 'legendary' ? '<div class="m-crown">👑</div>' : ''}
+    ${hasKw(m, 'taunt') ? '<div class="m-taunt"></div>' : ''}
     <div class="m-frame"><div class="m-art">${artHTML(m)}</div></div>${m.rarity && m.rarity !== 'common' ? `<div class="gem g-${m.rarity} m-gem"></div>` : ''}
-    <div class="m-icons">${icons.slice(0, 4).map((x) => `<span>${x}</span>`).join('')}</div>
-    ${status ? `<div class="m-status">${status}</div>` : ''}
+    <div class="m-icons">${icons.slice(0, 5).map((x) => `<span>${x}</span>`).join('')}</div>
+    ${chips.length ? `<div class="m-chips">${chips.slice(0, 4).map(([k, t, h]) => `<span class="${k}" title="${esc(h)}">${t}</span>`).join('')}</div>` : ''}
     ${sleepy ? '<div class="m-zz">💤</div>' : ''}
     <div class="m-atk ${atk > baseAtk ? 'up' : atk < baseAtk ? 'down' : ''}">${atk}</div>
     <div class="m-hp ${m.hp < m.maxHp ? 'hurt' : m.maxHp > (def ? def.hp : m.maxHp) ? 'up' : ''}">${m.hp}</div></div>`;
@@ -190,10 +228,32 @@ function previewHTML(c, live) {
     ${c.quote ? `<div class="pv-quote">${esc(c.quote)}</div>` : ''}`;
 }
 
+/** Короткая подсказка о карте поверх стола (по нажатию); долгое нажатие — крупный просмотр */
+let peekTimer = 0;
+function peekHTML(c, live) {
+  if (c.isHero) {
+    const h = heroText(c.idx);
+    return `<b>${esc(h.name)}</b><span class="pk-meta">${esc(h.meta)}</span>${h.parts.map(([n, t]) => `<div><b>${n}.</b> ${esc(t)}</div>`).join('')}`;
+  }
+  const atk = live ? getAtk(App.s, live) : c.atk, hp = live ? live.hp : c.hp;
+  const stats = c.type === 'minion' ? ` · ⚔${atk} ❤${hp}` : ' · заклинание';
+  const parts = cardTextParts(c).map((p) => `<div><b>${p.name}.</b> ${esc(p.text)}</div>`);
+  if (live) effectChips(App.s, live).forEach(([k, t, h]) => parts.push(`<div class="${k}"><b>${t}</b> ${esc(h)}</div>`));
+  return `<b>${esc(c.name)}</b><span class="pk-meta">💎${c.cost}${stats}</span>${parts.join('') || '<div>Без особых свойств.</div>'}<div class="pk-hint">🔍 нажмите сюда — крупно</div>`;
+}
+
 function showPreview(c, live) {
-  const el = $('#preview');
+  const el = $('#peek');
   App.pv = c ? { c, live } : null;
-  if (el) el.innerHTML = previewHTML(c, live) + (c ? '<div class="pv-zoomhint">🔍 Нажмите сюда, чтобы увеличить</div>' : '');
+  if (!el) return;
+  clearTimeout(peekTimer);
+  if (!c) { el.classList.remove('show'); return; }
+  el.innerHTML = peekHTML(c, live);
+  const enemy = (live && live.owner === 1) || (c.isHero && c.idx === 1);
+  el.classList.toggle('bottom', !!enemy);
+  el.classList.toggle('top', !enemy);
+  el.classList.add('show');
+  peekTimer = setTimeout(() => { if (!App.hovering) el.classList.remove('show'); }, 4000);
 }
 
 /* ---------------------- крупный просмотр ---------------------- */
@@ -348,8 +408,8 @@ function propHTML(side, i) {
   const P = App.props && App.props[side][i];
   if (!P) return '';
   const d = P.hp <= 0 ? 'broken' : P.hp < PROP_HP ? 'd' + Math.min(3, Math.ceil((PROP_HP - P.hp) * 3 / PROP_HP)) : '';
-  const pos = i === 0 ? 'left:36px' : 'right:36px';
-  return `<div class="prop ${d}" style="${pos};top:${side === 1 ? 40 : 30}px" data-prop="${side}:${i}" title="${esc(P.name)}">
+  const pos = `left:${1116 + i * 82}px;top:${side === 1 ? 104 : 18}px`;   // правая колонка, над и под кнопками
+  return `<div class="prop ${d}" style="${pos}" data-prop="${side}:${i}" title="${esc(P.name)}">
     <span class="pi">${P.icon}</span><span class="php"><i style="width:${Math.max(0, P.hp) / PROP_HP * 100}%"></i></span></div>`;
 }
 
@@ -390,6 +450,7 @@ const elOf = (id) => document.querySelector(`#arena [data-t="${id}"]`);
 function render() {
   const s = App.s;
   if (!s) return;
+  if (App.sel) showPreview(null);   // при выборе цели подсказка не должна закрывать стол
   const snap = snapshot();
   const events = App.fxq.splice(0);
   const propHits = damageProps(events);
@@ -435,7 +496,7 @@ function render() {
   const me = s.players[0];
   const handEl = $('#hand');
   const n = me.hand.length;
-  const gap = n <= 7 ? 6 : Math.floor((1000 - 136) / (n - 1) - 136);
+  const gap = n * 150 + (n - 1) * 6 <= 910 ? 6 : Math.floor((910 - 150) / (n - 1) - 150);
   handEl.style.setProperty('--gap', gap + 'px');
   handEl.classList.toggle('locked', !canAct());
   let drawnN = 0;
@@ -450,8 +511,9 @@ function render() {
     if (App.sel && App.sel.uid === c.uid && (App.sel.kind === 'card' || App.sel.kind === 'bc')) extra.push('sel');
     let style = '';
     if (!App.handSeen.has(c.uid)) { extra.push('drawn'); style = `animation-delay:${Math.min(drawnN++, 6) * 90}ms`; }
-    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style });
+    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style, zoom: extra.indexOf('sel') >= 0 });
   }).join('');
+  fitCardTexts(handEl);
   if (drawnN && App.handSeen.size) Sound.play('draw');
   App.handSeen = newHand;
 
@@ -463,13 +525,13 @@ function render() {
   // панели
   const crystals = (P) => Array.from({ length: 10 }, (_, k) => `<span class="crystal ${k < P.mana ? 'full' : k < P.maxMana ? 'spent' : ''}"></span>`).join('');
   const op = s.players[1];
-  const soulTag = (P) => `<span class="i-soul" style="color:${SOULS[P.soul].color}">${SOULS[P.soul].icon} ${SOULS[P.soul].name}</span>${P.artifact ? ' ' + ARTIFACTS[P.artifact].icon : ''}`;
+  const soulTag = (P) => `<span class="i-soul" style="color:${SOULS[P.soul].color}">${SOULS[P.soul].icon} ${SOULS[P.soul].name}</span>`;
   $('#op-info').innerHTML = `<div class="i-row">${soulTag(op)}<span class="i-gold">🪙 ${op.gold}</span></div><div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
     <div class="crystals">${crystals(op)}</div>
-    <div class="i-row"><span>🂠 Рука: ${opN}</span><span>📚 Колода: ${op.deck.length}</span></div>`;
+    <div class="i-row"><span title="Карт в руке">🂠 ${opN}</span><span title="Карт в колоде">📚 ${op.deck.length}</span></div>`;
   $('#me-info').innerHTML = `<div class="i-row">${soulTag(me)}<span class="i-gold">🪙 ${me.gold}</span></div><div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
     <div class="crystals">${crystals(me)}</div>
-    <div class="i-row"><span>📚 Колода: ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
+    <div class="i-row"><span title="Карт в колоде">📚 ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
 
   const shopBtn = $('#btn-shop');
   shopBtn.innerHTML = `🛒 Лавка: карта за ${shopCost(me)} 🪙${me.shopUsed ? ' (куплено)' : ''}`;
@@ -755,7 +817,7 @@ function onArenaClick(e) {
 
   const tEl = e.target.closest('[data-t]');
   const pEl = e.target.closest('[data-power]');
-  if (tEl || pEl) { const pv = previewFromEl(tEl || pEl); if (pv) showPreview(pv.c, pv.live); }
+  if (tEl || pEl) { const pv = previewFromEl(tEl || pEl); if (pv) showPreview(pv.c, pv.live); } else showPreview(null);
   if (!canAct()) return;
   const id = tEl ? (tEl.dataset.t[0] === 'h' ? tEl.dataset.t : +tEl.dataset.t) : null;
   const sel = App.sel;
@@ -804,6 +866,7 @@ function onHandClick(e) {
   if (!el || !App.s) return;
   const c = App.s.players[0].hand.find((x) => x.uid === +el.dataset.h);
   if (!c) return;
+  if (e.target.closest('.hc-zoom')) { openZoom(c); return; }
   showPreview(c);
   if (!canAct()) return;
   if (App.sel && App.sel.uid === c.uid) { clearSel(); return; }
@@ -972,23 +1035,23 @@ async function leaveToMenu() {
 /* ---------------------- меню ---------------------- */
 function fieldTileHTML(k, sel) {
   const F = FIELDS[k];
-  return `<div class="hero-tile field-tile field-${k} ${sel ? 'sel' : ''}" data-field="${k}">
-    <div class="ft-icon">${F.icon}</div><div class="ht-body"><h4>${esc(F.name)}</h4><p>${esc(F.desc)}</p></div></div>`;
+  return `<div class="pick field-${k} ${sel ? 'sel' : ''}" data-field="${k}"><span class="pk-ic">${F.icon}</span>${esc(F.name)}</div>`;
 }
 
 function renderMenu() {
   $('#hero-list').innerHTML = Object.keys(FIELDS).map((k) => fieldTileHTML(k, App.myField === k)).join('');
   $('#soul-list').innerHTML = Object.keys(SOULS).map((k) => {
     const so = SOULS[k];
-    return `<div class="chip ${App.mySoul === k ? 'sel' : ''}" data-soul="${k}" style="--c:${so.color}">
-      <div class="c-top">${so.icon} <b>${so.name}</b> · ${so.power.icon} ${so.power.name} (${so.power.cost})</div>
-      <div class="c-sub">${esc(so.power.desc)} ${esc(so.passive)}</div></div>`;
+    return `<div class="pick ${App.mySoul === k ? 'sel' : ''}" data-soul="${k}" style="--c:${so.color}"><span class="pk-ic">${so.icon}</span>${so.name}</div>`;
   }).join('');
   $('#artifact-list').innerHTML = Object.keys(ARTIFACTS).map((k) => {
     const ar = ARTIFACTS[k];
-    return `<div class="chip art ${App.myArtifact === k ? 'sel' : ''}" data-artifact="${k}">
-      <div class="c-top">${ar.icon} <b>${ar.name}</b></div><div class="c-sub">${esc(ar.desc)}</div></div>`;
+    return `<div class="pick ${App.myArtifact === k ? 'sel' : ''}" data-artifact="${k}"><span class="pk-ic">${ar.icon}</span>${ar.name}</div>`;
   }).join('');
+  const so = SOULS[App.mySoul], ar = ARTIFACTS[App.myArtifact];
+  $('#field-desc').textContent = FIELDS[App.myField].desc;
+  $('#soul-desc').innerHTML = `${so.power.icon} <b>${esc(so.power.name)}</b> (${so.power.cost} маны): ${esc(so.power.desc)} · ${esc(so.passive)}`;
+  $('#art-desc').textContent = ar.desc;
 }
 
 function showRules() {
@@ -1099,10 +1162,15 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.7';
+const GAME_VERSION = '3.8';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Новые карты: «Хтоя?» — неуязвим, пока не атакует; «Пространственный путник» — бьёт дважды кого угодно, пробивая любую защиту; «Взгляд убийцы» — цель каждый ход получает 2 урона',
+  'Новый интерфейс под телефон: всё крупнее, герои слева, кнопки справа, рука на всю ширину',
+  'Свойства существ видно на столе: каменный щит у Провокации, своя подсветка у Яда, Шипов, Уворота, Пробоя и других',
+  'Зелёные и красные плашки на существах показывают усиления и ослабления',
+  'Текст карт в руке больше не обрезается; у выбранной карты есть кнопка 🔍',
+  'Настройки ⚙️: отдельная громкость музыки, звуков и фона; кнопки громкости телефона управляют игрой',
+  'Звук стабильнее на слабых телефонах: больше буфер, легче музыка в экономном режиме',
 ];
 
 function showVersionBadge() {
@@ -1134,6 +1202,32 @@ async function checkUpdates() {
         <div class="mbtns"><a class="btn btn-gold" href="${esc(v.apkUrl)}">⬇ Скачать обновление</a><button class="btn" data-v="later">Позже</button></div>`);
     }
   } catch (e) { /* нет сети — ничего страшного */ }
+}
+
+/* ---------------------- журнал и настройки ---------------------- */
+function showLog() {
+  modal(`<h2>Журнал ходов</h2><div class="log-list">${App.logLines.slice(-40).map((l) => `<div class="${l.cls}">${esc(l.msg)}</div>`).join('') || '<div>Пока пусто</div>'}</div>
+    <div class="mbtns"><button class="btn btn-gold" data-v="ok">Закрыть</button></div>`, null, 'logbox');
+  const box = document.querySelector('.log-list');
+  if (box) box.scrollTop = box.scrollHeight;
+}
+
+function showSettings() {
+  Sound.init();
+  const row = (k, name) => `<label class="vol-row"><span>${name}</span><input type="range" min="0" max="100" value="${Math.round(Sound.getVolume(k) * 100)}" data-vol="${k}"><b>${Math.round(Sound.getVolume(k) * 100)}%</b></label>`;
+  const gfx = gfxSetting();
+  modal(`<h2>Настройки</h2>${row('music', '🎵 Музыка')}${row('sfx', '💥 Звуки')}${row('amb', '🍃 Фон')}
+    <label class="vol-row"><span>🖥️ Графика</span><select id="set-gfx">${[['auto', 'Авто'], ['high', 'Красивая'], ['low', 'Экономная']].map(([v, n]) => `<option value="${v}" ${v === gfx ? 'selected' : ''}>${n}</option>`).join('')}</select><b></b></label>
+    <div class="mbtns"><button class="btn btn-gold" data-v="ok">Готово</button></div>`, null, 'settings');
+  document.querySelectorAll('[data-vol]').forEach((inp) => inp.addEventListener('input', () => {
+    Sound.setVolume(inp.dataset.vol, inp.value / 100);
+    inp.nextElementSibling.textContent = inp.value + '%';
+  }));
+  $('#set-gfx').addEventListener('change', (e) => {
+    try { localStorage.setItem('tron-gfx', e.target.value); } catch (er) { /* ignore */ }
+    applyQuality(e.target.value === 'auto' ? detectQuality() : e.target.value);
+    const g = $('#gfx-select'); if (g) g.value = e.target.value;
+  });
 }
 
 /* ---------------------- инициализация ---------------------- */
@@ -1226,6 +1320,9 @@ function init() {
   $('#hand').addEventListener('click', onHandClick);
   $('#btn-end').addEventListener('click', () => { if (canAct()) humanAct({ type: 'end' }); });
   $('#btn-menu').addEventListener('click', leaveToMenu);
+  $('#btn-log').addEventListener('click', showLog);
+  document.addEventListener('click', (e) => { if (e.target.closest('.btn-settings')) { e.stopPropagation(); showSettings(); } }, { capture: true });
+  $('#peek').addEventListener('click', (e) => { e.stopPropagation(); if (App.pv) openZoom(App.pv.c, App.pv.live); });
 
   // предпросмотр при наведении (компьютер)
   $('#stage').addEventListener('mouseover', (e) => {
@@ -1245,7 +1342,7 @@ function init() {
   });
 
   setupLongPress();
-  $('#preview').addEventListener('click', () => { if (App.pv) openZoom(App.pv.c, App.pv.live); });
+
   $('#gal-preview').addEventListener('click', () => { if (App.galPv) openZoom(App.galPv); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeZoom(); if (App.sel) clearSel(); } });
   document.addEventListener('contextmenu', (e) => { if (App.sel) { e.preventDefault(); clearSel(); } });

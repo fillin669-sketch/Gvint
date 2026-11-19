@@ -532,3 +532,191 @@ a.btn { text-decoration: none; display: inline-block; }
 
 .hero .h-mark { position: absolute; left: -12px; top: 10px; padding: 2px 6px; border-radius: 12px; font-size: 18px; font-weight: 700; color: #fff;
   background: rgba(160,20,10,.85); border: 1px solid #ff8a7a; z-index: 3; }
+
+/* =====================================================================
+   РАСКЛАДКА ДЛЯ ТЕЛЕФОНА: сцена 1280×640 (пропорции 2:1), крупные элементы
+   ===================================================================== */
+#stage { width: 1280px; height: 640px; }
+/* ---------- меню ---------- */
+.menu-inner { width: 1240px; margin: 4px auto 0; }
+.logo { width: 50px !important; height: 50px !important; }
+.title { font-size: 40px !important; letter-spacing: 10px; }
+.subtitle { font-size: 17px !important; margin: 0 0 2px !important; }
+.menu-h { font-size: 19px !important; margin: 6px 0 4px !important; }
+.pick-list { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pick { height: 52px; padding: 0 16px; border-radius: 12px; font-size: 20px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background-color: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.14); color: var(--ink); transition: transform .12s, border-color .12s; }
+.pick .pk-ic { font-size: 28px; }
+.pick:active { transform: scale(.96); }
+.pick.sel { border-color: var(--c, var(--gold)); box-shadow: 0 0 16px color-mix(in srgb, var(--c, #d9b45a) 60%, transparent); background-color: rgba(60,40,14,.92); }
+.pick-desc { font-size: 16px; color: var(--ink-dim); min-height: 22px; margin: 4px auto 0; max-width: 1150px; line-height: 1.25; }
+.pick-desc b { color: #ffe39a; }
+.opp-pick { margin: 8px 0 0 !important; font-size: 18px; }
+.opp-pick select, .gfx-pick select { font-size: 18px !important; padding: 6px 8px !important; }
+.extra-pick input { width: 24px; height: 24px; }
+.menu-buttons { margin-top: 10px !important; gap: 12px !important; }
+.menu-buttons .btn { font-size: 22px !important; padding: 12px 22px !important; min-height: 56px; }
+.version-badge { margin-top: 6px; font-size: 14px; }
+
+/* ---------- поля и рамка ---------- */
+.field { left: 176px; width: 932px; }
+#field-op { top: 0; height: 204px; }
+#field-me { top: 204px; height: 436px; }
+.table-frame { left: 166px; width: 952px; height: 640px; }
+.god-rays { left: 176px; width: 932px; height: 640px; }
+#left { display: none !important; }
+
+/* ---------- арена ---------- */
+#arena { left: 0; top: 0; width: 1280px; height: 640px; }
+#op-hand { left: 180px; right: auto; width: 924px; top: -46px; }
+#op-hand .back { width: 54px; height: 76px; margin-left: -18px; }
+.hero-zone { width: 176px; }
+#op-zone { left: 0; top: 0; height: 200px; }
+#me-zone { left: 0; top: 440px; height: 200px; }
+.hero, #me-zone .hero { left: 24px !important; top: 12px; transform: none !important; width: 128px; height: 140px; }
+#me-zone .hero { top: 52px; }
+#me-zone .hero .h-name { top: -22px; bottom: auto; }
+.hero .h-name { font-size: 18px; }
+.hero.hit { animation: heroHit2 .45s; }
+@keyframes heroHit2 { 20% { transform: translate(-8px, 4px); } 40% { transform: translate(7px, -3px); } 60% { transform: translate(-4px, 2px); } }
+.power, #me-zone .power { left: 116px !important; width: 60px; height: 60px; font-size: 28px; }
+#op-zone .power { top: 112px; }
+#me-zone .power { top: 14px; }
+.prop { width: 70px; height: 90px; }
+.prop .pi { font-size: 44px; }
+.lane { left: 180px; right: auto; width: 924px; height: 166px; gap: 10px; }
+#op-board { top: 34px; }
+#me-board { top: 216px; }
+.divider { left: 180px; right: auto; width: 924px; top: 204px; }
+#hint { font-size: 20px; padding: 6px 20px; top: -18px; }
+
+/* ---------- правая и левая колонки ---------- */
+#right { left: 0; top: 0; width: 1280px; height: 640px; pointer-events: none; }
+#right > * { pointer-events: auto; }
+.info { width: 166px; left: 6px !important; right: auto !important; padding: 8px 10px; font-size: 17px; }
+#op-info { top: 202px; }
+#me-info { top: 324px; bottom: auto; }
+.info .i-name { font-size: 19px; }
+.info .i-soul { font-size: 16px; }
+.info .i-gold { font-size: 19px; }
+.mana-num { font-size: 21px; }
+.crystal { width: 14px; height: 14px; }
+.btn-end { left: 1112px !important; right: auto !important; top: 232px; width: 160px; height: 92px; font-size: 24px; border-radius: 46px; }
+.btn-shop { left: 1112px !important; right: auto !important; top: 334px; width: 160px; height: 66px; font-size: 18px; line-height: 1.15; padding: 6px; }
+.right-buttons { left: 1112px !important; right: auto !important; bottom: auto; top: 556px; width: 160px; display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; }
+.right-buttons .btn { height: 38px; padding: 0; font-size: 22px; }
+
+/* ---------- существа ---------- */
+.minion { width: 112px; height: 148px; }
+.minion .m-icons span { width: 26px; height: 26px; font-size: 15px; }
+.minion .m-taunt { position: absolute; left: -12px; right: -12px; top: -10px; bottom: -4px; z-index: -1;
+  clip-path: polygon(50% 0, 100% 9%, 100% 68%, 50% 100%, 0 68%, 0 9%);
+  background: linear-gradient(180deg, #b8c0c8, #6b737b 45%, #3b4248); }
+.minion.taunt .m-frame { border-color: #c9d1d8; }
+/* у каждого свойства — своё оформление на столе */
+.minion.kw-untouchable .m-frame { box-shadow: 0 0 0 3px #7fe6ff, 0 0 20px rgba(127,230,255,.8) !important; animation: untouch 2.4s ease-in-out infinite; }
+@keyframes untouch { 50% { opacity: .7; } }
+.minion.kw-pierce .m-frame { outline: 3px dashed #c48cff; outline-offset: 3px; }
+.minion.kw-poison .m-frame { box-shadow: 0 0 0 3px #4fd06a, 0 0 16px rgba(80,220,100,.75) !important; }
+.minion.kw-thorns .m-frame { outline: 4px dotted #ff9a3c; outline-offset: 2px; }
+.minion.kw-dodge .m-frame { outline: 2px dashed rgba(235,245,255,.9); outline-offset: 6px; }
+.minion.kw-tough .m-frame { border-width: 5px; border-color: #8f959b; }
+.minion.kw-windfury .m-frame { border-style: double; border-width: 6px; }
+.minion.kw-lifesteal .m-frame { box-shadow: 0 0 0 3px #e0453a, 0 0 16px rgba(224,69,58,.7) !important; }
+.minion.kw-flying { transform: translateY(-8px); }
+.minion.kw-flying .m-shadow { opacity: .45; transform: scale(.75); bottom: -24px; }
+/* плашки усилений и ослаблений */
+.minion .m-chips { position: absolute; left: -6px; right: -6px; bottom: 30px; display: flex; justify-content: center; flex-wrap: wrap; gap: 2px; z-index: 3; pointer-events: none; }
+.minion .m-chips span { font-size: 13px; font-weight: 700; padding: 1px 5px; border-radius: 8px; line-height: 1.25; text-shadow: 0 1px 1px #000; }
+.minion .m-chips .buff, .peek .buff { background: rgba(28,110,40,.92); color: #d8ffd0; border: 1px solid #7dff8a; }
+.minion .m-chips .debuff, .peek .debuff { background: rgba(140,22,16,.92); color: #ffd2c8; border: 1px solid #ff8a7a; }
+.peek .buff, .peek .debuff { border-radius: 8px; padding: 2px 6px; margin-top: 3px; }
+
+/* ---------- рука ---------- */
+#hand { left: 180px; width: 924px; top: 388px; height: 252px; }
+.hcard { width: 150px; height: 212px; }
+.hcard .hc-art { height: 112px; }
+.hcard .hc-gem { top: 96px; }
+.hcard .hc-name { top: 106px; font-size: 15px; padding: 3px 4px; }
+.hcard .hc-text { top: 131px; bottom: 34px; left: 5px; right: 5px; font-size: 15px; line-height: 1.1; }
+.hcard.spell .hc-text { bottom: 8px; }
+.hcard .hc-kw { position: absolute; top: 6px; right: 6px; z-index: 2; font-size: 16px; padding: 1px 4px; border-radius: 10px; background: rgba(0,0,0,.7); }
+.hcard .hc-cost { width: 44px; height: 44px; font-size: 26px; }
+#hand .hcard { transform-origin: 50% 100%; }
+#hand .hcard:hover { transform: translateY(-24px) scale(1.08); }
+#hand .hcard.sel { transform: translateY(-46px) scale(1.24); }
+.hcard .hc-zoom { position: absolute; top: 4px; right: 4px; width: 46px; height: 46px; border-radius: 50%; z-index: 4; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; background: radial-gradient(circle at 35% 30%, #ffe39a, #b5841f); border: 2px solid #fff3c4; box-shadow: 0 2px 8px #000; cursor: zoom-in; }
+#played { top: 90px; }
+
+/* ---------- подсказка о карте ---------- */
+.peek { position: absolute; left: 330px; width: 620px; z-index: 30; display: none; padding: 10px 14px; border-radius: 14px; cursor: zoom-in;
+  background: linear-gradient(180deg, rgba(40,28,14,.97), rgba(20,13,7,.97)); border: 2px solid var(--gold); box-shadow: 0 8px 30px #000;
+  font-size: 17px; line-height: 1.3; color: var(--ink); max-height: 200px; overflow: hidden; }
+.peek.show { display: block; animation: zoomIn .15s ease-out; }
+.peek.top { top: 30px; }
+.peek.bottom { top: 222px; }
+.peek > b { font-size: 21px; color: var(--gold); }
+.peek .pk-meta { margin-left: 10px; color: var(--ink-dim); font-size: 16px; }
+.peek div b { color: #ffe39a; }
+.peek .pk-hint { color: var(--gold); font-size: 14px; margin-top: 4px; opacity: .8; }
+
+/* ---------- окна, баннер, обучение, коллекция ---------- */
+#tut { left: 190px !important; top: 40px !important; width: 520px !important; }
+#tut .tut-text { font-size: 20px; }
+.banner { top: 240px; height: 130px; }
+.banner-text { font-size: 46px; }
+#zoom { padding: 14px 24px; gap: 24px; }
+#zoom .z-img { max-height: 600px; max-width: 600px; }
+#zoom .z-glyph { width: 420px; height: 520px; font-size: 240px; }
+#zoom .z-text { width: 540px; max-height: 600px; }
+#zoom h2 { font-size: 36px; }
+#zoom .z-ab { font-size: 22px; }
+.mbox { max-height: 620px; max-width: 1240px; padding: 16px 22px; }
+.mbox h2 { font-size: 28px; }
+.mbox p { font-size: 19px; }
+.mbox .mcards { margin: 10px; gap: 14px; }
+.mbox .mcards .hcard { transform: scale(1.18); margin: 18px 14px; }
+.mbox.rules { width: 1180px; }
+.mbox .mbtns .btn { font-size: 22px; padding: 12px 26px; }
+.vol-row { display: flex; align-items: center; gap: 16px; font-size: 22px; margin: 16px 0; justify-content: center; }
+.vol-row span { width: 170px; text-align: left; }
+.vol-row input[type=range] { width: 380px; height: 34px; accent-color: var(--gold); }
+.vol-row b { width: 60px; text-align: right; color: var(--gold); }
+.vol-row select { font: inherit; font-size: 20px; padding: 6px 10px; background: #22180d; color: var(--ink); border: 1px solid var(--gold-soft); border-radius: 8px; width: 380px; }
+.mbox.logbox { width: 820px; }
+.log-list { max-height: 440px; overflow-y: auto; text-align: left; font-size: 18px; line-height: 1.35; }
+.log-list div { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.log-list .me { color: #cfe8ff; } .log-list .op { color: #ffd2c8; } .log-list .sys { color: var(--gold); }
+#gallery { padding: 10px 14px; }
+.gal-head { height: 50px; }
+.gal-body { height: 566px; }
+#gal-preview { width: 330px; }
+#gal-preview .pv-img { max-height: 300px; }
+.legend-intro .li-card { width: 240px; height: 240px; }
+.legend-intro .li-name { font-size: 44px; }
+.lowfx .minion.kw-untouchable .m-frame { animation: none; }
+/* левая колонка: компактные блоки маны, сила героя рядом с портретом */
+.info .i-name { display: none; }
+.info .i-row { display: flex; justify-content: space-between; align-items: center; margin: 2px 0; font-size: 15px; gap: 4px; }
+.info .i-row:nth-child(2) { justify-content: center; }
+.info .crystals { flex-wrap: nowrap; gap: 1px; margin: 3px 0; }
+.crystal { width: 12px !important; height: 12px !important; }
+#op-info { top: 194px; }
+#me-info { top: 326px; }
+.hero, #me-zone .hero { left: 6px !important; width: 112px; height: 124px; }
+#op-zone .hero { top: 10px; }
+#me-zone .hero { top: 60px; }
+.power, #me-zone .power { left: 122px !important; width: 50px; height: 50px; font-size: 24px; }
+#op-zone .power { top: 10px; }
+#me-zone .power { top: 60px; }
+.power .pw-cost { width: 26px; height: 26px; font-size: 15px; top: -8px; }
+.peek { max-height: 260px; }
+
+/* подсказка и облачко обучения не перехватывают нажатия по столу */
+.peek { pointer-events: none; }
+.peek .pk-hint { display: none; }
+#tut { pointer-events: none; }
+#tut .tut-btns, #tut .tut-btns * { pointer-events: auto; }
+#tut.bottom { top: 236px !important; }
+.tut-glow { z-index: 47 !important; }

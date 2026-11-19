@@ -542,6 +542,194 @@ a.btn { text-decoration: none; display: inline-block; }
 .hero .h-mark { position: absolute; left: -12px; top: 10px; padding: 2px 6px; border-radius: 12px; font-size: 18px; font-weight: 700; color: #fff;
   background: rgba(160,20,10,.85); border: 1px solid #ff8a7a; z-index: 3; }
 
+/* =====================================================================
+   РАСКЛАДКА ДЛЯ ТЕЛЕФОНА: сцена 1280×640 (пропорции 2:1), крупные элементы
+   ===================================================================== */
+#stage { width: 1280px; height: 640px; }
+/* ---------- меню ---------- */
+.menu-inner { width: 1240px; margin: 4px auto 0; }
+.logo { width: 50px !important; height: 50px !important; }
+.title { font-size: 40px !important; letter-spacing: 10px; }
+.subtitle { font-size: 17px !important; margin: 0 0 2px !important; }
+.menu-h { font-size: 19px !important; margin: 6px 0 4px !important; }
+.pick-list { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pick { height: 52px; padding: 0 16px; border-radius: 12px; font-size: 20px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background-color: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.14); color: var(--ink); transition: transform .12s, border-color .12s; }
+.pick .pk-ic { font-size: 28px; }
+.pick:active { transform: scale(.96); }
+.pick.sel { border-color: var(--c, var(--gold)); box-shadow: 0 0 16px color-mix(in srgb, var(--c, #d9b45a) 60%, transparent); background-color: rgba(60,40,14,.92); }
+.pick-desc { font-size: 16px; color: var(--ink-dim); min-height: 22px; margin: 4px auto 0; max-width: 1150px; line-height: 1.25; }
+.pick-desc b { color: #ffe39a; }
+.opp-pick { margin: 8px 0 0 !important; font-size: 18px; }
+.opp-pick select, .gfx-pick select { font-size: 18px !important; padding: 6px 8px !important; }
+.extra-pick input { width: 24px; height: 24px; }
+.menu-buttons { margin-top: 10px !important; gap: 12px !important; }
+.menu-buttons .btn { font-size: 22px !important; padding: 12px 22px !important; min-height: 56px; }
+.version-badge { margin-top: 6px; font-size: 14px; }
+
+/* ---------- поля и рамка ---------- */
+.field { left: 176px; width: 932px; }
+#field-op { top: 0; height: 204px; }
+#field-me { top: 204px; height: 436px; }
+.table-frame { left: 166px; width: 952px; height: 640px; }
+.god-rays { left: 176px; width: 932px; height: 640px; }
+#left { display: none !important; }
+
+/* ---------- арена ---------- */
+#arena { left: 0; top: 0; width: 1280px; height: 640px; }
+#op-hand { left: 180px; right: auto; width: 924px; top: -46px; }
+#op-hand .back { width: 54px; height: 76px; margin-left: -18px; }
+.hero-zone { width: 176px; }
+#op-zone { left: 0; top: 0; height: 200px; }
+#me-zone { left: 0; top: 440px; height: 200px; }
+.hero, #me-zone .hero { left: 24px !important; top: 12px; transform: none !important; width: 128px; height: 140px; }
+#me-zone .hero { top: 52px; }
+#me-zone .hero .h-name { top: -22px; bottom: auto; }
+.hero .h-name { font-size: 18px; }
+.hero.hit { animation: heroHit2 .45s; }
+@keyframes heroHit2 { 20% { transform: translate(-8px, 4px); } 40% { transform: translate(7px, -3px); } 60% { transform: translate(-4px, 2px); } }
+.power, #me-zone .power { left: 116px !important; width: 60px; height: 60px; font-size: 28px; }
+#op-zone .power { top: 112px; }
+#me-zone .power { top: 14px; }
+.prop { width: 70px; height: 90px; }
+.prop .pi { font-size: 44px; }
+.lane { left: 180px; right: auto; width: 924px; height: 166px; gap: 10px; }
+#op-board { top: 34px; }
+#me-board { top: 216px; }
+.divider { left: 180px; right: auto; width: 924px; top: 204px; }
+#hint { font-size: 20px; padding: 6px 20px; top: -18px; }
+
+/* ---------- правая и левая колонки ---------- */
+#right { left: 0; top: 0; width: 1280px; height: 640px; pointer-events: none; }
+#right > * { pointer-events: auto; }
+.info { width: 166px; left: 6px !important; right: auto !important; padding: 8px 10px; font-size: 17px; }
+#op-info { top: 202px; }
+#me-info { top: 324px; bottom: auto; }
+.info .i-name { font-size: 19px; }
+.info .i-soul { font-size: 16px; }
+.info .i-gold { font-size: 19px; }
+.mana-num { font-size: 21px; }
+.crystal { width: 14px; height: 14px; }
+.btn-end { left: 1112px !important; right: auto !important; top: 232px; width: 160px; height: 92px; font-size: 24px; border-radius: 46px; }
+.btn-shop { left: 1112px !important; right: auto !important; top: 334px; width: 160px; height: 66px; font-size: 18px; line-height: 1.15; padding: 6px; }
+.right-buttons { left: 1112px !important; right: auto !important; bottom: auto; top: 556px; width: 160px; display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; }
+.right-buttons .btn { height: 38px; padding: 0; font-size: 22px; }
+
+/* ---------- существа ---------- */
+.minion { width: 112px; height: 148px; }
+.minion .m-icons span { width: 26px; height: 26px; font-size: 15px; }
+.minion .m-taunt { position: absolute; left: -12px; right: -12px; top: -10px; bottom: -4px; z-index: -1;
+  clip-path: polygon(50% 0, 100% 9%, 100% 68%, 50% 100%, 0 68%, 0 9%);
+  background: linear-gradient(180deg, #b8c0c8, #6b737b 45%, #3b4248); }
+.minion.taunt .m-frame { border-color: #c9d1d8; }
+/* у каждого свойства — своё оформление на столе */
+.minion.kw-untouchable .m-frame { box-shadow: 0 0 0 3px #7fe6ff, 0 0 20px rgba(127,230,255,.8) !important; animation: untouch 2.4s ease-in-out infinite; }
+@keyframes untouch { 50% { opacity: .7; } }
+.minion.kw-pierce .m-frame { outline: 3px dashed #c48cff; outline-offset: 3px; }
+.minion.kw-poison .m-frame { box-shadow: 0 0 0 3px #4fd06a, 0 0 16px rgba(80,220,100,.75) !important; }
+.minion.kw-thorns .m-frame { outline: 4px dotted #ff9a3c; outline-offset: 2px; }
+.minion.kw-dodge .m-frame { outline: 2px dashed rgba(235,245,255,.9); outline-offset: 6px; }
+.minion.kw-tough .m-frame { border-width: 5px; border-color: #8f959b; }
+.minion.kw-windfury .m-frame { border-style: double; border-width: 6px; }
+.minion.kw-lifesteal .m-frame { box-shadow: 0 0 0 3px #e0453a, 0 0 16px rgba(224,69,58,.7) !important; }
+.minion.kw-flying { transform: translateY(-8px); }
+.minion.kw-flying .m-shadow { opacity: .45; transform: scale(.75); bottom: -24px; }
+/* плашки усилений и ослаблений */
+.minion .m-chips { position: absolute; left: -6px; right: -6px; bottom: 30px; display: flex; justify-content: center; flex-wrap: wrap; gap: 2px; z-index: 3; pointer-events: none; }
+.minion .m-chips span { font-size: 13px; font-weight: 700; padding: 1px 5px; border-radius: 8px; line-height: 1.25; text-shadow: 0 1px 1px #000; }
+.minion .m-chips .buff, .peek .buff { background: rgba(28,110,40,.92); color: #d8ffd0; border: 1px solid #7dff8a; }
+.minion .m-chips .debuff, .peek .debuff { background: rgba(140,22,16,.92); color: #ffd2c8; border: 1px solid #ff8a7a; }
+.peek .buff, .peek .debuff { border-radius: 8px; padding: 2px 6px; margin-top: 3px; }
+
+/* ---------- рука ---------- */
+#hand { left: 180px; width: 924px; top: 388px; height: 252px; }
+.hcard { width: 150px; height: 212px; }
+.hcard .hc-art { height: 112px; }
+.hcard .hc-gem { top: 96px; }
+.hcard .hc-name { top: 106px; font-size: 15px; padding: 3px 4px; }
+.hcard .hc-text { top: 131px; bottom: 34px; left: 5px; right: 5px; font-size: 15px; line-height: 1.1; }
+.hcard.spell .hc-text { bottom: 8px; }
+.hcard .hc-kw { position: absolute; top: 6px; right: 6px; z-index: 2; font-size: 16px; padding: 1px 4px; border-radius: 10px; background: rgba(0,0,0,.7); }
+.hcard .hc-cost { width: 44px; height: 44px; font-size: 26px; }
+#hand .hcard { transform-origin: 50% 100%; }
+#hand .hcard:hover { transform: translateY(-24px) scale(1.08); }
+#hand .hcard.sel { transform: translateY(-46px) scale(1.24); }
+.hcard .hc-zoom { position: absolute; top: 4px; right: 4px; width: 46px; height: 46px; border-radius: 50%; z-index: 4; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; background: radial-gradient(circle at 35% 30%, #ffe39a, #b5841f); border: 2px solid #fff3c4; box-shadow: 0 2px 8px #000; cursor: zoom-in; }
+#played { top: 90px; }
+
+/* ---------- подсказка о карте ---------- */
+.peek { position: absolute; left: 330px; width: 620px; z-index: 30; display: none; padding: 10px 14px; border-radius: 14px; cursor: zoom-in;
+  background: linear-gradient(180deg, rgba(40,28,14,.97), rgba(20,13,7,.97)); border: 2px solid var(--gold); box-shadow: 0 8px 30px #000;
+  font-size: 17px; line-height: 1.3; color: var(--ink); max-height: 200px; overflow: hidden; }
+.peek.show { display: block; animation: zoomIn .15s ease-out; }
+.peek.top { top: 30px; }
+.peek.bottom { top: 222px; }
+.peek > b { font-size: 21px; color: var(--gold); }
+.peek .pk-meta { margin-left: 10px; color: var(--ink-dim); font-size: 16px; }
+.peek div b { color: #ffe39a; }
+.peek .pk-hint { color: var(--gold); font-size: 14px; margin-top: 4px; opacity: .8; }
+
+/* ---------- окна, баннер, обучение, коллекция ---------- */
+#tut { left: 190px !important; top: 40px !important; width: 520px !important; }
+#tut .tut-text { font-size: 20px; }
+.banner { top: 240px; height: 130px; }
+.banner-text { font-size: 46px; }
+#zoom { padding: 14px 24px; gap: 24px; }
+#zoom .z-img { max-height: 600px; max-width: 600px; }
+#zoom .z-glyph { width: 420px; height: 520px; font-size: 240px; }
+#zoom .z-text { width: 540px; max-height: 600px; }
+#zoom h2 { font-size: 36px; }
+#zoom .z-ab { font-size: 22px; }
+.mbox { max-height: 620px; max-width: 1240px; padding: 16px 22px; }
+.mbox h2 { font-size: 28px; }
+.mbox p { font-size: 19px; }
+.mbox .mcards { margin: 10px; gap: 14px; }
+.mbox .mcards .hcard { transform: scale(1.18); margin: 18px 14px; }
+.mbox.rules { width: 1180px; }
+.mbox .mbtns .btn { font-size: 22px; padding: 12px 26px; }
+.vol-row { display: flex; align-items: center; gap: 16px; font-size: 22px; margin: 16px 0; justify-content: center; }
+.vol-row span { width: 170px; text-align: left; }
+.vol-row input[type=range] { width: 380px; height: 34px; accent-color: var(--gold); }
+.vol-row b { width: 60px; text-align: right; color: var(--gold); }
+.vol-row select { font: inherit; font-size: 20px; padding: 6px 10px; background: #22180d; color: var(--ink); border: 1px solid var(--gold-soft); border-radius: 8px; width: 380px; }
+.mbox.logbox { width: 820px; }
+.log-list { max-height: 440px; overflow-y: auto; text-align: left; font-size: 18px; line-height: 1.35; }
+.log-list div { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.log-list .me { color: #cfe8ff; } .log-list .op { color: #ffd2c8; } .log-list .sys { color: var(--gold); }
+#gallery { padding: 10px 14px; }
+.gal-head { height: 50px; }
+.gal-body { height: 566px; }
+#gal-preview { width: 330px; }
+#gal-preview .pv-img { max-height: 300px; }
+.legend-intro .li-card { width: 240px; height: 240px; }
+.legend-intro .li-name { font-size: 44px; }
+.lowfx .minion.kw-untouchable .m-frame { animation: none; }
+/* левая колонка: компактные блоки маны, сила героя рядом с портретом */
+.info .i-name { display: none; }
+.info .i-row { display: flex; justify-content: space-between; align-items: center; margin: 2px 0; font-size: 15px; gap: 4px; }
+.info .i-row:nth-child(2) { justify-content: center; }
+.info .crystals { flex-wrap: nowrap; gap: 1px; margin: 3px 0; }
+.crystal { width: 12px !important; height: 12px !important; }
+#op-info { top: 194px; }
+#me-info { top: 326px; }
+.hero, #me-zone .hero { left: 6px !important; width: 112px; height: 124px; }
+#op-zone .hero { top: 10px; }
+#me-zone .hero { top: 60px; }
+.power, #me-zone .power { left: 122px !important; width: 50px; height: 50px; font-size: 24px; }
+#op-zone .power { top: 10px; }
+#me-zone .power { top: 60px; }
+.power .pw-cost { width: 26px; height: 26px; font-size: 15px; top: -8px; }
+.peek { max-height: 260px; }
+
+/* подсказка и облачко обучения не перехватывают нажатия по столу */
+.peek { pointer-events: none; }
+.peek .pk-hint { display: none; }
+#tut { pointer-events: none; }
+#tut .tut-btns, #tut .tut-btns * { pointer-events: auto; }
+#tut.bottom { top: 236px !important; }
+.tut-glow { z-index: 47 !important; }
+
 </style>
 </head>
 <body>
@@ -555,11 +743,14 @@ a.btn { text-decoration: none; display: inline-block; }
         <h1 class="title">ТРОН</h1>
         <p class="subtitle">Битва за Трон: 30 здоровья, мана растёт каждый ход, существа бьются насмерть</p>
         <h3 class="menu-h">Поле боя</h3>
-        <div id="hero-list" class="hero-list"></div>
+        <div id="hero-list" class="pick-list"></div>
+        <div id="field-desc" class="pick-desc"></div>
         <h3 class="menu-h">Натура героя</h3>
-        <div id="soul-list" class="chip-list"></div>
+        <div id="soul-list" class="pick-list"></div>
+        <div id="soul-desc" class="pick-desc"></div>
         <h3 class="menu-h">Артефакт</h3>
-        <div id="artifact-list" class="chip-list"></div>
+        <div id="artifact-list" class="pick-list"></div>
+        <div id="art-desc" class="pick-desc"></div>
         <div class="opp-pick">
           <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок в колоде</label>
           <label class="gfx-pick">Противник:
@@ -573,7 +764,7 @@ a.btn { text-decoration: none; display: inline-block; }
           <button class="btn" id="btn-gallery">🃏 Коллекция</button>
           <button class="btn" id="btn-rules">📜 Правила</button>
           <button class="btn btn-sound" title="Звук">🔊</button>
-          <button class="btn btn-music" title="Музыка">🎵</button>
+          <button class="btn btn-settings" title="Настройки звука">⚙️</button>
         </div>
         <div id="version-badge" class="version-badge"></div>
       </div>
@@ -586,10 +777,8 @@ a.btn { text-decoration: none; display: inline-block; }
 
       <div class="table-frame"></div>
       <div class="god-rays"></div>
-      <div id="left">
-        <div id="preview" class="preview"></div>
-        <div id="log" class="log"></div>
-      </div>
+      <div id="peek" class="peek"></div>
+      <div id="log" class="hidden"></div>
 
       <div id="arena">
         <div id="op-hand"></div>
@@ -607,7 +796,8 @@ a.btn { text-decoration: none; display: inline-block; }
         <div id="me-info" class="info"></div>
         <div class="right-buttons">
           <button class="btn btn-small btn-sound" title="Звук">🔊</button>
-          <button class="btn btn-small btn-music" title="Музыка">🎵</button>
+          <button class="btn btn-small btn-settings" title="Настройки звука">⚙️</button>
+          <button class="btn btn-small" id="btn-log" title="Журнал ходов">📜</button>
           <button class="btn btn-small" id="btn-menu" title="В меню">☰</button>
         </div>
       </div>
@@ -616,7 +806,7 @@ a.btn { text-decoration: none; display: inline-block; }
       <div id="played"></div>
 
       <div id="light"><div class="l-me"></div><div class="l-op"></div><div class="l-flicker"></div></div>
-      <canvas id="fx-canvas" width="1600" height="900"></canvas>
+      <canvas id="fx-canvas" width="1280" height="640"></canvas>
       <div id="fx-layer"></div>
     </section>
 
@@ -2161,15 +2351,28 @@ const Sound = (() => {
   let current = null;      // { key, nodes: [], timers: [] }
   let wanted = 'tavern';
 
+  // громкость каналов 0..1 (ползунки в настройках)
+  const VOL = { music: 0.8, sfx: 0.8, amb: 0.6 };
+  try { Object.assign(VOL, JSON.parse(localStorage.getItem('tron-volume') || '{}')); } catch (e) { /* ignore */ }
+  const GAIN = { music: 1.25, sfx: 0.95, amb: 0.5 };   // множители, чтобы 100% звучало уверенно, но не хрипело
+  const chanGain = (k) => (k === 'music' && !musicOn ? 0 : VOL[k] * GAIN[k]);
+
   function init() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return true; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
-    try { ac = lowQuality ? new AC({ sampleRate: 22050 }) : new AC(); } catch (e) { ac = new AC(); }
-    master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ac.destination);
-    sfx = ac.createGain(); sfx.gain.value = 0.75; sfx.connect(master);
-    amb = ac.createGain(); amb.gain.value = 0.3; amb.connect(master);
-    mus = ac.createGain(); mus.gain.value = musicOn ? 1.0 : 0; mus.connect(master);
+    // большой буфер ('playback') — меньше треска и запинок на телефонах
+    const opts = { latencyHint: 'playback' };
+    if (lowQuality) opts.sampleRate = 22050;
+    try { ac = new AC(opts); } catch (e) { try { ac = new AC({ latencyHint: 'playback' }); } catch (e2) { ac = new AC(); } }
+    // компрессор на выходе: громкие места не хрипят
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -10; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.2;
+    comp.connect(ac.destination);
+    master = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(comp);
+    sfx = ac.createGain(); sfx.gain.value = chanGain('sfx'); sfx.connect(master);
+    amb = ac.createGain(); amb.gain.value = chanGain('amb'); amb.connect(master);
+    mus = ac.createGain(); mus.gain.value = chanGain('music'); mus.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -2561,7 +2764,7 @@ const Sound = (() => {
       });
     }
     // арфа: перебор по аккорду
-    if (st.arp) {
+    if (st.arp && (!lowQuality || sg.step % 2 === 0)) {
       const seq = [chord, chord + 2, chord + 4, chord + 7, chord + 4, chord + 2];
       voice(st.arp, t + jit(), deg2midi(seq[sg.step % seq.length], st.root - 12), { vol: 0.28 });
     }
@@ -2572,7 +2775,7 @@ const Sound = (() => {
         const swing = st.swing && sg.step % 2 ? st.swing * stepDur : 0;
         const plucked = ['acoustic_guitar_nylon', 'music_box', 'orchestral_harp'].indexOf(st.lead) >= 0;
         voice(st.lead, t + swing + jit(), n.midi, plucked ? { vol: 0.8 } : { vol: 0.62, attack: 0.045, len: n.dur * stepDur * 0.96, release: 0.22 });
-        if (st.counter && sg.loops % 2 === 0 && bar >= 4) {
+        if (st.counter && !lowQuality && sg.loops % 2 === 0 && bar >= 4) {
           voice(st.counter[0], t + swing + jit(), n.midi + st.counter[1], { vol: st.counter[2], attack: 0.06, len: n.dur * stepDur * 0.9, release: 0.25 });
         }
       }
@@ -2584,7 +2787,7 @@ const Sound = (() => {
     if (!sg || !ac || !sg.ready) return;
     const stepDur = 60 / sg.st.bpm / 2;
     if (sg.nextT < ac.currentTime) sg.nextT = ac.currentTime + 0.05;   // вкладка «спала» — не догоняем
-    while (sg.nextT < ac.currentTime + 0.3) {
+    while (sg.nextT < ac.currentTime + (lowQuality ? 0.7 : 0.35)) {
       scheduleStep(sg, sg.nextT);
       sg.nextT += stepDur;
       sg.step++;
@@ -2614,14 +2817,17 @@ const Sound = (() => {
     const st = STYLES[key] || STYLES.tavern;
     if (song && song.key === key) return;
     stopSong();
-    if (!reverb) reverb = makeReverb();
+    if (!lowQuality && !reverb) reverb = makeReverb();   // на слабых телефонах без эха — оно самое тяжёлое
     const out = ac.createGain();
     out.gain.value = 0.0001;
     out.gain.setTargetAtTime(1, now(), 1.5);
     out.connect(mus);
-    const send = ac.createGain();
-    send.gain.value = lowQuality ? 0.18 : 0.32;
-    send.connect(reverb);
+    let send = null;
+    if (reverb) {
+      send = ac.createGain();
+      send.gain.value = 0.32;
+      send.connect(reverb);
+    }
     const sg = { key, st, out, send, nextT: 0, bar: 0, step: 0, loops: 0, ready: false,
       melody: compose(st, Math.floor(Math.random() * 1e9)) };
     song = sg;
@@ -2640,7 +2846,7 @@ const Sound = (() => {
     musicOn = on;
     try { localStorage.setItem('tron-music', on ? '1' : '0'); } catch (e) { /* ignore */ }
     if (!ac) return;
-    mus.gain.setTargetAtTime(on ? 1.0 : 0, now(), 0.3);
+    mus.gain.setTargetAtTime(chanGain('music'), now(), 0.3);
     if (on) startSong(wanted); else stopSong();
   }
 
@@ -2669,6 +2875,17 @@ const Sound = (() => {
     startSong(key);
   }
 
+  /** Плавно меняет громкость канала: music | sfx | amb */
+  function setVolume(kind, v) {
+    VOL[kind] = Math.max(0, Math.min(1, v));
+    try { localStorage.setItem('tron-volume', JSON.stringify(VOL)); } catch (e) { /* ignore */ }
+    if (!ac) return;
+    const node = { music: mus, sfx, amb }[kind];
+    node.gain.cancelScheduledValues(now());
+    node.gain.setTargetAtTime(chanGain(kind), now(), 0.08);
+    if (kind === 'music' && VOL.music > 0 && !musicOn) setMusic(true);
+  }
+
   function setMuted(m) {
     muted = m;
     try { localStorage.setItem('tron-muted', m ? '1' : '0'); } catch (e) { /* ignore */ }
@@ -2676,6 +2893,7 @@ const Sound = (() => {
   }
 
   return { init, play, setLocation, setMuted, isMuted: () => muted, setMusic, isMusicOn: () => musicOn, setLowQuality,
+    setVolume, getVolume: (k) => VOL[k],
     _debugSong: () => song && { key: song.key, ready: song.ready, bar: song.bar, loops: song.loops, bank: Object.keys(BANK).length } };
 })();
 
@@ -2687,7 +2905,7 @@ const Sound = (() => {
    - анимированная погода на рядах (canvas)
    - искры, угли, обломки
    - «сгорание» уничтоженных карт, всплывающие числа, тряска стола
-   Все координаты — в системе #stage (1600×900).
+   Все координаты — в системе #stage (1280×640).
    ===================================================================== */
 
 const FX = (() => {
@@ -2716,7 +2934,7 @@ const FX = (() => {
     MAX_PARTS = low ? 160 : 420;
     if (!cv) return;
     const k = low ? 0.5 : 1;
-    cv.width = 1600 * k; cv.height = 900 * k;
+    cv.width = 1280 * k; cv.height = 640 * k;
     cx = cv.getContext('2d');
     cx.setTransform(k, 0, 0, k, 0, 0);
     if (!low && ambientOn) kick();
@@ -2741,7 +2959,7 @@ const FX = (() => {
 
   function stageScale() {
     const sr = document.getElementById('stage').getBoundingClientRect();
-    return { sr, k: sr.width / 1600 || 1 };
+    return { sr, k: sr.width / 1280 || 1 };
   }
 
   function toStage(el, cache) {
@@ -2767,7 +2985,7 @@ const FX = (() => {
   function clearAll() {
     parts = [];
     KINDS.forEach((k) => { target[k] = false; level[k] = 0; clearTimeout(timers[k]); });
-    if (cx) cx.clearRect(0, 0, 1600, 900);
+    if (cx) cx.clearRect(0, 0, 1280, 640);
     if (layer) layer.innerHTML = '';
   }
 
@@ -2893,7 +3111,7 @@ const FX = (() => {
     }
     spawnWeather(dt);
     spawnAmbient();
-    cx.clearRect(0, 0, 1600, 900);
+    cx.clearRect(0, 0, 1280, 640);
     if (Q.fog) drawFog();
 
     const alive = [];
@@ -2963,7 +3181,7 @@ const FX = (() => {
     parts = alive;
 
     if (busy()) raf = requestAnimationFrame(frame);
-    else { raf = 0; cx.clearRect(0, 0, 1600, 900); }
+    else { raf = 0; cx.clearRect(0, 0, 1280, 640); }
   }
 
   /* ---------------- DOM-эффекты ---------------- */
@@ -3117,19 +3335,19 @@ const Tut = (() => {
       text: 'Кент на поле! 💤 — он спит: существа атакуют только <b>со следующего хода</b>. 🛡️ <b>Провокация</b> — враги обязаны бить сначала его. 🦏 <b>Толстокожий</b> — получает на 1 урон меньше.' },
     { want: { type: 'end' }, el: () => $('#btn-end'),
       text: 'Мана закончилась. Нажмите <b>«Конец хода»</b> — теперь ходит противник.' },
-    { next: true, afterAI: true, el: () => minionEl(1, 'semki'),
+    { pos: 'bottom', next: true, afterAI: true, el: () => minionEl(1, 'semki'),
       text: 'Противник выставил «Семки у Подъезда». <b>Жёлтый ромб</b> — атака (1), <b>красное сердце</b> — здоровье (2).' },
-    { want: { type: 'attack', id: 'kent', targetId: 'semki' }, el: () => minionEl(0, 'kent'),
+    { want: { pos: 'bottom', type: 'attack', id: 'kent', targetId: 'semki' }, el: () => minionEl(0, 'kent'),
       text: 'Ваш ход! Атакуйте: нажмите на <b>Кента</b> (у него зелёная рамка), потом на вражеские <b>Семки</b>.' },
     { next: true, el: () => minionEl(0, 'kent'),
       text: 'Существа бьют друг друга <b>одновременно</b>. Кент убил Семки, а их удар погасила Толстокожесть. За убитого врага вы получили 🪙 <b>золото</b>.' },
-    { want: { type: 'play', id: 'kirpich', target: 'h1' }, el: () => handEl('kirpich'),
+    { want: { pos: 'bottom', type: 'play', id: 'kirpich', target: 'h1' }, el: () => handEl('kirpich'),
       text: '<b>Заклинания</b> срабатывают сразу. Нажмите «Кирпич с балкона», а потом <b>вражеского героя</b> — 3 урона!' },
     { want: { type: 'end' }, el: () => $('#btn-end'),
       text: 'Осталась 1 мана — этого мало. Завершите ход.' },
-    { next: true, afterAI: true, el: () => minionEl(1, 'karlik'),
+    { pos: 'bottom', next: true, afterAI: true, el: () => minionEl(1, 'karlik'),
       text: 'Противник выставил «Горбатого Карлика». У многих карт есть 📣 <b>боевой клич</b> — эффект, который срабатывает при розыгрыше.' },
-    { want: { type: 'power' }, el: () => document.querySelector('[data-power="0"]'),
+    { want: { pos: 'bottom', type: 'power' }, el: () => document.querySelector('[data-power="0"]'),
       text: 'Круглая кнопка рядом с портретом — <b>сила героя</b> ✊. Нажмите её, затем Карлика: 1 урон. Стоит 2 маны, раз в ход.' },
     { want: 'zoom', el: () => $('#hand'),
       text: 'Любую карту можно рассмотреть крупно: <b>подержите на ней палец</b> (на компьютере — правая кнопка мыши). Закройте просмотр нажатием.' },
@@ -3226,6 +3444,7 @@ const Tut = (() => {
     const waiting = st && st.afterAI && s && (s.current !== 0 || App.looping);
     if (!active || free || !st || waiting || !s) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
+    box.classList.toggle('bottom', st.pos === 'bottom');
     box.querySelector('.tut-step').textContent = `Обучение · шаг ${step + 1} из ${STEPS.length}`;
     box.querySelector('.tut-text').innerHTML = st.text;
     $('#tut-next').classList.toggle('hidden', !st.next);
@@ -3335,7 +3554,7 @@ const artOf = (c, full) => {
 
 /* ---------------------- масштаб ---------------------- */
 function fit() {
-  const k = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+  const k = Math.min(window.innerWidth / 1280, window.innerHeight / 640);
   $('#stage').style.transform = `translate(-50%, -50%) scale(${k})`;
 }
 window.addEventListener('resize', fit);
@@ -3363,38 +3582,76 @@ function hcardHTML(c, o) {
   if (o.cls) cls.push(o.cls);
   const data = c.uid ? `data-h="${c.uid}"` : `data-gid="${esc(c.id)}"`;
   const stats = c.type === 'minion' ? `<div class="hc-atk">${c.atk}</div><div class="hc-hp">${c.hp}</div>` : '';
+  const kws = (c.kw || []).map((k) => KEYWORDS[k].icon).join('');
+  const fit = App.fit && App.fit[c.id];
   return `<div class="${cls.join(' ')}" ${data} ${o.style ? `style="${o.style}"` : ''}>
     <div class="hc-art">${artHTML(c)}</div>${c.rarity && c.rarity !== 'common' ? `<div class="gem g-${c.rarity} hc-gem"></div>` : ''}
     <div class="hc-cost ${cost < c.cost ? 'cheap' : ''}">${cost}</div>
+    ${kws ? `<div class="hc-kw">${kws}</div>` : ''}
     <div class="hc-name">${esc(c.name)}</div>
-    <div class="hc-text">${esc(cardShortText(c))}</div>${stats}</div>`;
+    <div class="hc-text" data-fit="${esc(c.id)}"${fit ? ` style="font-size:${fit}px"` : ''}>${esc(cardShortText(c))}</div>${stats}
+    ${o.zoom ? `<div class="hc-zoom" data-zoom="${c.uid}">🔍</div>` : ''}</div>`;
+}
+
+/** Подгоняет размер текста на картах, чтобы он не обрезался (результат запоминается) */
+function fitCardTexts(root) {
+  App.fit = App.fit || {};
+  (root || document).querySelectorAll('.hc-text[data-fit]').forEach((el) => {
+    const id = el.dataset.fit;
+    if (App.fit[id]) return;
+    let size = 15;
+    el.style.fontSize = size + 'px';
+    while (size > 10 && el.scrollHeight > el.clientHeight + 1) { size -= 0.5; el.style.fontSize = size + 'px'; }
+    App.fit[id] = size;
+  });
+}
+
+const KW_VISUAL = ['taunt', 'shield', 'stealth', 'untouchable', 'pierce', 'poison', 'thorns', 'dodge', 'tough', 'windfury', 'lifesteal', 'flying'];
+
+/** Плашки усилений и ослаблений на существе: [[вид, текст, подсказка]] */
+function effectChips(s, m) {
+  const def = defOf(m.id);
+  const baseAtk = def ? def.atk : m.atk, baseHp = def ? def.hp : m.maxHp;
+  const out = [];
+  const dA = getAtk(s, m) - baseAtk, dH = m.maxHp - baseHp;
+  if (dA > 0) out.push(['buff', `+${dA}⚔`, `Атака усилена на ${dA}`]);
+  if (dA < 0) out.push(['debuff', `${dA}⚔`, `Атака снижена на ${-dA}`]);
+  if (dH > 0) out.push(['buff', `+${dH}❤`, `Здоровье усилено на ${dH}`]);
+  if (dH < 0) out.push(['debuff', `${dH}❤`, `Здоровье снижено на ${-dH}`]);
+  if (m.frozen) out.push(['debuff', '💫', 'Оглушён: пропустит атаку']);
+  if (m.debt) out.push(['debuff', `📜${m.debt}`, `Долг: −${m.debt} атаки каждый ход`]);
+  if (m.mark) out.push(['debuff', '🎯', `На прицеле: −${m.mark.n} здоровья каждый ход`]);
+  if (m.preg) out.push(['debuff', '🤰', 'Беременность']);
+  if (m.spouse) out.push(['debuff', '💍', 'В браке']);
+  if (m.silenced) out.push(['debuff', '🤐', 'Без свойств']);
+  return out;
 }
 
 function minionHTML(s, m, o) {
   const cls = ['minion'];
   if (m.rarity === 'legendary' || m.rarity === 'epic' || m.rarity === 'rare') cls.push(m.rarity);
-  ['taunt', 'shield', 'stealth'].forEach((k) => { if (hasKw(m, k)) cls.push(k); });
+  KW_VISUAL.forEach((k) => { if (hasKw(m, k)) cls.push(k === 'taunt' || k === 'shield' || k === 'stealth' ? k : 'kw-' + k); });
   if (m.frozen) cls.push('frozen');
   if (o.extra) cls.push(o.extra);
   const atk = getAtk(s, m);
-  const icons = [];
-  ['untouchable', 'pierce', 'poison', 'windfury', 'lifesteal', 'flying', 'charge'].forEach((k) => { if (hasKw(m, k)) icons.push(KEYWORDS[k].icon); });
+  const icons = (m.kw || []).filter((k) => KEYWORDS[k]).map((k) => KEYWORDS[k].icon);
   if (m.dr) icons.push('⚰️');
   if (m.end) icons.push('🌙');
+  if (m.kill) icons.push('🗡️');
   if (m.aura) icons.push('✴️');
   if (m.enrage) icons.push('💢');
   if (m.spellDiscount) icons.push('🏷️');
   if (m.cantAttack) icons.push('⛔');
-  if (m.female) icons.push('♀');
-  const status = [m.spouse ? '💍' : '', m.preg ? '🤰' : '', m.debt ? '📜' : '', m.mark ? '🎯' : ''].join('');
+  const chips = effectChips(s, m);
   const sleepy = m.owner === s.current && m.sleeping && !m.cantAttack && s.phase === 'play';
   const def = defOf(m.id);
   const baseAtk = def ? def.atk : m.atk;
   return `<div class="${cls.join(' ')}" data-t="${m.uid}" ${o.style ? `style="${o.style}"` : ''}>
     <div class="m-shadow"></div>${m.rarity === 'legendary' ? '<div class="m-crown">👑</div>' : ''}
+    ${hasKw(m, 'taunt') ? '<div class="m-taunt"></div>' : ''}
     <div class="m-frame"><div class="m-art">${artHTML(m)}</div></div>${m.rarity && m.rarity !== 'common' ? `<div class="gem g-${m.rarity} m-gem"></div>` : ''}
-    <div class="m-icons">${icons.slice(0, 4).map((x) => `<span>${x}</span>`).join('')}</div>
-    ${status ? `<div class="m-status">${status}</div>` : ''}
+    <div class="m-icons">${icons.slice(0, 5).map((x) => `<span>${x}</span>`).join('')}</div>
+    ${chips.length ? `<div class="m-chips">${chips.slice(0, 4).map(([k, t, h]) => `<span class="${k}" title="${esc(h)}">${t}</span>`).join('')}</div>` : ''}
     ${sleepy ? '<div class="m-zz">💤</div>' : ''}
     <div class="m-atk ${atk > baseAtk ? 'up' : atk < baseAtk ? 'down' : ''}">${atk}</div>
     <div class="m-hp ${m.hp < m.maxHp ? 'hurt' : m.maxHp > (def ? def.hp : m.maxHp) ? 'up' : ''}">${m.hp}</div></div>`;
@@ -3469,10 +3726,32 @@ function previewHTML(c, live) {
     ${c.quote ? `<div class="pv-quote">${esc(c.quote)}</div>` : ''}`;
 }
 
+/** Короткая подсказка о карте поверх стола (по нажатию); долгое нажатие — крупный просмотр */
+let peekTimer = 0;
+function peekHTML(c, live) {
+  if (c.isHero) {
+    const h = heroText(c.idx);
+    return `<b>${esc(h.name)}</b><span class="pk-meta">${esc(h.meta)}</span>${h.parts.map(([n, t]) => `<div><b>${n}.</b> ${esc(t)}</div>`).join('')}`;
+  }
+  const atk = live ? getAtk(App.s, live) : c.atk, hp = live ? live.hp : c.hp;
+  const stats = c.type === 'minion' ? ` · ⚔${atk} ❤${hp}` : ' · заклинание';
+  const parts = cardTextParts(c).map((p) => `<div><b>${p.name}.</b> ${esc(p.text)}</div>`);
+  if (live) effectChips(App.s, live).forEach(([k, t, h]) => parts.push(`<div class="${k}"><b>${t}</b> ${esc(h)}</div>`));
+  return `<b>${esc(c.name)}</b><span class="pk-meta">💎${c.cost}${stats}</span>${parts.join('') || '<div>Без особых свойств.</div>'}<div class="pk-hint">🔍 нажмите сюда — крупно</div>`;
+}
+
 function showPreview(c, live) {
-  const el = $('#preview');
+  const el = $('#peek');
   App.pv = c ? { c, live } : null;
-  if (el) el.innerHTML = previewHTML(c, live) + (c ? '<div class="pv-zoomhint">🔍 Нажмите сюда, чтобы увеличить</div>' : '');
+  if (!el) return;
+  clearTimeout(peekTimer);
+  if (!c) { el.classList.remove('show'); return; }
+  el.innerHTML = peekHTML(c, live);
+  const enemy = (live && live.owner === 1) || (c.isHero && c.idx === 1);
+  el.classList.toggle('bottom', !!enemy);
+  el.classList.toggle('top', !enemy);
+  el.classList.add('show');
+  peekTimer = setTimeout(() => { if (!App.hovering) el.classList.remove('show'); }, 4000);
 }
 
 /* ---------------------- крупный просмотр ---------------------- */
@@ -3627,8 +3906,8 @@ function propHTML(side, i) {
   const P = App.props && App.props[side][i];
   if (!P) return '';
   const d = P.hp <= 0 ? 'broken' : P.hp < PROP_HP ? 'd' + Math.min(3, Math.ceil((PROP_HP - P.hp) * 3 / PROP_HP)) : '';
-  const pos = i === 0 ? 'left:36px' : 'right:36px';
-  return `<div class="prop ${d}" style="${pos};top:${side === 1 ? 40 : 30}px" data-prop="${side}:${i}" title="${esc(P.name)}">
+  const pos = `left:${1116 + i * 82}px;top:${side === 1 ? 104 : 18}px`;   // правая колонка, над и под кнопками
+  return `<div class="prop ${d}" style="${pos}" data-prop="${side}:${i}" title="${esc(P.name)}">
     <span class="pi">${P.icon}</span><span class="php"><i style="width:${Math.max(0, P.hp) / PROP_HP * 100}%"></i></span></div>`;
 }
 
@@ -3669,6 +3948,7 @@ const elOf = (id) => document.querySelector(`#arena [data-t="${id}"]`);
 function render() {
   const s = App.s;
   if (!s) return;
+  if (App.sel) showPreview(null);   // при выборе цели подсказка не должна закрывать стол
   const snap = snapshot();
   const events = App.fxq.splice(0);
   const propHits = damageProps(events);
@@ -3714,7 +3994,7 @@ function render() {
   const me = s.players[0];
   const handEl = $('#hand');
   const n = me.hand.length;
-  const gap = n <= 7 ? 6 : Math.floor((1000 - 136) / (n - 1) - 136);
+  const gap = n * 150 + (n - 1) * 6 <= 910 ? 6 : Math.floor((910 - 150) / (n - 1) - 150);
   handEl.style.setProperty('--gap', gap + 'px');
   handEl.classList.toggle('locked', !canAct());
   let drawnN = 0;
@@ -3729,8 +4009,9 @@ function render() {
     if (App.sel && App.sel.uid === c.uid && (App.sel.kind === 'card' || App.sel.kind === 'bc')) extra.push('sel');
     let style = '';
     if (!App.handSeen.has(c.uid)) { extra.push('drawn'); style = `animation-delay:${Math.min(drawnN++, 6) * 90}ms`; }
-    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style });
+    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style, zoom: extra.indexOf('sel') >= 0 });
   }).join('');
+  fitCardTexts(handEl);
   if (drawnN && App.handSeen.size) Sound.play('draw');
   App.handSeen = newHand;
 
@@ -3742,13 +4023,13 @@ function render() {
   // панели
   const crystals = (P) => Array.from({ length: 10 }, (_, k) => `<span class="crystal ${k < P.mana ? 'full' : k < P.maxMana ? 'spent' : ''}"></span>`).join('');
   const op = s.players[1];
-  const soulTag = (P) => `<span class="i-soul" style="color:${SOULS[P.soul].color}">${SOULS[P.soul].icon} ${SOULS[P.soul].name}</span>${P.artifact ? ' ' + ARTIFACTS[P.artifact].icon : ''}`;
+  const soulTag = (P) => `<span class="i-soul" style="color:${SOULS[P.soul].color}">${SOULS[P.soul].icon} ${SOULS[P.soul].name}</span>`;
   $('#op-info').innerHTML = `<div class="i-row">${soulTag(op)}<span class="i-gold">🪙 ${op.gold}</span></div><div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
     <div class="crystals">${crystals(op)}</div>
-    <div class="i-row"><span>🂠 Рука: ${opN}</span><span>📚 Колода: ${op.deck.length}</span></div>`;
+    <div class="i-row"><span title="Карт в руке">🂠 ${opN}</span><span title="Карт в колоде">📚 ${op.deck.length}</span></div>`;
   $('#me-info').innerHTML = `<div class="i-row">${soulTag(me)}<span class="i-gold">🪙 ${me.gold}</span></div><div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
     <div class="crystals">${crystals(me)}</div>
-    <div class="i-row"><span>📚 Колода: ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
+    <div class="i-row"><span title="Карт в колоде">📚 ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
 
   const shopBtn = $('#btn-shop');
   shopBtn.innerHTML = `🛒 Лавка: карта за ${shopCost(me)} 🪙${me.shopUsed ? ' (куплено)' : ''}`;
@@ -4034,7 +4315,7 @@ function onArenaClick(e) {
 
   const tEl = e.target.closest('[data-t]');
   const pEl = e.target.closest('[data-power]');
-  if (tEl || pEl) { const pv = previewFromEl(tEl || pEl); if (pv) showPreview(pv.c, pv.live); }
+  if (tEl || pEl) { const pv = previewFromEl(tEl || pEl); if (pv) showPreview(pv.c, pv.live); } else showPreview(null);
   if (!canAct()) return;
   const id = tEl ? (tEl.dataset.t[0] === 'h' ? tEl.dataset.t : +tEl.dataset.t) : null;
   const sel = App.sel;
@@ -4083,6 +4364,7 @@ function onHandClick(e) {
   if (!el || !App.s) return;
   const c = App.s.players[0].hand.find((x) => x.uid === +el.dataset.h);
   if (!c) return;
+  if (e.target.closest('.hc-zoom')) { openZoom(c); return; }
   showPreview(c);
   if (!canAct()) return;
   if (App.sel && App.sel.uid === c.uid) { clearSel(); return; }
@@ -4251,23 +4533,23 @@ async function leaveToMenu() {
 /* ---------------------- меню ---------------------- */
 function fieldTileHTML(k, sel) {
   const F = FIELDS[k];
-  return `<div class="hero-tile field-tile field-${k} ${sel ? 'sel' : ''}" data-field="${k}">
-    <div class="ft-icon">${F.icon}</div><div class="ht-body"><h4>${esc(F.name)}</h4><p>${esc(F.desc)}</p></div></div>`;
+  return `<div class="pick field-${k} ${sel ? 'sel' : ''}" data-field="${k}"><span class="pk-ic">${F.icon}</span>${esc(F.name)}</div>`;
 }
 
 function renderMenu() {
   $('#hero-list').innerHTML = Object.keys(FIELDS).map((k) => fieldTileHTML(k, App.myField === k)).join('');
   $('#soul-list').innerHTML = Object.keys(SOULS).map((k) => {
     const so = SOULS[k];
-    return `<div class="chip ${App.mySoul === k ? 'sel' : ''}" data-soul="${k}" style="--c:${so.color}">
-      <div class="c-top">${so.icon} <b>${so.name}</b> · ${so.power.icon} ${so.power.name} (${so.power.cost})</div>
-      <div class="c-sub">${esc(so.power.desc)} ${esc(so.passive)}</div></div>`;
+    return `<div class="pick ${App.mySoul === k ? 'sel' : ''}" data-soul="${k}" style="--c:${so.color}"><span class="pk-ic">${so.icon}</span>${so.name}</div>`;
   }).join('');
   $('#artifact-list').innerHTML = Object.keys(ARTIFACTS).map((k) => {
     const ar = ARTIFACTS[k];
-    return `<div class="chip art ${App.myArtifact === k ? 'sel' : ''}" data-artifact="${k}">
-      <div class="c-top">${ar.icon} <b>${ar.name}</b></div><div class="c-sub">${esc(ar.desc)}</div></div>`;
+    return `<div class="pick ${App.myArtifact === k ? 'sel' : ''}" data-artifact="${k}"><span class="pk-ic">${ar.icon}</span>${ar.name}</div>`;
   }).join('');
+  const so = SOULS[App.mySoul], ar = ARTIFACTS[App.myArtifact];
+  $('#field-desc').textContent = FIELDS[App.myField].desc;
+  $('#soul-desc').innerHTML = `${so.power.icon} <b>${esc(so.power.name)}</b> (${so.power.cost} маны): ${esc(so.power.desc)} · ${esc(so.passive)}`;
+  $('#art-desc').textContent = ar.desc;
 }
 
 function showRules() {
@@ -4378,10 +4660,15 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.7';
+const GAME_VERSION = '3.8';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Новые карты: «Хтоя?» — неуязвим, пока не атакует; «Пространственный путник» — бьёт дважды кого угодно, пробивая любую защиту; «Взгляд убийцы» — цель каждый ход получает 2 урона',
+  'Новый интерфейс под телефон: всё крупнее, герои слева, кнопки справа, рука на всю ширину',
+  'Свойства существ видно на столе: каменный щит у Провокации, своя подсветка у Яда, Шипов, Уворота, Пробоя и других',
+  'Зелёные и красные плашки на существах показывают усиления и ослабления',
+  'Текст карт в руке больше не обрезается; у выбранной карты есть кнопка 🔍',
+  'Настройки ⚙️: отдельная громкость музыки, звуков и фона; кнопки громкости телефона управляют игрой',
+  'Звук стабильнее на слабых телефонах: больше буфер, легче музыка в экономном режиме',
 ];
 
 function showVersionBadge() {
@@ -4413,6 +4700,32 @@ async function checkUpdates() {
         <div class="mbtns"><a class="btn btn-gold" href="${esc(v.apkUrl)}">⬇ Скачать обновление</a><button class="btn" data-v="later">Позже</button></div>`);
     }
   } catch (e) { /* нет сети — ничего страшного */ }
+}
+
+/* ---------------------- журнал и настройки ---------------------- */
+function showLog() {
+  modal(`<h2>Журнал ходов</h2><div class="log-list">${App.logLines.slice(-40).map((l) => `<div class="${l.cls}">${esc(l.msg)}</div>`).join('') || '<div>Пока пусто</div>'}</div>
+    <div class="mbtns"><button class="btn btn-gold" data-v="ok">Закрыть</button></div>`, null, 'logbox');
+  const box = document.querySelector('.log-list');
+  if (box) box.scrollTop = box.scrollHeight;
+}
+
+function showSettings() {
+  Sound.init();
+  const row = (k, name) => `<label class="vol-row"><span>${name}</span><input type="range" min="0" max="100" value="${Math.round(Sound.getVolume(k) * 100)}" data-vol="${k}"><b>${Math.round(Sound.getVolume(k) * 100)}%</b></label>`;
+  const gfx = gfxSetting();
+  modal(`<h2>Настройки</h2>${row('music', '🎵 Музыка')}${row('sfx', '💥 Звуки')}${row('amb', '🍃 Фон')}
+    <label class="vol-row"><span>🖥️ Графика</span><select id="set-gfx">${[['auto', 'Авто'], ['high', 'Красивая'], ['low', 'Экономная']].map(([v, n]) => `<option value="${v}" ${v === gfx ? 'selected' : ''}>${n}</option>`).join('')}</select><b></b></label>
+    <div class="mbtns"><button class="btn btn-gold" data-v="ok">Готово</button></div>`, null, 'settings');
+  document.querySelectorAll('[data-vol]').forEach((inp) => inp.addEventListener('input', () => {
+    Sound.setVolume(inp.dataset.vol, inp.value / 100);
+    inp.nextElementSibling.textContent = inp.value + '%';
+  }));
+  $('#set-gfx').addEventListener('change', (e) => {
+    try { localStorage.setItem('tron-gfx', e.target.value); } catch (er) { /* ignore */ }
+    applyQuality(e.target.value === 'auto' ? detectQuality() : e.target.value);
+    const g = $('#gfx-select'); if (g) g.value = e.target.value;
+  });
 }
 
 /* ---------------------- инициализация ---------------------- */
@@ -4505,6 +4818,9 @@ function init() {
   $('#hand').addEventListener('click', onHandClick);
   $('#btn-end').addEventListener('click', () => { if (canAct()) humanAct({ type: 'end' }); });
   $('#btn-menu').addEventListener('click', leaveToMenu);
+  $('#btn-log').addEventListener('click', showLog);
+  document.addEventListener('click', (e) => { if (e.target.closest('.btn-settings')) { e.stopPropagation(); showSettings(); } }, { capture: true });
+  $('#peek').addEventListener('click', (e) => { e.stopPropagation(); if (App.pv) openZoom(App.pv.c, App.pv.live); });
 
   // предпросмотр при наведении (компьютер)
   $('#stage').addEventListener('mouseover', (e) => {
@@ -4524,7 +4840,7 @@ function init() {
   });
 
   setupLongPress();
-  $('#preview').addEventListener('click', () => { if (App.pv) openZoom(App.pv.c, App.pv.live); });
+
   $('#gal-preview').addEventListener('click', () => { if (App.galPv) openZoom(App.galPv); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeZoom(); if (App.sel) clearSel(); } });
   document.addEventListener('contextmenu', (e) => { if (App.sel) { e.preventDefault(); clearSel(); } });
