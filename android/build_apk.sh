@@ -14,11 +14,12 @@ rm -rf build
 mkdir -p build/assets/game build/classes ../dist
 
 echo "1/6 Копирую игру в assets"
-cp -r ../index.html ../css ../js ../img ../fonts build/assets/game/
+python3 ../tools/build_manifest.py
+cp -r ../index.html ../css ../js ../img ../fonts ../files.txt build/assets/game/
 
 echo "2/6 Компилирую Java"
 javac --release 8 -nowarn -Xlint:-options -cp "$ANDROID_JAR" -d build/classes \
-  src/com/tavernduel/game/MainActivity.java
+  src/com/tavernduel/game/MainActivity.java src/com/tavernduel/game/Updater.java
 
 echo "3/6 Превращаю в DEX"
 dalvik-exchange --dex --output=build/classes.dex build/classes

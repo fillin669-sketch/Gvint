@@ -88,13 +88,15 @@ APK подписывается ключом `android/debug.keystore` (парол
 
 ## Обновления внутри приложения
 
-Приложение при запуске открывает онлайн-версию игры с GitHub Pages
-(`https://fillin669-sketch.github.io/Gvint/`), поэтому новые карты и правки приходят сами.
-Без интернета — встроенная копия. Если в `version.json` номер `apk` больше, чем у установленного
-приложения, игра предложит скачать новый APK.
+При каждом запуске с интернетом приложение скачивает с GitHub `files.txt` — список файлов игры
+с контрольными суммами (ветка `ccr-ed511808-3mdvrp`, публичный репозиторий) — и докачивает только
+изменившиеся файлы. GitHub Pages для этого не нужен. Без интернета запускается то, что уже есть.
+Если в `version.json` номер `apk` больше, чем у установленного приложения, игра предложит скачать новый APK.
 
-Чтобы это работало, репозиторий должен быть публичным, а GitHub Pages включён:
-Settings → Pages → Deploy from a branch → `ccr-ed511808-3mdvrp` / `(root)`.
+Выпуск обновления:
+1. поправить `GAME_VERSION` и `CHANGELOG` в `js/ui.js`;
+2. `python3 tools/build_manifest.py` (пересобирает `files.txt`; `android/build_apk.sh` делает это сам);
+3. закоммитить и отправить в ветку — через ~5 минут (кэш GitHub) обновление придёт всем.
 
-Выпуск обновления: поправить `GAME_VERSION` и `CHANGELOG` в `js/ui.js`, `version.json`;
-для новой оболочки — ещё `versionCode` в `android/AndroidManifest.xml` и `APK_VERSION` в `MainActivity.java`.
+Для новой оболочки — ещё `versionCode` в `android/AndroidManifest.xml`, `APK_VERSION` в `MainActivity.java`
+и `apk` в `version.json`.

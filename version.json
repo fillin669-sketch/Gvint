@@ -1,9 +1,8 @@
 {
-  "content": "3.5",
-  "apk": 13,
-  "apkUrl": "https://fillin669-sketch.github.io/Gvint/dist/tron.apk",
+  "content": "3.6",
+  "apk": 14,
+  "apkUrl": "https://github.com/fillin669-sketch/Gvint/raw/ccr-ed511808-3mdvrp/dist/tron.apk",
   "notes": [
-    "Выбор сложности противника: Лёгкий, Средний, Сложный",
-    "Больше карт с Провокацией"
+    "Игра обновляется сама при запуске — прямо с GitHub, без переустановки"
   ]
 }

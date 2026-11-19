@@ -5,11 +5,9 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -17,24 +15,39 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Полноэкранное окно с игрой.
- * Сначала открывается онлайн-версия с GitHub Pages — так новые карты и правки приходят сами.
- * Если сети нет или сайт недоступен — встроенная копия из assets/game.
+ * При запуске игра обновляется прямо с GitHub (см. Updater): докачиваются только изменившиеся файлы.
+ * Игра открывается с адреса https://tron.game/ — его запросы приложение обслуживает само:
+ * сначала скачанные файлы из памяти телефона, а если их нет — встроенные из assets/game.
  */
 public class MainActivity extends Activity {
 
-    /** Адрес онлайн-версии игры */
-    private static final String ONLINE_URL = "https://fillin669-sketch.github.io/Gvint/index.html";
-    private static final String OFFLINE_URL = "file:///android_asset/game/index.html";
-    private static final int APK_VERSION = 13;      // совпадает с versionCode в манифесте
-    private static final long ONLINE_TIMEOUT_MS = 8000;
+    /** Папка игры на GitHub (публичный репозиторий) */
+    private static final String REMOTE = "https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/";
+    private static final String HOST = "tron.game";
+    private static final String START = "https://" + HOST + "/index.html";
+    private static final int APK_VERSION = 14;          // совпадает с versionCode в манифесте
+    private static final long UPDATE_LIMIT_MS = 45000;  // дольше ждать обновление не будем
+
+    private static final Map<String, String> MIME = new HashMap<String, String>();
+    static {
+        MIME.put("html", "text/html"); MIME.put("js", "application/javascript"); MIME.put("css", "text/css");
+        MIME.put("json", "application/json"); MIME.put("txt", "text/plain");
+        MIME.put("jpg", "image/jpeg"); MIME.put("jpeg", "image/jpeg"); MIME.put("png", "image/png"); MIME.put("webp", "image/webp");
+        MIME.put("svg", "image/svg+xml"); MIME.put("woff2", "font/woff2"); MIME.put("mp3", "audio/mpeg");
+    }
 
     private WebView web;
+    private File gameDir;
     private long lastBackPress;
-    private boolean usingOffline;
-    private boolean onlineLoaded;
-    private final Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle state) {
@@ -42,6 +55,7 @@ public class MainActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
                 | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        gameDir = new File(getFilesDir(), "game");
 
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(13, 9, 5));
@@ -53,8 +67,6 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
-        s.setAllowFileAccess(true);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
         s.setTextZoom(100);
         s.setSupportZoom(false);
         s.setMediaPlaybackRequiresUserGesture(false);
@@ -64,59 +76,67 @@ public class MainActivity extends Activity {
 
         if (state != null) {
             web.restoreState(state);
-        } else {
-            loadOnline();
+            return;
         }
-    }
-
-    private void loadOnline() {
-        usingOffline = false;
-        onlineLoaded = false;
-        web.loadUrl(ONLINE_URL + "?apk=" + APK_VERSION);
-        handler.postDelayed(new Runnable() {
+        splash("Проверяем обновления…");
+        new Thread(new Runnable() {
             @Override public void run() {
-                if (!onlineLoaded && !usingOffline) loadOffline();
+                Updater up = new Updater(REMOTE, gameDir, new Updater.Bundled() {
+                    @Override public InputStream open() throws IOException { return getAssets().open("game/files.txt"); }
+                }, new Updater.Progress() {
+                    @Override public void update(final String text) {
+                        runOnUiThread(new Runnable() { @Override public void run() { splash(text); } });
+                    }
+                });
+                final String updated = up.run(UPDATE_LIMIT_MS);
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        web.loadUrl(START + "?apk=" + APK_VERSION + (updated != null ? "&updated=" + updated : ""));
+                    }
+                });
             }
-        }, ONLINE_TIMEOUT_MS);
+        }).start();
     }
 
-    private void loadOffline() {
-        if (usingOffline) return;
-        usingOffline = true;
-        web.stopLoading();
-        web.loadUrl(OFFLINE_URL + "?apk=" + APK_VERSION + "&offline=1");
+    private void splash(String text) {
+        String html = "<html><body style='margin:0;background:#0d0905;color:#d9b45a;font-family:serif;display:flex;"
+                + "align-items:center;justify-content:center;height:100vh;flex-direction:column'>"
+                + "<div style='font-size:42px;letter-spacing:10px'>ТРОН</div>"
+                + "<div style='margin-top:14px;font-size:16px;color:#b9a888'>" + text + "</div></body></html>";
+        web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
     }
 
     private class GameClient extends WebViewClient {
+        /** Обслуживаем запросы к https://tron.game/… из памяти телефона или из assets */
         @Override
-        public void onPageFinished(WebView view, String url) {
-            if (url != null && url.startsWith("https://")) onlineLoaded = true;
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
+            Uri u = req.getUrl();
+            if (!HOST.equals(u.getHost())) return null;
+            String path = u.getPath() == null ? "" : u.getPath().replaceFirst("^/+", "");
+            if (path.isEmpty()) path = "index.html";
+            if (path.contains("..")) return notFound();
+            String ext = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
+            String mime = MIME.containsKey(ext) ? MIME.get(ext) : "application/octet-stream";
+            try {
+                File f = new File(gameDir, path);
+                InputStream in = f.isFile() ? new FileInputStream(f) : getAssets().open("game/" + path);
+                Map<String, String> headers = new HashMap<String, String>();
+                headers.put("Cache-Control", "no-cache");
+                return new WebResourceResponse(mime, "utf-8", 200, "OK", headers, in);
+            } catch (IOException e) {
+                return notFound();
+            }
         }
 
-        // старые Android
-        @Override
-        @SuppressWarnings("deprecation")
-        public void onReceivedError(WebView view, int code, String desc, String url) {
-            if (url != null && url.startsWith(ONLINE_URL)) loadOffline();
-        }
-
-        // Android 6+
-        @Override
-        public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
-            if (req.isForMainFrame()) loadOffline();
-        }
-
-        @Override
-        public void onReceivedHttpError(WebView view, WebResourceRequest req, WebResourceResponse resp) {
-            if (req.isForMainFrame()) loadOffline();
+        private WebResourceResponse notFound() {
+            return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", new HashMap<String, String>(), null);
         }
 
         /** Ссылки наружу (например, скачать новый APK) открываются в браузере */
         @Override
         @SuppressWarnings("deprecation")
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
-            boolean inside = url.startsWith("file:///android_asset/") || url.startsWith(ONLINE_URL);
-            if (inside && !url.endsWith(".apk")) return false;
+            if (url.startsWith("https://" + HOST + "/") && !url.endsWith(".apk")) return false;
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
             } catch (Exception e) {
@@ -174,7 +194,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        handler.removeCallbacksAndMessages(null);
         web.destroy();
         super.onDestroy();
     }

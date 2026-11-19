@@ -1096,18 +1096,19 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.5';
-const SITE_URL = 'https://fillin669-sketch.github.io/Gvint/';
+const GAME_VERSION = '3.6';
+const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Выбор сложности противника в меню: Лёгкий, Средний (по умолчанию) и Сложный — прежний сильный ИИ',
-  'Больше Провокаций: 7 новых карт (Охранник, Очередь в поликлинику, Забор с гвоздями, Тёщин шкаф, Бык из качалки, Свекровь, Крыша)',
-  'Провокацию получили Тёща, Бабки у подъезда, Качок из подвала и Боба; в каждой колоде теперь не меньше 4 существ с Провокацией',
+  'Игра теперь обновляется сама при каждом запуске с интернетом — прямо с GitHub, без переустановки',
+  'Скачиваются только изменённые файлы, так что обновление быстрое',
 ];
 
 function showVersionBadge() {
-  const online = location.protocol.startsWith('http');
+  const p = new URLSearchParams(location.search);
   const el = $('#version-badge');
-  if (el) el.textContent = `Версия ${GAME_VERSION} · ${online ? 'онлайн, обновляется сама' : 'офлайн'}`;
+  if (!el) return;
+  if (p.get('apk')) el.textContent = `Версия ${GAME_VERSION} · обновляется сама при запуске${p.get('updated') ? ' · только что обновлена' : ''}`;
+  else el.textContent = `Версия ${GAME_VERSION}`;
 }
 
 async function checkUpdates() {
