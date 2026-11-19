@@ -720,3 +720,4 @@ a.btn { text-decoration: none; display: inline-block; }
 #tut .tut-btns, #tut .tut-btns * { pointer-events: auto; }
 #tut.bottom { top: 236px !important; }
 .tut-glow { z-index: 47 !important; }
+.minion.kw-cleave .m-frame { box-shadow: 0 0 0 3px #ff7b2b, 0 0 14px rgba(255,123,43,.7) !important; }

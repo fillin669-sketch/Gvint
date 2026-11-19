@@ -23,6 +23,7 @@ const KEYWORDS = {
   tough:     { name: 'Толстокожий',  icon: '🦏', desc: 'Получает на 1 урон меньше от любого источника.' },
   thorns:    { name: 'Шипы',         icon: '🌵', desc: 'Кто атакует это существо, получает 2 урона.' },
   untouchable: { name: 'Нездешний', icon: '⏳', desc: 'Неуязвим к любому урону и эффектам, пока сам не атакует.' },
+  cleave:    { name: 'Размах',       icon: '🪓', desc: 'Атакуя существо, наносит ещё 2 урона его соседям слева и справа.' },
   pierce:    { name: 'Пробой',       icon: '🌀', desc: 'Атакует кого угодно, не глядя на Провокацию и Скрытность; удары пробивают Щит, Уворот, Толстокожесть, Шипы и броню героя.' },
   rush:      { name: 'Спешка',       icon: '🏃', desc: 'Может сразу атаковать существ (но не героя).' },
 };
@@ -51,6 +52,7 @@ const TOKENS = {
   garage:  { name: 'Гараж', atk: 0, hp: 5, icon: '🏚️', kw: ['taunt'], cantAttack: true },
   bone:    { name: 'Костяк', atk: 1, hp: 1, icon: '💀' },
   baby:    { name: 'Ребёнок', atk: 2, hp: 2, icon: '👶' },
+  dog:     { name: 'Пёс', atk: 1, hp: 1, icon: '🐕', img: 'vot_chto' },
   bugaichik: { name: 'Бугайчик', atk: 2, hp: 2, icon: '👹', img: 'bugai' },
 };
 
@@ -86,6 +88,17 @@ const SHARED_CARDS = [
   M('baba_snaryad', 'Баба-Снаряд', 8, 6, 5, { female: true, ...IMG('baba_snaryad'), rarity: 'legendary', icon: '🍺', kw: ['charge'],
     bc: [{ e: 'aoe', n: 2, who: 'enemyMinions' }, { e: 'stunRandomEnemy', n: 1 }], kill: [{ e: 'healSelf', n: 3 }],
     quote: '«Летит, орёт, давит — и ещё просит добавки!»' }),
+
+  // ---- влияние и контроль ----
+  Sp('vot_chto', 'Вот что будет с тобой', 2, [{ e: 'transform', t: 'enemyMinion' }], { ...IMG('vot_chto'), rarity: 'epic', icon: '🐕',
+    note: 'Превращает вражеское существо в самое слабое другое существо из колоды противника; если такого нет — в «Пса» 1/1. Не действует на легендарные карты.',
+    quote: '«Вжух и ты теперь пёс.»' }),
+  M('para', 'Ultimate Пара', 5, 4, 3, { ...IMG('para'), rarity: 'epic', icon: '💞', dr: [{ e: 'summonCopy' }, { e: 'buffAll', a: 1, h: 1 }],
+    quote: '«Влюблённые сердца не сломит буря.»' }),
+  M('nadezhda', 'Надежда', 5, 4, 4, { ...IMG('nadezhda'), rarity: 'epic', icon: '🗡️', female: true, kw: ['charge', 'cleave'],
+    quote: '«Пиздюли достанутся всем)»' }),
+  M('zamanchivy', 'Заманчивый взгляд', 4, 2, 4, { ...IMG('zamanchivy'), rarity: 'epic', icon: '💋', female: true, bc: [{ e: 'charmRandom', n: 2 }],
+    quote: '«Кокетное подмигивание — путь к сердцам»' }),
 
   // ---- путешественник между мирами ----
   M('khtoya', 'Хтоя?', 4, 3, 4, { ...IMG('khtoya'), rarity: 'epic', icon: '❓', kw: ['untouchable'],
@@ -437,6 +450,9 @@ function effText(f) {
     case 'faceDmgHand': return 'Нанесите вражескому герою урон, равный числу карт в его руке.';
     case 'selfBuffIf': return 'Если у вас есть другой «Качок» — получает +2/+2.';
     case 'chance': return `С вероятностью ${Math.round(f.p * 100)}%: ${f.fx.map(effText).join(' ').replace(/^./, (c) => c.toLowerCase())}`;
+    case 'charmRandom': return `Очаруйте ${f.n} случайных вражеских существ: они не могут атаковать, пока это существо на столе.`;
+    case 'transform': return 'Превратите вражеское существо (не легенду) в более слабое существо из колоды противника.';
+    case 'summonCopy': return 'Возвращается на стол с вдвое меньшими атакой и здоровьем (один раз).';
     case 'mark': return `Возьмите на прицел ${TGT_ACC[f.t]}: в начале каждого вашего хода он получает ${f.n} урона.`;
     case 'selfBuff': return `Получает +${f.a}/+${f.h}.`;
     case 'healSelf': return `Восстанавливает себе ${f.n} здоровья.`;

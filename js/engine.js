@@ -214,6 +214,7 @@ function targetsForSpec(s, pIdx, f, card, src) {
     if (f.maxAtk != null && getAtk(s, x) > f.maxAtk) return false;
     if (f.minAtk != null && getAtk(s, x) < f.minAtk) return false;
     if (f.e === 'steal' && (x.noSteal || immune(x))) return false;
+    if (f.e === 'transform' && (x.rarity === 'legendary' || immune(x))) return false;
     if (immune(x) && ['stun', 'silence', 'debuff', 'setAtk', 'debt', 'pregnant'].includes(f.e)) return false;
     return true;
   }).map((x) => (typeof x === 'string' ? x : x.uid));
@@ -250,8 +251,13 @@ function canPower(s, pIdx) {
   return !t || t.length > 0;
 }
 
+/** Очарован «Заманчивым взглядом» и та ещё на столе */
+function isCharmed(s, m) {
+  return !!(m.charmedBy && s.players.some((p) => p.board.some((x) => x.uid === m.charmedBy)));
+}
+
 function canAttack(s, m) {
-  return s.phase === 'play' && m.owner === s.current && !m.sleeping && !m.frozen &&
+  return s.phase === 'play' && m.owner === s.current && !m.sleeping && !m.frozen && !isCharmed(s, m) &&
     m.attacks > 0 && !m.cantAttack && getAtk(s, m) > 0 && attackTargets(s, m).length > 0;
 }
 
@@ -622,6 +628,36 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       if (src && P.board.some((m) => m !== src && m.id === f.id)) { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); }
       break;
     case 'chance': if (Math.random() < f.p) await runFx(s, pIdx, f.fx, null, ctx, src); break;
+    case 'charmRandom': {
+      const pool = shuffle(E.board.filter((m) => m.hp > 0 && !immune(m) && !m.charmedBy)).slice(0, f.n);
+      pool.forEach((m) => { m.charmedBy = src ? src.uid : null; fx(ctx, 'charm', { id: m.uid }); });
+      if (pool.length) ctx.log(`Очарованы: ${pool.map(q).join(', ')} — не атакуют, пока на столе ${src ? q(src) : 'очаровавшая'}`);
+      break;
+    }
+    case 'transform': {
+      if (!tm || tm.rarity === 'legendary' || immune(tm)) break;
+      const side = T.side, row = s.players[side].board, idx = row.indexOf(tm);
+      const power = (d) => d.atk + d.hp;
+      const def = defOf(tm.id) || tm;
+      const weaker = s.players[side].deck.filter((c) => c.type === 'minion' && c.id !== tm.id && power(c) < power(def));
+      const pick = weaker.length ? weaker.sort((a, b) => power(a) - power(b))[0] : null;
+      const nm = pick ? inst(defOf(pick.id), side) : inst(tokenDef('dog'), side);
+      nm.owner = side; nm.maxHp = nm.hp; nm.sleeping = true; nm.attacks = 0; nm.tempAtk = 0;
+      row.splice(idx, 1, nm);
+      fx(ctx, 'transform', { id: nm.uid });
+      ctx.log(`«Вжух»: ${q(tm)} превращается в ${q(nm)}`);
+      break;
+    }
+    case 'summonCopy': {
+      if (!src) break;
+      const copy = inst(defOf(src.id), pIdx);
+      copy.atk = Math.max(1, Math.floor(copy.atk / 2)); copy.hp = Math.max(1, Math.floor(copy.hp / 2));
+      delete copy.dr; copy.copyOf = true;
+      copy.dr = (defOf(src.id).dr || []).filter((x) => x.e !== 'summonCopy');
+      const m = placeMinion(s, pIdx, copy, pos, ctx);
+      if (m) ctx.log(`${q(m)} возвращается слабее: ${m.atk}/${m.hp}`);
+      break;
+    }
     case 'mark':
       if (!T) break;
       if (tm) tm.mark = { by: pIdx, n: f.n };
@@ -783,7 +819,10 @@ async function performAction(s, a, ctx) {
       }
       const tAtk = getAtk(s, T.m);
       ctx.log(`${q(m)} атакует ${q(T.m)}`);
+      const row = s.players[T.side].board, ti = row.indexOf(T.m);
+      const near = hasKw(m, 'cleave') ? [row[ti - 1], row[ti + 1]].filter(Boolean) : [];
       damage(s, T.m.uid, atk, ctx, m, true);
+      near.forEach((x) => { fx(ctx, 'cleave', { id: x.uid }); damage(s, x.uid, 2, ctx, m, false); });
       damage(s, m.uid, tAtk, ctx, T.m, false);
       if (hasKw(T.m, 'thorns') && !hasKw(m, 'pierce')) { ctx.log(`Шипы! ${q(m)} получает 2 урона`); damage(s, m.uid, 2, ctx, null); }
       const killed = T.m.hp <= 0 || T.m.dead;

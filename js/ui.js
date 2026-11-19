@@ -108,7 +108,7 @@ function fitCardTexts(root) {
   });
 }
 
-const KW_VISUAL = ['taunt', 'shield', 'stealth', 'untouchable', 'pierce', 'poison', 'thorns', 'dodge', 'tough', 'windfury', 'lifesteal', 'flying'];
+const KW_VISUAL = ['taunt', 'shield', 'stealth', 'untouchable', 'pierce', 'cleave', 'poison', 'thorns', 'dodge', 'tough', 'windfury', 'lifesteal', 'flying'];
 
 /** Плашки усилений и ослаблений на существе: [[вид, текст, подсказка]] */
 function effectChips(s, m) {
@@ -122,6 +122,7 @@ function effectChips(s, m) {
   if (dH < 0) out.push(['debuff', `${dH}❤`, `Здоровье снижено на ${-dH}`]);
   if (m.frozen) out.push(['debuff', '💫', 'Оглушён: пропустит атаку']);
   if (m.debt) out.push(['debuff', `📜${m.debt}`, `Долг: −${m.debt} атаки каждый ход`]);
+  if (isCharmed(s, m)) out.push(['debuff', '💘', 'Очарован: не атакует, пока очаровавшая на столе']);
   if (m.mark) out.push(['debuff', '🎯', `На прицеле: −${m.mark.n} здоровья каждый ход`]);
   if (m.preg) out.push(['debuff', '🤰', 'Беременность']);
   if (m.spouse) out.push(['debuff', '💍', 'В браке']);
@@ -669,6 +670,9 @@ function playFx(events, snap, propHits) {
       case 'dodge': { const r = rectOf(e.id); if (r) { FX.float('💨 мимо!', r, 'icon'); } sounds.add('attack'); break; }
       case 'gold': { const r = rectOf('h' + e.pIdx); if (r) FX.float('🪙+' + e.n, r, 'up'); sounds.add('mana'); break; }
       case 'shop': sounds.add('draw'); break;
+      case 'charm': { const r = rectOf(e.id); if (r) { FX.float('💘', r, 'icon'); FX.burstRect(r, 'arcane', 12); } sounds.add('marry'); break; }
+      case 'transform': { const r = rectOf(e.id); if (r) { FX.float('🐕 Вжух!', r, 'icon'); FX.burstRect(r, 'arcane', 30); } sounds.add('epic'); break; }
+      case 'cleave': { const r = rectOf(e.id); if (r) FX.burstRect(r, 'spark', 10); break; }
       case 'mark': { const r = rectOf(e.id); if (r) { FX.float('🎯', r, 'icon'); FX.ring(r, '#ff4b3a'); } sounds.add('debuff'); break; }
       case 'saved': { const r = rectOf(e.id); if (r) { FX.float('🐏 Упрямство!', r, 'up'); FX.burstRect(r, 'spark', 40); } sounds.add('clear'); break; }
       case 'armor': { const r = rectOf(e.id); if (r) FX.float('🛡️+' + e.n, r, 'up'); sounds.add('absorb'); break; }
@@ -1162,15 +1166,10 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.8';
+const GAME_VERSION = '3.9';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Новый интерфейс под телефон: всё крупнее, герои слева, кнопки справа, рука на всю ширину',
-  'Свойства существ видно на столе: каменный щит у Провокации, своя подсветка у Яда, Шипов, Уворота, Пробоя и других',
-  'Зелёные и красные плашки на существах показывают усиления и ослабления',
-  'Текст карт в руке больше не обрезается; у выбранной карты есть кнопка 🔍',
-  'Настройки ⚙️: отдельная громкость музыки, звуков и фона; кнопки громкости телефона управляют игрой',
-  'Звук стабильнее на слабых телефонах: больше буфер, легче музыка в экономном режиме',
+  'Новые карты: «Вот что будет с тобой» (вжух — и враг теперь пёс), «Ultimate Пара» (возвращается после смерти и усиливает своих), «Надежда» (Рывок и удар по соседям), «Заманчивый взгляд» (очаровывает 2 врагов)',
 ];
 
 function showVersionBadge() {

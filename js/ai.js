@@ -37,6 +37,8 @@ const AI = (() => {
     if (hasKw(m, 'untouchable')) v += 1.5 + atk * 0.3;
     if (hasKw(m, 'pierce')) v += atk * 0.6;
     if (m.mark) v -= m.mark.n * 1.2;
+    if (hasKw(m, 'cleave')) v += 1.5;
+    if (m.charmedBy && isCharmed(s, m)) v -= atk * 0.8;
     if (m.aura) v += 2;
     if (m.end) v += 2.5;
     if (m.spellDiscount) v += 1;
