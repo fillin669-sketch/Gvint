@@ -9,6 +9,7 @@ const MAX_BOARD = 7;
 const MAX_HAND = 10;
 const HERO_HP = 30;
 const DECK_SIZE = 30;
+const MIN_TAUNTS = 4;
 
 let UID_SEQ = 1;
 const rnd = (n) => Math.floor(Math.random() * n);
@@ -67,6 +68,19 @@ function buildDeck(owner, extra) {
     if (have[b] < want[b]) { deck.push(d); have[b]++; } else rest.push(d);
   }
   while (deck.length < DECK_SIZE && rest.length) deck.push(rest.shift());
+  // в каждой колоде — не меньше MIN_TAUNTS существ с Провокацией
+  const isTaunt = (d) => d.type === 'minion' && (d.kw || []).indexOf('taunt') >= 0;
+  const left = new Map();                  // сколько копий карты ещё не попало в колоду
+  pool.forEach(({ d }) => left.set(d, (left.get(d) || 0) + 1));
+  deck.forEach((d) => left.set(d, (left.get(d) || 0) - 1));
+  const spare = shuffle(pool.map(({ d }) => d).filter((d, i, arr) => isTaunt(d) && arr.indexOf(d) === i && left.get(d) > 0));
+  while (deck.filter(isTaunt).length < MIN_TAUNTS && spare.length) {
+    const add = spare.shift();
+    const swap = deck.map((d, i) => ({ d, i })).filter((x) => !isTaunt(x.d) && x.d.type === 'minion')
+      .sort((a, b) => Math.abs(a.d.cost - add.cost) - Math.abs(b.d.cost - add.cost))[0];
+    if (!swap) break;
+    deck[swap.i] = add;
+  }
   return shuffle(deck.map((d) => inst(d, owner)));
 }
 

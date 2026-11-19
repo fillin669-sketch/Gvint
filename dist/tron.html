@@ -559,6 +559,8 @@ a.btn { text-decoration: none; display: inline-block; }
         <div id="artifact-list" class="chip-list"></div>
         <div class="opp-pick">
           <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок в колоде</label>
+          <label class="gfx-pick">Противник:
+            <select id="ai-select"><option value="easy">Лёгкий</option><option value="medium">Средний</option><option value="hard">Сложный</option></select></label>
           <label class="gfx-pick">Графика:
             <select id="gfx-select"><option value="auto">Авто</option><option value="high">Красивая</option><option value="low">Экономная</option></select></label>
         </div>
@@ -688,7 +690,7 @@ function Sp(id, name, cost, fx, o) {
 const TOKENS = {
   recruit: { name: 'Новобранец', atk: 1, hp: 1, icon: '🪖' },
   kitten:  { name: 'Котёнок-рыцарь', atk: 1, hp: 1, icon: '🐱', img: 'umilenie' },
-  boba:    { name: 'Боба', atk: 2, hp: 2, icon: '💪', img: 'biba_boba' },
+  boba:    { name: 'Боба', atk: 2, hp: 2, icon: '💪', img: 'biba_boba', kw: ['taunt'] },
   teen:    { name: 'Малолетка', atk: 1, hp: 1, icon: '🍺', img: 'maloletki' },
   muzhik:  { name: 'Мужик из гаража', atk: 2, hp: 2, icon: '🔧' },
   garage:  { name: 'Гараж', atk: 0, hp: 5, icon: '🏚️', kw: ['taunt'], cantAttack: true },
@@ -714,7 +716,7 @@ const SHARED_CARDS = [
   M('mantikora', 'Бухой Мантикора-Таксист', 9, 7, 7, { ...IMG('mantikora'), rarity: 'legendary', icon: '🚕', kw: ['charge'],
     bc: [{ e: 'bounceRandomEnemy', n: 2 }],
     quote: '«Куда едем, блять? В пизду, говоришь? Поехали!»' }),
-  M('dragon_ass', 'Жопный Дракон', 10, 8, 8, { ...IMG('dragon_ass'), rarity: 'legendary', icon: '🐉', noSteal: true,
+  M('dragon_ass', 'Жопный Дракон', 10, 8, 7, { ...IMG('dragon_ass'), rarity: 'legendary', icon: '🐉', noSteal: true,
     bc: [{ e: 'aoe', n: 3, who: 'enemyMinions' }], end: [{ e: 'dmgRandomEnemy', n: 2 }],
     quote: '«Садись ближе, пидор, щас дам дыхнуть могуществом!»' }),
   M('gus', 'Гусь-Ебанатор', 9, 6, 6, { ...IMG('gus'), rarity: 'legendary', icon: '🪿',
@@ -854,16 +856,16 @@ const SHARED_CARDS = [
    НОВЫЕ КАРТЫ (пока без картинок — рисуется значок)
    ===================================================================== */
 const EXTRA_CARDS = [
-  M('tescha', 'Тёща', 8, 6, 9, { female: true, ...ART('tescha'), rarity: 'legendary', icon: '👵', bc: [{ e: 'stunAllEnemy' }],
+  M('tescha', 'Тёща', 8, 6, 9, { female: true, ...ART('tescha'), rarity: 'legendary', icon: '👵', kw: ['taunt'], bc: [{ e: 'stunAllEnemy' }],
     quote: '«Я же говорила, что он тебе не пара!»' }),
   M('batya', 'Батя с ремнём', 7, 5, 5, { ...ART('batya'), rarity: 'legendary', icon: '👨‍🦳', bc: [{ e: 'destroy', t: 'enemyMinion', minAtk: 5 }],
     quote: '«Ну всё. Сейчас кто-то получит.»' }),
   M('gop_kolyan', 'Гопник Колян', 2, 2, 2, { ...ART('gop_kolyan'), icon: '🧢', kw: ['rush'], group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«Слышь, есть чё?»' }),
   M('gop_tolyan', 'Гопник Толян', 2, 2, 2, { ...ART('gop_tolyan'), icon: '🧢', kw: ['rush'], group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«А ты с какого района?»' }),
   M('gop_vovan', 'Гопник Вован', 2, 2, 2, { ...ART('gop_vovan'), icon: '🧢', kw: ['rush'], group: 'gop', bc: [{ e: 'muster', group: 'gop' }], quote: '«Позвонить дай, брат.»' }),
-  M('babki', 'Бабки у подъезда', 1, 1, 2, { female: true, ...ART('babki'), rarity: 'rare', icon: '👀', bc: [{ e: 'drawBoth' }],
+  M('babki', 'Бабки у подъезда', 1, 1, 2, { female: true, ...ART('babki'), rarity: 'rare', icon: '👀', kw: ['taunt'], bc: [{ e: 'drawBoth' }],
     quote: '«А эта-то, с третьего этажа, опять с новым!»' }),
-  M('kachok', 'Качок из подвала', 3, 3, 3, { ...ART('kachok'), icon: '🏋️', kw: ['rush'], count: 2, bc: [{ e: 'selfBuffIf', id: 'kachok', a: 2, h: 2 }],
+  M('kachok', 'Качок из подвала', 3, 3, 3, { ...ART('kachok'), icon: '🏋️', kw: ['taunt'], count: 2, bc: [{ e: 'selfBuffIf', id: 'kachok', a: 2, h: 2 }],
     quote: '«Ты ваще сколько жмёшь?»' }),
   M('sborshik', 'Сборщик металлолома', 3, 3, 3, { ...ART('sborshik'), rarity: 'rare', icon: '🛒', kill: [{ e: 'gold', n: 2 }],
     quote: '«Это не мусор — это капитал.»' }),
@@ -872,6 +874,21 @@ const EXTRA_CARDS = [
   M('kot_vasya', 'Кот Вася', 1, 1, 1, { ...ART('kot_vasya'), icon: '🐈', kw: ['dodge', 'rush'], count: 2,
     quote: '«Мяу. В смысле — пошёл вон.»' }),
   Sp('lombard', 'Ломбард', 1, [{ e: 'gold', n: 3 }], { ...ART('lombard'), rarity: 'rare', icon: '💍', quote: '«Сдал кольцо — получил на жизнь.»' }),
+  // ---- стена из Провокаций ----
+  M('okhrannik', 'Охранник в магазине', 2, 1, 4, { ...ART('okhrannik'), icon: '🕴️', kw: ['taunt'], count: 2,
+    quote: '«Сумочку к осмотру.»' }),
+  M('ochered', 'Очередь в поликлинику', 3, 2, 5, { ...ART('ochered'), icon: '🧓', kw: ['taunt'],
+    quote: '«Я только спросить!»' }),
+  M('zabor', 'Забор с гвоздями', 3, 0, 6, { ...ART('zabor'), rarity: 'rare', icon: '🚧', kw: ['taunt', 'thorns'], cantAttack: true,
+    quote: '«Не влезай — убьёт.»' }),
+  M('shkaf', 'Тёщин шкаф', 4, 2, 7, { ...ART('shkaf'), rarity: 'rare', icon: '🗄️', kw: ['taunt', 'tough'],
+    quote: '«Там ещё бабушкины шубы.»' }),
+  M('bychok', 'Бык из качалки', 6, 5, 7, { ...ART('bychok'), rarity: 'epic', icon: '🐂', kw: ['taunt', 'thorns'],
+    quote: '«Ещё подход — и домой.»' }),
+  M('svekrov', 'Свекровь', 6, 4, 7, { ...ART('svekrov'), rarity: 'epic', icon: '👩‍🦳', female: true, kw: ['taunt'],
+    bc: [{ e: 'debuff', a: 2, h: 0, t: 'enemyMinion' }], quote: '«Я тебе как мать говорю.»' }),
+  Sp('krysha', 'Крыша', 2, [{ e: 'buff', a: 0, h: 2, t: 'friendlyMinion', kw: 'taunt' }], { ...ART('krysha'), rarity: 'rare', icon: '🛡️',
+    quote: '«Мы за тебя впряжёмся.»' }),
   M('tamada', 'Тамада', 3, 2, 3, { ...ART('tamada'), rarity: 'rare', icon: '🎤', end: [{ e: 'buffRandomFriendly', a: 1, h: 1 }],
     quote: '«А теперь — конкурс!»' }),
   M('perforator', 'Сосед с перфоратором', 5, 3, 4, { ...ART('perforator'), rarity: 'rare', icon: '🔨', end: [{ e: 'dmgRandomEnemy', n: 1 }],
@@ -1124,6 +1141,7 @@ const MAX_BOARD = 7;
 const MAX_HAND = 10;
 const HERO_HP = 30;
 const DECK_SIZE = 30;
+const MIN_TAUNTS = 4;
 
 let UID_SEQ = 1;
 const rnd = (n) => Math.floor(Math.random() * n);
@@ -1182,6 +1200,19 @@ function buildDeck(owner, extra) {
     if (have[b] < want[b]) { deck.push(d); have[b]++; } else rest.push(d);
   }
   while (deck.length < DECK_SIZE && rest.length) deck.push(rest.shift());
+  // в каждой колоде — не меньше MIN_TAUNTS существ с Провокацией
+  const isTaunt = (d) => d.type === 'minion' && (d.kw || []).indexOf('taunt') >= 0;
+  const left = new Map();                  // сколько копий карты ещё не попало в колоду
+  pool.forEach(({ d }) => left.set(d, (left.get(d) || 0) + 1));
+  deck.forEach((d) => left.set(d, (left.get(d) || 0) - 1));
+  const spare = shuffle(pool.map(({ d }) => d).filter((d, i, arr) => isTaunt(d) && arr.indexOf(d) === i && left.get(d) > 0));
+  while (deck.filter(isTaunt).length < MIN_TAUNTS && spare.length) {
+    const add = spare.shift();
+    const swap = deck.map((d, i) => ({ d, i })).filter((x) => !isTaunt(x.d) && x.d.type === 'minion')
+      .sort((a, b) => Math.abs(a.d.cost - add.cost) - Math.abs(b.d.cost - add.cost))[0];
+    if (!swap) break;
+    deck[swap.i] = add;
+  }
   return shuffle(deck.map((d) => inst(d, owner)));
 }
 
@@ -2005,30 +2036,59 @@ const AI = (() => {
     return v;
   }
 
+  /* Уровни сложности:
+     noise   — ошибка в оценке позиции (чем больше, тем чаще «не видит» лучший ход)
+     blunder — шанс сделать случайный ход вместо лучшего
+     lazy    — шанс закончить ход, хотя ходы ещё есть
+     look    — смотреть ли на ход вперёд (Медяк, Аванс)
+     lethal  — всегда ли замечает добивание */
+  const LEVELS = {
+    easy:   { noise: 5,   blunder: 0.3,  lazy: 0.2,  look: false, lethal: 0.4 },
+    medium: { noise: 1.8, blunder: 0.1,  lazy: 0.06, look: true,  lethal: 0.85 },
+    hard:   { noise: 0.3, blunder: 0,    lazy: 0,    look: true,  lethal: 1 },
+  };
+  let level = 'medium';
+  function setLevel(l) { if (LEVELS[l]) level = l; }
+
   /** Следующее действие ИИ или {type:'end'} */
-  async function choose(s, me) {
+  async function choose(s, me, lvl) {
+    const L = LEVELS[lvl || level];
     const base = score(s, me);
     const actions = genActions(s, me);
-    let best = null, bestV = base + 0.25;
+    if (!actions.length) return { type: 'end' };
+    const evals = [];
     for (const a of actions) {
-      // небольшая случайность, чтобы ИИ не был предсказуемым
       const runs = a.type === 'attack' ? 1 : 2;
       let v = 0;
-      for (let i = 0; i < runs; i++) v += await simulate(s, me, a, 1);
-      v = v / runs + Math.random() * 0.3;
+      for (let i = 0; i < runs; i++) v += await simulate(s, me, a, L.look ? 1 : 0);
+      v /= runs;
       if (a.type === 'play' && a.card.type === 'minion') v += 0.3;
-      if (v > bestV) { bestV = v; best = a; }
+      evals.push({ a, v, win: v >= 9000 });
     }
-    if (!best) return { type: 'end' };
-    return { type: best.type, uid: best.uid, target: best.target, pos: null };
+    // добивание: сильный ИИ не упускает, слабый — иногда
+    const lethal = evals.find((e) => e.win);
+    if (lethal && Math.random() < L.lethal) return pack(lethal.a);
+    if (Math.random() < L.lazy) return { type: 'end' };
+    if (Math.random() < L.blunder) {
+      const ok = evals.filter((e) => e.v > base - 6);   // откровенно самоубийственные ходы не делает
+      if (ok.length) return pack(pickRandom(ok).a);
+    }
+    let best = null, bestV = base + 0.25;
+    for (const e of evals) {
+      const v = e.v + (Math.random() * 2 - 1) * L.noise + Math.random() * 0.3;
+      if (v > bestV) { bestV = v; best = e.a; }
+    }
+    return best ? pack(best) : { type: 'end' };
   }
+
+  const pack = (a) => ({ type: a.type, uid: a.uid, target: a.target, pos: null });
 
   function mulligan(s, me) {
     const P = s.players[me];
     return P.hand.filter((c) => c.cost >= 5).map((c) => c.uid);
   }
 
-  return { choose, mulligan, pickBest, score };
+  return { choose, mulligan, pickBest, score, setLevel, levels: () => Object.keys(LEVELS), get level() { return level; } };
 })();
 
 </script>
@@ -2986,7 +3046,7 @@ const FX = (() => {
    ===================================================================== */
 
 const Tut = (() => {
-  let active = false, free = false, step = 0, aiTurn = 0;
+  let active = false, free = false, step = 0, aiTurn = 0, prevLevel = null;
 
   const S = () => App.s;
   const handEl = (id) => {
@@ -3050,6 +3110,8 @@ const Tut = (() => {
     O.hp = 12;
     P.maxMana = 1; O.maxMana = 1;   // первый ход сразу с 2 маной
     active = true; free = false; step = 0; aiTurn = 0;
+    prevLevel = AI.level;
+    AI.setLevel('easy');
     resetView(s);
     Sound.setLocation('zags');
     show('game');
@@ -3067,7 +3129,7 @@ const Tut = (() => {
 
   /** Ходы противника по сценарию */
   function aiAction(s) {
-    if (free) return null;
+    if (free) return null;   // дальше — обычный ИИ (уровень задаёт start)
     const script = [['semki'], ['karlik']][aiTurn];
     if (!script) return null;
     const O = s.players[1];
@@ -3135,6 +3197,7 @@ const Tut = (() => {
   function after() { if (pendingOk) { pendingOk = false; advance(); } }
 
   function finish(winner) {
+    if (prevLevel) { AI.setLevel(prevLevel); prevLevel = null; }
     active = false;
     decorate();
     try { localStorage.setItem('tron-tut-done', '1'); } catch (e) { /* ignore */ }
@@ -3149,6 +3212,7 @@ const Tut = (() => {
   }
 
   function stop() {
+    if (prevLevel) { AI.setLevel(prevLevel); prevLevel = null; }
     active = false;
     free = false;
     const box = $('#tut');
@@ -4169,6 +4233,7 @@ function showRules() {
       <li>Карты стоят ману (синий кристалл в углу карты). Существа выходят на поле, заклинания срабатывают сразу.</li>
       <li>Существа атакуют со следующего хода (кроме тех, у кого Рывок). Каждое — один раз за ход.</li>
       <li>При атаке существа наносят урон друг другу одновременно. Вражеского героя можно бить напрямую, если нет Провокации.</li>
+      <li>Сложность противника выбирается в меню: Лёгкий, Средний или Сложный.</li>
       <li>Натура героя даёт силу (круглая кнопка, раз в ход) и постоянный бонус. Артефакт — стартовый бонус.</li>
       <li>🪙 Золото даётся за каждое убитое вражеское существо. В Лавке за ${SHOP_COST} золота можно раз в ход купить карту.</li>
       <li>Кто ходит вторым, получает «Медяк» — +1 мана на один ход. Кто ходит первым, не берёт карту в свой первый ход.</li>
@@ -4267,12 +4332,12 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.4';
+const GAME_VERSION = '3.5';
 const SITE_URL = 'https://fillin669-sketch.github.io/Gvint/';
 const CHANGELOG = [
-  'Баланс карт по итогам 4800 тестовых партий: ослаблены Гигаслав, Жопный Дракон, Баба-Снаряд, GiGa$lav Pro+, Гусь, Батя и другие',
-  'Усилены слабые карты: Мужики из гаражей, Говномёт-3000, Кредитная Жена, Кредитор, Шаман, Магнат, Гибель, Малолетки и другие',
-  'Кто ходит первым, не берёт карту в самый первый ход — шансы обоих игроков выровнялись',
+  'Выбор сложности противника в меню: Лёгкий, Средний (по умолчанию) и Сложный — прежний сильный ИИ',
+  'Больше Провокаций: 7 новых карт (Охранник, Очередь в поликлинику, Забор с гвоздями, Тёщин шкаф, Бык из качалки, Свекровь, Крыша)',
+  'Провокацию получили Тёща, Бабки у подъезда, Качок из подвала и Боба; в каждой колоде теперь не меньше 4 существ с Провокацией',
 ];
 
 function showVersionBadge() {
@@ -4323,6 +4388,14 @@ function init() {
   const gfx = gfxSetting();
   applyQuality(gfx === 'auto' ? detectQuality() : gfx);
   $('#gfx-select').value = gfx;
+  let ai = 'medium';
+  try { ai = localStorage.getItem('tron-ai') || 'medium'; } catch (e) { /* ignore */ }
+  AI.setLevel(ai);
+  $('#ai-select').value = ai;
+  $('#ai-select').addEventListener('change', (e) => {
+    AI.setLevel(e.target.value);
+    try { localStorage.setItem('tron-ai', e.target.value); } catch (er) { /* ignore */ }
+  });
   $('#gfx-select').addEventListener('change', (e) => {
     try { localStorage.setItem('tron-gfx', e.target.value); } catch (er) { /* ignore */ }
     applyQuality(e.target.value === 'auto' ? detectQuality() : e.target.value);

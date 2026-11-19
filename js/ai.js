@@ -98,28 +98,57 @@ const AI = (() => {
     return v;
   }
 
+  /* Уровни сложности:
+     noise   — ошибка в оценке позиции (чем больше, тем чаще «не видит» лучший ход)
+     blunder — шанс сделать случайный ход вместо лучшего
+     lazy    — шанс закончить ход, хотя ходы ещё есть
+     look    — смотреть ли на ход вперёд (Медяк, Аванс)
+     lethal  — всегда ли замечает добивание */
+  const LEVELS = {
+    easy:   { noise: 5,   blunder: 0.3,  lazy: 0.2,  look: false, lethal: 0.4 },
+    medium: { noise: 1.8, blunder: 0.1,  lazy: 0.06, look: true,  lethal: 0.85 },
+    hard:   { noise: 0.3, blunder: 0,    lazy: 0,    look: true,  lethal: 1 },
+  };
+  let level = 'medium';
+  function setLevel(l) { if (LEVELS[l]) level = l; }
+
   /** Следующее действие ИИ или {type:'end'} */
-  async function choose(s, me) {
+  async function choose(s, me, lvl) {
+    const L = LEVELS[lvl || level];
     const base = score(s, me);
     const actions = genActions(s, me);
-    let best = null, bestV = base + 0.25;
+    if (!actions.length) return { type: 'end' };
+    const evals = [];
     for (const a of actions) {
-      // небольшая случайность, чтобы ИИ не был предсказуемым
       const runs = a.type === 'attack' ? 1 : 2;
       let v = 0;
-      for (let i = 0; i < runs; i++) v += await simulate(s, me, a, 1);
-      v = v / runs + Math.random() * 0.3;
+      for (let i = 0; i < runs; i++) v += await simulate(s, me, a, L.look ? 1 : 0);
+      v /= runs;
       if (a.type === 'play' && a.card.type === 'minion') v += 0.3;
-      if (v > bestV) { bestV = v; best = a; }
+      evals.push({ a, v, win: v >= 9000 });
     }
-    if (!best) return { type: 'end' };
-    return { type: best.type, uid: best.uid, target: best.target, pos: null };
+    // добивание: сильный ИИ не упускает, слабый — иногда
+    const lethal = evals.find((e) => e.win);
+    if (lethal && Math.random() < L.lethal) return pack(lethal.a);
+    if (Math.random() < L.lazy) return { type: 'end' };
+    if (Math.random() < L.blunder) {
+      const ok = evals.filter((e) => e.v > base - 6);   // откровенно самоубийственные ходы не делает
+      if (ok.length) return pack(pickRandom(ok).a);
+    }
+    let best = null, bestV = base + 0.25;
+    for (const e of evals) {
+      const v = e.v + (Math.random() * 2 - 1) * L.noise + Math.random() * 0.3;
+      if (v > bestV) { bestV = v; best = e.a; }
+    }
+    return best ? pack(best) : { type: 'end' };
   }
+
+  const pack = (a) => ({ type: a.type, uid: a.uid, target: a.target, pos: null });
 
   function mulligan(s, me) {
     const P = s.players[me];
     return P.hand.filter((c) => c.cost >= 5).map((c) => c.uid);
   }
 
-  return { choose, mulligan, pickBest, score };
+  return { choose, mulligan, pickBest, score, setLevel, levels: () => Object.keys(LEVELS), get level() { return level; } };
 })();

@@ -6,7 +6,7 @@
    ===================================================================== */
 
 const Tut = (() => {
-  let active = false, free = false, step = 0, aiTurn = 0;
+  let active = false, free = false, step = 0, aiTurn = 0, prevLevel = null;
 
   const S = () => App.s;
   const handEl = (id) => {
@@ -70,6 +70,8 @@ const Tut = (() => {
     O.hp = 12;
     P.maxMana = 1; O.maxMana = 1;   // первый ход сразу с 2 маной
     active = true; free = false; step = 0; aiTurn = 0;
+    prevLevel = AI.level;
+    AI.setLevel('easy');
     resetView(s);
     Sound.setLocation('zags');
     show('game');
@@ -87,7 +89,7 @@ const Tut = (() => {
 
   /** Ходы противника по сценарию */
   function aiAction(s) {
-    if (free) return null;
+    if (free) return null;   // дальше — обычный ИИ (уровень задаёт start)
     const script = [['semki'], ['karlik']][aiTurn];
     if (!script) return null;
     const O = s.players[1];
@@ -155,6 +157,7 @@ const Tut = (() => {
   function after() { if (pendingOk) { pendingOk = false; advance(); } }
 
   function finish(winner) {
+    if (prevLevel) { AI.setLevel(prevLevel); prevLevel = null; }
     active = false;
     decorate();
     try { localStorage.setItem('tron-tut-done', '1'); } catch (e) { /* ignore */ }
@@ -169,6 +172,7 @@ const Tut = (() => {
   }
 
   function stop() {
+    if (prevLevel) { AI.setLevel(prevLevel); prevLevel = null; }
     active = false;
     free = false;
     const box = $('#tut');
