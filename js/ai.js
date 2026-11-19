@@ -9,6 +9,14 @@
 const AI = (() => {
   const clone = (s) => JSON.parse(JSON.stringify(s));
 
+  /** Отдать управление экрану без задержки таймера (setTimeout в браузере ждёт минимум 4 мс) */
+  const yieldNow = (() => {
+    if (typeof MessageChannel === 'undefined') return () => new Promise((r) => setTimeout(r, 0));
+    const ch = new MessageChannel(), q = [];
+    ch.port1.onmessage = () => { const r = q.shift(); if (r) r(); };
+    return () => new Promise((r) => { q.push(r); ch.port2.postMessage(0); });
+  })();
+
   function pickBest(cards) {
     return cards.slice().sort((a, b) => (b.cost || 0) - (a.cost || 0))[0] || null;
   }
@@ -130,7 +138,7 @@ const AI = (() => {
     let slice = Date.now();
     for (const a of actions) {
       // в браузере отдаём управление экрану, чтобы анимации не замирали, пока ИИ думает
-      if (typeof window !== 'undefined' && Date.now() - slice > 12) { await new Promise((r) => setTimeout(r, 0)); slice = Date.now(); }
+      if (typeof window !== 'undefined' && Date.now() - slice > 24) { await yieldNow(); slice = Date.now(); }
       const runs = a.type === 'attack' || fast ? 1 : 2;
       let v = 0;
       for (let i = 0; i < runs; i++) v += await simulate(s, me, a, L.look ? 1 : 0);
