@@ -117,6 +117,7 @@ const AI = (() => {
     hard:   { noise: 0.3, blunder: 0,    lazy: 0,    look: true,  lethal: 1 },
   };
   let level = 'medium';
+  let fast = false;   // слабый телефон: меньше просчётов
   function setLevel(l) { if (LEVELS[l]) level = l; }
 
   /** Следующее действие ИИ или {type:'end'} */
@@ -126,8 +127,11 @@ const AI = (() => {
     const actions = genActions(s, me);
     if (!actions.length) return { type: 'end' };
     const evals = [];
+    let slice = Date.now();
     for (const a of actions) {
-      const runs = a.type === 'attack' ? 1 : 2;
+      // в браузере отдаём управление экрану, чтобы анимации не замирали, пока ИИ думает
+      if (typeof window !== 'undefined' && Date.now() - slice > 12) { await new Promise((r) => setTimeout(r, 0)); slice = Date.now(); }
+      const runs = a.type === 'attack' || fast ? 1 : 2;
       let v = 0;
       for (let i = 0; i < runs; i++) v += await simulate(s, me, a, L.look ? 1 : 0);
       v /= runs;
@@ -157,5 +161,5 @@ const AI = (() => {
     return P.hand.filter((c) => c.cost >= 5).map((c) => c.uid);
   }
 
-  return { choose, mulligan, pickBest, score, setLevel, levels: () => Object.keys(LEVELS), get level() { return level; } };
+  return { choose, mulligan, pickBest, score, setLevel, setFast: (v) => { fast = !!v; }, levels: () => Object.keys(LEVELS), get level() { return level; } };
 })();

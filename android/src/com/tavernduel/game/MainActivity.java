@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private static final String REMOTE = "https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/";
     private static final String HOST = "tron.game";
     private static final String START = "https://" + HOST + "/index.html";
-    private static final int APK_VERSION = 17;          // совпадает с versionCode в манифесте
+    private static final int APK_VERSION = 18;          // совпадает с versionCode в манифесте
     private static final long UPDATE_LIMIT_MS = 45000;  // дольше ждать обновление не будем
 
     private static final Map<String, String> MIME = new HashMap<String, String>();

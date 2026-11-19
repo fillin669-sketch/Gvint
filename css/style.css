@@ -721,3 +721,25 @@ a.btn { text-decoration: none; display: inline-block; }
 #tut.bottom { top: 236px !important; }
 .tut-glow { z-index: 47 !important; }
 .minion.kw-cleave .m-frame { box-shadow: 0 0 0 3px #ff7b2b, 0 0 14px rgba(255,123,43,.7) !important; }
+
+/* =====================================================================
+   ОПТИМИЗАЦИЯ: изоляция перерисовок и облегчённый экономный режим
+   ===================================================================== */
+.minion, .hcard, .hero, .prop, .info { contain: layout style; }
+.gal-grid .gcard { content-visibility: auto; contain-intrinsic-size: 160px 240px; }
+.lowfx .minion.tgt .m-frame, .lowfx .hero.tgt .h-art, .lowfx .btn-end.ready, .lowfx .leader-wrap.can .card,
+.lowfx .weather.target, .lowfx .row.target, .lowfx .minion.kw-untouchable .m-frame, .lowfx .minion.legendary .m-frame::after,
+.lowfx .shield::after, .lowfx .crystal.full { animation: none !important; }
+.lowfx .minion.hit, .lowfx .hcard.hit { animation: hitLite .35s; }
+@keyframes hitLite { 25% { transform: translateX(-6px); } 60% { transform: translateX(5px); } }
+.lowfx .minion.fresh { animation: summonLite .35s ease-out backwards; }
+@keyframes summonLite { from { transform: translateY(-60px) scale(1.2); opacity: 0; } }
+.lowfx #hand .hcard.drawn { animation-duration: .3s; }
+.lowfx .ghost { animation: ghostLite .5s ease-in forwards; }
+@keyframes ghostLite { to { transform: scale(.6) translateY(-20px); opacity: 0; } }
+.lowfx .hcard, .lowfx .minion .m-frame::before { box-shadow: none !important; }
+.lowfx .hcard .hc-text { background: rgba(0,0,0,.3) !important; }
+.lowfx .minion .m-shadow, .lowfx .lane::before { display: none; }
+.lowfx .hcard .hc-art::after, .lowfx .hero::before { box-shadow: none; }
+.lowfx .peek, .lowfx .mbox, .lowfx #tut { box-shadow: none; }
+.lowfx .modal { background: rgba(0,0,0,.82); }

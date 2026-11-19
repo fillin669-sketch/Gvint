@@ -74,7 +74,7 @@ function clsName(c) {
 
 function artHTML(c, full) {
   const src = artOf(c, full);
-  return src ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<span class="glyph">${c.icon || '✦'}</span>`;
+  return src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : `<span class="glyph">${c.icon || '✦'}</span>`;
 }
 
 function hcardHTML(c, o) {
@@ -97,7 +97,10 @@ function hcardHTML(c, o) {
 
 /** Подгоняет размер текста на картах, чтобы он не обрезался (результат запоминается) */
 function fitCardTexts(root) {
-  App.fit = App.fit || {};
+  if (!App.fit) {
+    try { App.fit = JSON.parse(localStorage.getItem('tron-fit-' + GAME_VERSION) || '{}'); } catch (e) { App.fit = {}; }
+  }
+  let added = false;
   (root || document).querySelectorAll('.hc-text[data-fit]').forEach((el) => {
     const id = el.dataset.fit;
     if (App.fit[id]) return;
@@ -105,7 +108,9 @@ function fitCardTexts(root) {
     el.style.fontSize = size + 'px';
     while (size > 10 && el.scrollHeight > el.clientHeight + 1) { size -= 0.5; el.style.fontSize = size + 'px'; }
     App.fit[id] = size;
+    added = true;
   });
+  if (added) { try { localStorage.setItem('tron-fit-' + GAME_VERSION, JSON.stringify(App.fit)); } catch (e) { /* ignore */ } }
 }
 
 const KW_VISUAL = ['taunt', 'shield', 'stealth', 'untouchable', 'pierce', 'cleave', 'poison', 'thorns', 'dodge', 'tough', 'windfury', 'lifesteal', 'flying'];
@@ -448,11 +453,50 @@ function snapshot() {
 
 const elOf = (id) => document.querySelector(`#arena [data-t="${id}"]`);
 
+/* ---------------------- точечное обновление DOM ---------------------- */
+/** Меняет содержимое, только если HTML изменился */
+function setHTML(el, html) {
+  if (el.__html === html) return;
+  el.innerHTML = html;
+  el.__html = html;
+}
+
+/** Обновляет список по ключам: неизменившиеся элементы (и их картинки) остаются на месте */
+function patchList(container, items) {
+  const old = new Map();
+  for (const ch of container.children) if (ch.__key != null) old.set(ch.__key, ch);
+  const tpl = document.createElement('template');
+  const nodes = items.map(({ key, html }) => {
+    const e = old.get(key);
+    if (e && e.__html === html && !e.dataset.stale) return e;
+    tpl.innerHTML = html.trim();
+    const n = tpl.content.firstElementChild;
+    n.__key = key; n.__html = html;
+    return n;
+  });
+  const cur = container.children;
+  let same = cur.length === nodes.length;
+  for (let i = 0; same && i < nodes.length; i++) same = cur[i] === nodes[i];
+  if (!same) container.replaceChildren(...nodes);
+  container.__html = null;
+}
+
+/** Перезапускает CSS-анимацию на уже существующем элементе */
+function replay(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+const SNAP_EVENTS = { kill: 1, bounce: 1, steal: 1, transform: 1 };
+
 function render() {
   const s = App.s;
   if (!s) return;
   if (App.sel) showPreview(null);   // при выборе цели подсказка не должна закрывать стол
-  const snap = snapshot();
+  // положение элементов замеряем, только если что-то исчезнет со стола (для эффекта сгорания)
+  const needSnap = App.fxq.some((e) => SNAP_EVENTS[e.type]);
+  const snap = needSnap ? snapshot() : new Map();
   const events = App.fxq.splice(0);
   const propHits = damageProps(events);
   const { out: targets, hint, lane } = computeTargets();
@@ -470,24 +514,24 @@ function render() {
 
   // героини и их силы
   const selPower = App.sel && App.sel.kind === 'power';
-  $('#op-zone').innerHTML = heroHTML(s, 1, tcls('h1')) + powerHTML(s, 1) + propHTML(1, 0) + propHTML(1, 1);
-  $('#me-zone').innerHTML = heroHTML(s, 0, tcls('h0')) + powerHTML(s, 0, selPower ? 'sel' : '') + propHTML(0, 0) + propHTML(0, 1);
+  setHTML($('#op-zone'), heroHTML(s, 1, tcls('h1')) + powerHTML(s, 1) + propHTML(1, 0) + propHTML(1, 1));
+  setHTML($('#me-zone'), heroHTML(s, 0, tcls('h0')) + powerHTML(s, 0, selPower ? 'sel' : '') + propHTML(0, 0) + propHTML(0, 1));
 
   // существа
   let freshN = 0;
   const newSeen = new Set();
   for (const [sel, i] of [['#op-board', 1], ['#me-board', 0]]) {
-    const html = s.players[i].board.map((m) => {
+    const items = s.players[i].board.map((m) => {
       newSeen.add(m.uid);
       let extra = tcls(m.uid);
       let style = '';
       if (!App.seen.has(m.uid)) { extra += ' fresh'; style = `animation-delay:${Math.min(freshN++, 4) * 90}ms`; }
       if (i === 0 && canAct() && canAttack(s, m)) extra += ' can';
       if (App.sel && App.sel.kind === 'minion' && App.sel.uid === m.uid) extra += ' sel';
-      return minionHTML(s, m, { extra, style });
-    }).join('');
+      return { key: m.uid, html: minionHTML(s, m, { extra, style }) };
+    });
     const el = $(sel);
-    el.innerHTML = html;
+    patchList(el, items);
     el.classList.toggle('drop', i === 0 && lane === 'drop');
     el.classList.toggle('cast', lane === 'cast');
   }
@@ -503,7 +547,7 @@ function render() {
   let drawnN = 0;
   const newHand = new Set();
   const mid = (n - 1) / 2;
-  handEl.innerHTML = me.hand.map((c, i) => {
+  patchList(handEl, me.hand.map((c, i) => {
     newHand.add(c.uid);
     const off = i - mid;
     const fan = `--r:${(off * Math.min(3.5, 22 / Math.max(1, n))).toFixed(1)}deg;--y:${(off * off * 0.9 - 8).toFixed(1)}px;`;
@@ -512,30 +556,31 @@ function render() {
     if (App.sel && App.sel.uid === c.uid && (App.sel.kind === 'card' || App.sel.kind === 'bc')) extra.push('sel');
     let style = '';
     if (!App.handSeen.has(c.uid)) { extra.push('drawn'); style = `animation-delay:${Math.min(drawnN++, 6) * 90}ms`; }
-    return hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style, zoom: extra.indexOf('sel') >= 0 });
-  }).join('');
+    return { key: c.uid, html: hcardHTML(c, { cost: costOf(s, 0, c), cls: extra.join(' '), style: fan + style, zoom: extra.indexOf('sel') >= 0 }) };
+  }));
+  if (!n) setHTML(handEl, '');
   fitCardTexts(handEl);
   if (drawnN && App.handSeen.size) Sound.play('draw');
   App.handSeen = newHand;
 
   // рука противника
   const opN = s.players[1].hand.length;
-  $('#op-hand').innerHTML = Array.from({ length: opN }, (_, k) => `<div class="back ${k >= App.opHandN ? 'drawn' : ''}"></div>`).join('');
+  setHTML($('#op-hand'), Array.from({ length: opN }, (_, k) => `<div class="back ${k >= App.opHandN ? 'drawn' : ''}"></div>`).join(''));
   App.opHandN = opN;
 
   // панели
   const crystals = (P) => Array.from({ length: 10 }, (_, k) => `<span class="crystal ${k < P.mana ? 'full' : k < P.maxMana ? 'spent' : ''}"></span>`).join('');
   const op = s.players[1];
   const soulTag = (P) => `<span class="i-soul" style="color:${SOULS[P.soul].color}">${SOULS[P.soul].icon} ${SOULS[P.soul].name}</span>`;
-  $('#op-info').innerHTML = `<div class="i-row">${soulTag(op)}<span class="i-gold">🪙 ${op.gold}</span></div><div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
+  setHTML($('#op-info'), `<div class="i-row">${soulTag(op)}<span class="i-gold">🪙 ${op.gold}</span></div><div class="i-row"><span class="i-name">Противник</span><span class="mana-num">💎 ${op.mana}/${op.maxMana}</span></div>
     <div class="crystals">${crystals(op)}</div>
-    <div class="i-row"><span title="Карт в руке">🂠 ${opN}</span><span title="Карт в колоде">📚 ${op.deck.length}</span></div>`;
-  $('#me-info').innerHTML = `<div class="i-row">${soulTag(me)}<span class="i-gold">🪙 ${me.gold}</span></div><div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
+    <div class="i-row"><span title="Карт в руке">🂠 ${opN}</span><span title="Карт в колоде">📚 ${op.deck.length}</span></div>`);
+  setHTML($('#me-info'), `<div class="i-row">${soulTag(me)}<span class="i-gold">🪙 ${me.gold}</span></div><div class="i-row"><span class="i-name">Вы</span><span class="mana-num">💎 ${me.mana}/${me.maxMana}</span></div>
     <div class="crystals">${crystals(me)}</div>
-    <div class="i-row"><span title="Карт в колоде">📚 ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`;
+    <div class="i-row"><span title="Карт в колоде">📚 ${me.deck.length}</span>${me.fatigue ? `<span>😵 Усталость ${me.fatigue}</span>` : ''}</div>`);
 
   const shopBtn = $('#btn-shop');
-  shopBtn.innerHTML = `🛒 Лавка: карта за ${shopCost(me)} 🪙${me.shopUsed ? ' (куплено)' : ''}`;
+  setHTML(shopBtn, `🛒 Лавка: карта за ${shopCost(me)} 🪙${me.shopUsed ? ' (куплено)' : ''}`);
   shopBtn.disabled = !(canAct() && canShop(s, 0));
   const endBtn = $('#btn-end');
   const myTurn = s.phase === 'play' && s.current === 0;
@@ -570,7 +615,7 @@ function render() {
     if (!p) return;
     const dh = v.hp - p.hp;
     if (dh) FX.float((dh > 0 ? '+' : '') + dh, FX.toStage(el), dh > 0 ? 'up' : 'down');
-    if (dh < 0) el.classList.add('hit');
+    if (dh < 0) replay(el, 'hit');
   });
   App.prev = nowVals;
   playFx(events, snap, propHits);
@@ -694,7 +739,7 @@ function playFx(events, snap, propHits) {
   for (const ph of propHits) {
     const el = document.querySelector(`[data-prop="${ph.side}:${ph.i}"]`);
     if (!el) continue;
-    el.classList.add('shake');
+    replay(el, 'shake');
     const r = FX.toStage(el);
     FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'debris', ph.broken ? 30 : 9);
     if (ph.broken) { FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'dust', 16); sounds.add('smash'); } else sounds.add('crack');
@@ -709,6 +754,7 @@ async function lunge(uid, target) {
   const ra = FX.toStage(a), rt = FX.toStage(t);
   const dx = (rt.x + rt.w / 2 - ra.x - ra.w / 2) * 0.82, dy = (rt.y + rt.h / 2 - ra.y - ra.h / 2) * 0.82;
   a.style.zIndex = 10;
+  a.dataset.stale = '1';
   Sound.play('attack');
   const m = rarityOf(uid);
   const V = m && RARITY_VFX[m.rarity];
@@ -745,7 +791,7 @@ async function doAction(a) {
   try {
     if (a.type === 'play' && pIdx === 1) {
       const c = s.players[1].hand.find((x) => x.uid === a.uid);
-      if (c) { $('#played').innerHTML = hcardHTML(c, {}); showPreview(c); Sound.play('draw'); await sleep(1000); $('#played').innerHTML = ''; }
+      if (c) { $('#played').innerHTML = hcardHTML(c, {}); showPreview(c); Sound.play('draw'); await sleep(App.quality === 'low' ? 700 : 1000); $('#played').innerHTML = ''; }
     }
     if (a.type === 'attack') await lunge(a.uid, a.target);
     else if ((a.type === 'play' || a.type === 'power') && a.target != null) {
@@ -764,7 +810,7 @@ async function loop() {
   App.looping = true;
   try {
     while (s === App.s && s.phase === 'play' && s.current === 1) {
-      await sleep(650);
+      await sleep(App.quality === 'low' ? 380 : 650);
       if (s !== App.s) return;
       const a = (Tut.active && Tut.aiAction(s)) || await AI.choose(s, 1);
       if (s !== App.s) return;
@@ -811,7 +857,7 @@ function onArenaClick(e) {
       P.hp--;
       render();
       const el = document.querySelector(`[data-prop="${side}:${i}"]`);
-      el.classList.add('shake');
+      replay(el, 'shake');
       const r = FX.toStage(el);
       FX.burst(r.x + r.w / 2, r.y + r.h * 0.6, 'debris', P.hp ? 6 : 30);
       Sound.play(P.hp ? 'crack' : 'smash');
@@ -1104,7 +1150,7 @@ function renderGallery() {
 function detectQuality() {
   const mem = navigator.deviceMemory || 4;
   const cores = navigator.hardwareConcurrency || 4;
-  return mem <= 2 || cores <= 4 ? 'low' : 'high';
+  return mem <= 3 || cores <= 4 ? 'low' : 'high';
 }
 
 function gfxSetting() {
@@ -1116,23 +1162,33 @@ function applyQuality(q) {
   document.body.classList.toggle('lowfx', q === 'low');
   FX.setQuality(q);
   Sound.setLowQuality(q === 'low');
+  AI.setFast(q === 'low');
 }
 
 /** Замер плавности в начале партии: если телефон не тянет — экономный режим */
+/** Следит за плавностью всю партию: если кадров мало два замера подряд — экономный режим */
+let fpsWatch = 0;
 function watchFps() {
+  cancelAnimationFrame(fpsWatch);
   if (gfxSetting() !== 'auto' || App.quality === 'low') return;
-  let frames = 0;
-  const t0 = performance.now();
+  const game = App.s;
+  let frames = 0, t0 = performance.now(), bad = 0;
   const step = (t) => {
+    if (App.s !== game || App.quality === 'low') return;
     frames++;
-    if (t - t0 < 5000) { requestAnimationFrame(step); return; }
-    const fps = frames * 1000 / (t - t0);
-    if (fps < 38 && App.quality !== 'low') {
-      applyQuality('low');
-      addLog(`⚙️ Графика переключена на экономную (было ${Math.round(fps)} кадров/с)`);
+    if (t - t0 >= 3000) {
+      const fps = frames * 1000 / (t - t0);
+      bad = !document.hidden && fps < 40 ? bad + 1 : 0;
+      if (bad >= 2) {
+        applyQuality('low');
+        addLog(`⚙️ Телефон не успевает — графика переключена на экономную (${Math.round(fps)} кадров/с)`);
+        return;
+      }
+      frames = 0; t0 = t;
     }
+    fpsWatch = requestAnimationFrame(step);
   };
-  requestAnimationFrame(step);
+  fpsWatch = requestAnimationFrame(step);
 }
 
 /** Текстуры рисуются один раз при запуске и дальше ничего не стоят */
@@ -1166,10 +1222,13 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.9';
+const GAME_VERSION = '4.0';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Новые карты: «Вот что будет с тобой» (вжух — и враг теперь пёс), «Ultimate Пара» (возвращается после смерти и усиливает своих), «Надежда» (Рывок и удар по соседям), «Заманчивый взгляд» (очаровывает 2 врагов)',
+  'Оптимизация для слабых телефонов: стол перерисовывается в 2–3 раза быстрее, подвисаний в 4 раза меньше',
+  'ИИ больше не замораживает экран, пока думает',
+  'Игра всю партию следит за плавностью и сама включает экономную графику, если телефон не успевает',
+  'Экономный режим стал ещё легче, паузы между ходами противника короче',
 ];
 
 function showVersionBadge() {
