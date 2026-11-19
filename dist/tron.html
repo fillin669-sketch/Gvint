@@ -753,6 +753,10 @@ a.btn { text-decoration: none; display: inline-block; }
 .lowfx .peek, .lowfx .mbox, .lowfx #tut { box-shadow: none; }
 .lowfx .modal { background: rgba(0,0,0,.82); }
 
+/* мерцание без смешивания цветов — тот же вид, но не нагружает видеочип */
+#light .l-flicker { mix-blend-mode: normal !important; background: radial-gradient(circle at 18% 47%, rgba(255,150,60,.08), transparent 16%), radial-gradient(circle at 82% 47%, rgba(255,150,60,.08), transparent 16%) !important; }
+.tex .field::after { mix-blend-mode: normal !important; opacity: .18 !important; }
+
 </style>
 </head>
 <body>
@@ -1411,8 +1415,15 @@ const hasKw = (m, k) => !!(m && m.kw && m.kw.indexOf(k) !== -1);
 const immune = (m) => !!(m && (m.resist || hasKw(m, 'untouchable')));
 const heroId = (i) => 'h' + i;
 
+// поля только для показа: на копии карты их не тащим (ИИ копирует партию сотни раз за ход)
+const VIEW_ONLY = ['quote', 'img', 'thumb', 'note', 'optionalArt'];
+
 function inst(def, owner) {
-  const c = JSON.parse(JSON.stringify(def));
+  const view = {};
+  VIEW_ONLY.forEach((k) => { if (def[k] !== undefined) view[k] = def[k]; });
+  const c = JSON.parse(JSON.stringify(def, (k, v) => (VIEW_ONLY.indexOf(k) >= 0 ? undefined : v)));
+  // доступны интерфейсу, но не попадают в JSON-копии
+  for (const k in view) Object.defineProperty(c, k, { value: view[k], enumerable: false, writable: true, configurable: true });
   delete c.count;
   c.uid = UID_SEQ++;
   c.owner = owner;
@@ -3041,10 +3052,16 @@ const FX = (() => {
       r: ember ? rand(1.2, 2.2) : rand(0.8, 1.6), col: ember ? pickRandom(['#ffb347', '#ff8a3d', '#ffd36b']) : 'rgba(255,240,210,.8)', wob: rand(0, 6), ember });
   }
 
+  // положение сцены меняется только при повороте/изменении окна — запоминаем
+  let stageCache = null;
   function stageScale() {
-    const sr = document.getElementById('stage').getBoundingClientRect();
-    return { sr, k: sr.width / 1280 || 1 };
+    if (!stageCache) {
+      const sr = document.getElementById('stage').getBoundingClientRect();
+      stageCache = { sr, k: sr.width / 1280 || 1 };
+    }
+    return stageCache;
   }
+  function invalidate() { stageCache = null; }
 
   function toStage(el, cache) {
     const { sr, k } = cache || stageScale();
@@ -3185,6 +3202,9 @@ const FX = (() => {
   }
 
   function frame(now) {
+    // экономный режим и одни лишь пылинки — 30 кадров/с вместо 60
+    const onlyAmbient = !parts.some((p) => p.kind !== 'mote') && !KINDS.some((r) => level[r] > 0.01 || target[r]);
+    if ((Q.name === 'low' || onlyAmbient) && now - last < 30) { raf = requestAnimationFrame(frame); return; }
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     t += dt;
@@ -3378,7 +3398,7 @@ const FX = (() => {
     dom('legend-intro', null, 1500, `<div class="li-rays"></div><div class="li-card">${img}</div><div class="li-name">${card.name}</div><div class="li-sub">Легендарная карта</div>`);
   }
 
-  return { setQuality, setAmbient, quality: () => Q.name, ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
+  return { invalidate, setQuality, setAmbient, quality: () => Q.name, ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
 })();
 
 </script>
@@ -3640,6 +3660,7 @@ const artOf = (c, full) => {
 function fit() {
   const k = Math.min(window.innerWidth / 1280, window.innerHeight / 640);
   $('#stage').style.transform = `translate(-50%, -50%) scale(${k})`;
+  if (window.FX) FX.invalidate();
 }
 window.addEventListener('resize', fit);
 window.addEventListener('orientationchange', () => setTimeout(fit, 200));
@@ -3923,10 +3944,6 @@ function addLog(msg) {
   const cls = msg.startsWith('Вы') ? 'me' : msg.startsWith('Противник') ? 'op' : 'sys';
   App.logLines.push({ msg, cls });
   if (App.logLines.length > 80) App.logLines.shift();
-  const el = $('#log');
-  if (!el) return;
-  el.innerHTML = App.logLines.map((l) => `<div class="${l.cls}">${esc(l.msg)}</div>`).join('');
-  el.scrollTop = el.scrollHeight;
 }
 
 const CTX = {
@@ -4065,9 +4082,9 @@ function patchList(container, items) {
 
 /** Перезапускает CSS-анимацию на уже существующем элементе */
 function replay(el, cls) {
+  if (!el.classList.contains(cls)) { el.classList.add(cls); return; }
   el.classList.remove(cls);
-  void el.offsetWidth;
-  el.classList.add(cls);
+  requestAnimationFrame(() => el.classList.add(cls));
 }
 
 const SNAP_EVENTS = { kill: 1, bounce: 1, steal: 1, transform: 1 };
@@ -4804,13 +4821,11 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '4.0';
+const GAME_VERSION = '4.1';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Оптимизация для слабых телефонов: стол перерисовывается в 2–3 раза быстрее, подвисаний в 4 раза меньше',
-  'ИИ больше не замораживает экран, пока думает',
-  'Игра всю партию следит за плавностью и сама включает экономную графику, если телефон не успевает',
-  'Экономный режим стал ещё легче, паузы между ходами противника короче',
+  'Ещё оптимизация для слабых телефонов: противник думает вдвое быстрее, стол перерисовывается без лишних пересчётов',
+  'Красивая графика легче для видеочипа: мерцание и фактура без тяжёлого смешивания цветов, частицы 30 кадров/с в покое',
 ];
 
 function showVersionBadge() {
