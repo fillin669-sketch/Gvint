@@ -32,6 +32,8 @@ function defOf(id) {
 }
 
 const hasKw = (m, k) => !!(m && m.kw && m.kw.indexOf(k) !== -1);
+/** Не поддаётся эффектам: Барьер целомудрия или «Нездешний» (пока не атаковал) */
+const immune = (m) => !!(m && (m.resist || hasKw(m, 'untouchable')));
 const heroId = (i) => 'h' + i;
 
 function inst(def, owner) {
@@ -189,6 +191,7 @@ function findChar(s, id) {
 }
 
 function isTargetable(s, byIdx, m, card) {
+  if (hasKw(m, 'untouchable')) return false;
   if (m.owner !== byIdx && hasKw(m, 'stealth')) return !!(card && card.antiTobi && m.id === 'tobi_ninja');
   return true;
 }
@@ -210,8 +213,8 @@ function targetsForSpec(s, pIdx, f, card, src) {
     if (typeof x === 'string') return true;
     if (f.maxAtk != null && getAtk(s, x) > f.maxAtk) return false;
     if (f.minAtk != null && getAtk(s, x) < f.minAtk) return false;
-    if (f.e === 'steal' && (x.noSteal || x.resist)) return false;
-    if (x.resist && ['stun', 'silence', 'debuff', 'setAtk', 'debt', 'pregnant'].includes(f.e)) return false;
+    if (f.e === 'steal' && (x.noSteal || immune(x))) return false;
+    if (immune(x) && ['stun', 'silence', 'debuff', 'setAtk', 'debt', 'pregnant'].includes(f.e)) return false;
     return true;
   }).map((x) => (typeof x === 'string' ? x : x.uid));
 }
@@ -254,10 +257,12 @@ function canAttack(s, m) {
 
 function attackTargets(s, m) {
   const enemy = 1 - m.owner;
-  const visible = s.players[enemy].board.filter((x) => !hasKw(x, 'stealth'));
+  const visible = s.players[enemy].board.filter((x) => !hasKw(x, 'stealth') && !hasKw(x, 'untouchable'));
   const taunts = visible.filter((x) => hasKw(x, 'taunt'));
   // Спешка: в ход появления — только существа
   const noHero = m.justPlayed && hasKw(m, 'rush') && !hasKw(m, 'charge');
+  // Пробой: бьёт кого угодно, не глядя на Провокацию и Скрытность
+  if (hasKw(m, 'pierce')) return [heroId(enemy), ...s.players[enemy].board.filter((x) => !hasKw(x, 'untouchable')).map((x) => x.uid)];
   if (taunts.length && !hasKw(m, 'flying')) return taunts.map((x) => x.uid);
   return [...(noHero ? [] : [heroId(enemy)]), ...visible.map((x) => x.uid)];
 }
@@ -267,26 +272,28 @@ function damage(s, id, n, ctx, src, isAttack) {
   if (n <= 0) return 0;
   const ch = findChar(s, id);
   if (!ch) return 0;
+  const pierce = isAttack && src && hasKw(src, 'pierce');
   if (ch.kind === 'hero') {
     const p = ch.p;
-    const a = Math.min(p.armor, n);
+    const a = pierce ? 0 : Math.min(p.armor, n);
     p.armor -= a;
     p.hp -= n - a;
     fx(ctx, 'dmg', { id, n });
   } else {
     const m = ch.m;
-    if (isAttack && hasKw(m, 'dodge')) {
+    if (hasKw(m, 'untouchable')) { fx(ctx, 'dodge', { id }); return 0; }
+    if (isAttack && hasKw(m, 'dodge') && !pierce) {
       m.kw = m.kw.filter((k) => k !== 'dodge');
       fx(ctx, 'dodge', { id });
       ctx.log(`${q(m)} уворачивается!`);
       return 0;
     }
-    if (hasKw(m, 'shield')) {
+    if (hasKw(m, 'shield') && !pierce) {
       m.kw = m.kw.filter((k) => k !== 'shield');
       fx(ctx, 'shieldpop', { id });
       return 0;
     }
-    if (hasKw(m, 'tough')) n -= 1;
+    if (hasKw(m, 'tough') && !pierce) n -= 1;
     if (n <= 0) { fx(ctx, 'dmg', { id, n: 0 }); return 0; }
     m.hp -= n;
     fx(ctx, 'dmg', { id, n });
@@ -336,12 +343,12 @@ function removeMinion(s, m) {
   return -1;
 }
 
-function freeze(m, ctx) { if (m.resist) return; m.frozen = true; fx(ctx, 'stun', { id: m.uid }); }
+function freeze(m, ctx) { if (immune(m)) return; m.frozen = true; fx(ctx, 'stun', { id: m.uid }); }
 
 function silence(s, m, ctx) {
-  if (m.resist) return;
+  if (immune(m)) return;
   m.kw = [];
-  ['bc', 'dr', 'end', 'kill', 'aura', 'enrage', 'spellDiscount', 'debt', 'preg'].forEach((k) => { delete m[k]; });
+  ['bc', 'dr', 'end', 'kill', 'aura', 'enrage', 'spellDiscount', 'debt', 'preg', 'mark'].forEach((k) => { delete m[k]; });
   m.cantAttack = false;
   m.tempAtk = 0;
   m.silenced = true;
@@ -354,7 +361,7 @@ function silence(s, m, ctx) {
 }
 
 function takeControl(s, m, newOwner, ctx) {
-  if (m.noSteal || m.resist) return;
+  if (m.noSteal || immune(m)) return;
   removeMinion(s, m);
   if (s.players[newOwner].board.length >= MAX_BOARD) { m.dead = true; s.players[m.owner].board.push(m); return; }
   m.owner = newOwner;
@@ -383,7 +390,7 @@ function marry(s, a, b, ctx) {
 }
 
 function makePregnant(s, m, by, ctx) {
-  if (m.preg || m.resist) return false;
+  if (m.preg || immune(m)) return false;
   m.preg = { by, turns: 2 };
   m.atk = Math.max(0, m.atk - 2);
   ctx.log(`${q(m)} «беременеет»`);
@@ -395,7 +402,10 @@ function makePregnant(s, m, by, ctx) {
 async function resolveDeaths(s, ctx) {
   for (let guard = 0; guard < 20; guard++) {
     const dying = [];
-    for (const P of s.players) for (const m of P.board) if (m.hp <= 0 || m.dead) dying.push(m);
+    for (const P of s.players) for (const m of P.board) {
+      if (m.dead && hasKw(m, 'untouchable')) m.dead = false;
+      if (m.hp <= 0 || m.dead) dying.push(m);
+    }
     if (!dying.length) break;
     const after = [];
     for (const m of dying) {
@@ -472,12 +482,12 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       fx(ctx, 'buff', { id: tm.uid });
       break;
     case 'debuff':
-      if (!tm || tm.resist) break;
+      if (!tm || immune(tm)) break;
       tm.atk = Math.max(0, tm.atk - f.a);
       if (f.h) { tm.hp -= f.h; tm.maxHp = Math.max(1, tm.maxHp - f.h); }
       fx(ctx, 'debuff', { id: tm.uid });
       break;
-    case 'setAtk': if (tm && !tm.resist) { tm.atk = f.n; tm.tempAtk = 0; fx(ctx, 'debuff', { id: tm.uid }); } break;
+    case 'setAtk': if (tm && !immune(tm)) { tm.atk = f.n; tm.tempAtk = 0; fx(ctx, 'debuff', { id: tm.uid }); } break;
     case 'stun': if (tm) freeze(tm, ctx); break;
     case 'destroy': if (tm) tm.dead = true; break;
     case 'steal': if (tm) takeControl(s, tm, pIdx, ctx); break;
@@ -498,7 +508,7 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
     }
     case 'stunAllEnemy': E.board.forEach((m) => freeze(m, ctx)); break;
     case 'stunRandomEnemy': shuffle(E.board.slice()).slice(0, f.n).forEach((m) => freeze(m, ctx)); break;
-    case 'debuffAll': E.board.filter((m) => !m.resist).forEach((m) => { m.atk = Math.max(0, m.atk - f.a); fx(ctx, 'debuff', { id: m.uid }); }); break;
+    case 'debuffAll': E.board.filter((m) => !immune(m)).forEach((m) => { m.atk = Math.max(0, m.atk - f.a); fx(ctx, 'debuff', { id: m.uid }); }); break;
     case 'buffAll':
       (f.others ? others(pIdx) : P.board).forEach((m) => {
         if (f.temp) m.tempAtk = (m.tempAtk || 0) + f.a; else m.atk += f.a;
@@ -612,6 +622,13 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       if (src && P.board.some((m) => m !== src && m.id === f.id)) { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); }
       break;
     case 'chance': if (Math.random() < f.p) await runFx(s, pIdx, f.fx, null, ctx, src); break;
+    case 'mark':
+      if (!T) break;
+      if (tm) tm.mark = { by: pIdx, n: f.n };
+      else T.p.mark = { by: pIdx, n: f.n, turns: f.turns };
+      fx(ctx, 'mark', { id: target });
+      ctx.log(`${T.kind === 'hero' ? T.p.name : q(tm)}: на прицеле — ${f.n} урона каждый ход`);
+      break;
     case 'selfBuff': if (src && src.type === 'minion') { src.atk += f.a; src.hp += f.h; src.maxHp += f.h; fx(ctx, 'buff', { id: src.uid }); } break;
     case 'healSelf': if (src && src.type === 'minion') heal(s, src.uid, f.n, ctx); break;
     case 'gold': P.gold += f.n; fx(ctx, 'gold', { pIdx, n: f.n }); break;
@@ -637,16 +654,16 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
     case 'dmgHero': damage(s, heroId(enemy), f.n, ctx, src); break;
     case 'unstun': P.board.forEach((m) => { m.frozen = false; }); break;
     case 'marryRandom': {
-      const free = shuffle(E.board.filter((m) => m.hp > 0 && !m.spouse && !m.resist));
+      const free = shuffle(E.board.filter((m) => m.hp > 0 && !m.spouse && !immune(m)));
       if (free.length >= 2) marry(s, free[0], free[1], ctx);
       else damage(s, heroId(enemy), 2, ctx, null);
       break;
     }
-    case 'debt': if (tm && !tm.resist) { tm.debt = (tm.debt || 0) + f.n; fx(ctx, 'debuff', { id: tm.uid }); } break;
-    case 'debtRandom': { const m = randEnemyMinion(); if (m && !m.resist) { m.debt = (m.debt || 0) + f.n; fx(ctx, 'debuff', { id: m.uid }); } break; }
+    case 'debt': if (tm && !immune(tm)) { tm.debt = (tm.debt || 0) + f.n; fx(ctx, 'debuff', { id: tm.uid }); } break;
+    case 'debtRandom': { const m = randEnemyMinion(); if (m && !immune(m)) { m.debt = (m.debt || 0) + f.n; fx(ctx, 'debuff', { id: m.uid }); } break; }
     case 'pregnant': if (tm) makePregnant(s, tm, pIdx, ctx); break;
     case 'pregnantRandom': {
-      const free = E.board.filter((m) => m.hp > 0 && !m.preg && !m.resist);
+      const free = E.board.filter((m) => m.hp > 0 && !m.preg && !immune(m));
       if (free.length) makePregnant(s, pickRandom(free), pIdx, ctx);
       else { summonDef(s, pIdx, tokenDef('baby'), ctx); ctx.log('Рождается «Ребёнок»'); }
       break;
@@ -681,6 +698,13 @@ async function startTurn(s, ctx) {
         fx(ctx, 'birth', { id: m.uid });
       }
     }
+  }
+  // «Взгляд убийцы»: отмеченные враги получают урон в начале хода того, кто их отметил
+  const E = s.players[1 - P.idx];
+  for (const m of E.board.slice()) if (m.mark && m.mark.by === P.idx) { ctx.log(`${q(m)} под взглядом убийцы`); damage(s, m.uid, m.mark.n, ctx, null); }
+  if (E.mark && E.mark.by === P.idx) {
+    damage(s, heroId(E.idx), E.mark.n, ctx, null);
+    if (--E.mark.turns <= 0) delete E.mark;
   }
   fx(ctx, 'turn', { pIdx: P.idx });
   if (s.turn > 1) draw(s, P.idx, 1, ctx);   // первый ход партии — без добора (сглаживает преимущество первого хода)
@@ -746,7 +770,7 @@ async function performAction(s, a, ctx) {
     case 'attack': {
       const m = P.board.find((x) => x.uid === a.uid);
       if (!m || !canAttack(s, m) || attackTargets(s, m).indexOf(a.target) < 0) return false;
-      m.kw = m.kw.filter((k) => k !== 'stealth');
+      m.kw = m.kw.filter((k) => k !== 'stealth' && k !== 'untouchable');
       m.attacks--;
       const T = findChar(s, a.target);
       const atk = getAtk(s, m);
@@ -761,7 +785,7 @@ async function performAction(s, a, ctx) {
       ctx.log(`${q(m)} атакует ${q(T.m)}`);
       damage(s, T.m.uid, atk, ctx, m, true);
       damage(s, m.uid, tAtk, ctx, T.m, false);
-      if (hasKw(T.m, 'thorns')) { ctx.log(`Шипы! ${q(m)} получает 2 урона`); damage(s, m.uid, 2, ctx, null); }
+      if (hasKw(T.m, 'thorns') && !hasKw(m, 'pierce')) { ctx.log(`Шипы! ${q(m)} получает 2 урона`); damage(s, m.uid, 2, ctx, null); }
       const killed = T.m.hp <= 0 || T.m.dead;
       await resolveDeaths(s, ctx);
       if (killed && m.kill && P.board.indexOf(m) >= 0 && s.phase === 'play') {

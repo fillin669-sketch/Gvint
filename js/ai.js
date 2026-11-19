@@ -34,6 +34,9 @@ const AI = (() => {
     if (hasKw(m, 'tough')) v += 1;
     if (hasKw(m, 'thorns')) v += 1;
     if (m.kill) v += 1;
+    if (hasKw(m, 'untouchable')) v += 1.5 + atk * 0.3;
+    if (hasKw(m, 'pierce')) v += atk * 0.6;
+    if (m.mark) v -= m.mark.n * 1.2;
     if (m.aura) v += 2;
     if (m.end) v += 2.5;
     if (m.spellDiscount) v += 1;
@@ -53,6 +56,8 @@ const AI = (() => {
     const handCards = (p) => p.hand.filter((c) => c.id !== 'coin').length;
     v += handCards(P) * 1.6 - handCards(O) * 0.8;
     v += P.gold * 0.45 - O.gold * 0.2;
+    if (O.mark && O.mark.by === me) v += O.mark.n * O.mark.turns * 0.7;
+    if (P.mark && P.mark.by === op) v -= P.mark.n * P.mark.turns * 0.7;
     // угроза летала: сумма атаки врага против нашего здоровья
     const threat = O.board.reduce((a, m) => a + (m.cantAttack ? 0 : getAtk(s, m)), 0);
     if (threat >= P.hp + P.armor) v -= 40;

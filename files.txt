@@ -1,14 +1,14 @@
-version 3.6
+version 3.7
 f8f5d375e8eb3b4f18b64b19697fb07affaef114 index.html
-633e5baf704d9caffb621942c9d090471ab5c881 css/style.css
-c692087d94c2844b342335c5505e7e1c0bbd80e5 js/ai.js
+ddd47e0d23e6a438a8213f67d9c2a051c5589b1f css/style.css
+76a3dc68031e31d3bd36f28dc129d1716bd963c7 js/ai.js
 e015f03af210636c5fece01a6e15598bde1986be js/audio.js
-7bc1941391aa816e8f6056d66ffc470d164bb281 js/cards.js
-8d2034f8832d068a3b3cd0bd3d5889bd1173eed8 js/engine.js
+4c900ea4a49da740f11d581e4c38399fc4e58b77 js/cards.js
+104ef8a11d729d397e029090d45db87032d715ac js/engine.js
 385779948b54098e8191ce669fd1449a71acae6a js/fx.js
 1e9840edc12201d315d5d4e8dd1291ff31240e4a js/samples.js
 0a60f94c267e4ef3e9c673436da37d7140d3c4f7 js/tutorial.js
-d415444be2dc3ee36c0a5557f37a9a93f3df4989 js/ui.js
+3462515fb92331800d055e5f14f4d24137854f5f js/ui.js
 2df2e102ff2005513486bf08f5d48450a7b36c71 img/cards/baba_snaryad.jpg
 65a4f10557d5972ae4a76877e9b635b3bdc61665 img/cards/bard.jpg
 c6247259c1fc79f0012586e05490483932562dda img/cards/baryga.jpg
@@ -35,6 +35,7 @@ bbdd694bc6d9c57c9b12cef50a6f16be96e8dd78 img/cards/govnomet.jpg
 6197208e44f43e3d4cc7cf0bba14f9b030e3dbdf img/cards/kaka.jpg
 13847eb38357e6a1754746863491f641e9b7bd97 img/cards/karlik.jpg
 957d1e3173bf49f08c660dab15ce489d1a00964c img/cards/kent.jpg
+b29754bcdbc9ee5620a70ce4cb60631bf0eb78b1 img/cards/khtoya.jpg
 b3a4d99a6434a1f03461cfee5d834b5f19be6b63 img/cards/kompot.jpg
 f92f65a3c8e0ca250afc23650fa389bc73c27a10 img/cards/korobka.jpg
 64e2e22eac62fbc2e1e3e6ab96836e66d9b97e54 img/cards/kreditor.jpg
@@ -57,6 +58,7 @@ e06390b492ba3a893e6017f57d40456a270876c1 img/cards/pisyunchik_zametil.jpg
 6e9c0c19299e400e565ac5f8d3f5ac8e8cd782cf img/cards/podzatylnik.jpg
 3c1add223bd4d5a809d0028016ed95b10cc1cd92 img/cards/poilo.jpg
 f9d06273e18906c42f70529906e257285a1d0731 img/cards/pricha.jpg
+e79b1627081d9c55d7c4ac32f0a836220f3eee5f img/cards/putnik.jpg
 2c91d3e1d49424d25b0f097b48b03284e32a3dad img/cards/rassol.jpg
 446c8b64e6d8daf6512109447585fb162ff31fcb img/cards/realtor.jpg
 4ada4ea165cee05f344efbccf48b09c0e5f9864e img/cards/semki.jpg
@@ -91,6 +93,7 @@ ae3b657995298d2b1c2c105174d82541e79dcf24 img/cards/thumbs/gigaslav_pro.jpg
 814bac3fe7c8249fcaeb87bca07689902759b8c8 img/cards/thumbs/kaka.jpg
 d985279dfa55d4fbd3ee3f749186fceee2c25911 img/cards/thumbs/karlik.jpg
 90951b11335b97980e3644af2b0f409e1cf9362f img/cards/thumbs/kent.jpg
+3a6046ac0e851d854e7a8acd1eca50202a57d513 img/cards/thumbs/khtoya.jpg
 31915e7dd28dc9145df7cb8740d525f6d4942e61 img/cards/thumbs/kompot.jpg
 768c47a34b65b3a24f65a2e135cee321c41c73d7 img/cards/thumbs/korobka.jpg
 4a5f084a438620c7e9346c750ccfbc2865d3a3d6 img/cards/thumbs/kreditor.jpg
@@ -113,6 +116,7 @@ d2dfca385370a1312237c44547169bc95221e5cb img/cards/thumbs/pisyunchik_zol.jpg
 59a72f73f1b1ae23d9159d16e85fcde3d59d46c8 img/cards/thumbs/podzatylnik.jpg
 8e9a5b91e6dedb19c891b20c917b001a626072a0 img/cards/thumbs/poilo.jpg
 b1d9c5bf15d075147c3266dc59b33aa242881149 img/cards/thumbs/pricha.jpg
+4964c1fe34079e561923181828ccb2c56f5a0866 img/cards/thumbs/putnik.jpg
 05873402c03beba861d5bc073b8ab6254c7c4c52 img/cards/thumbs/rassol.jpg
 321dea11a198913f2aaf3ac085577c67444c7964 img/cards/thumbs/realtor.jpg
 90846d11b0da3793694438a7a0200f86381856b3 img/cards/thumbs/semki.jpg
@@ -129,6 +133,7 @@ c8968135caafa0e48cc666b0117e9766fbcfc522 img/cards/thumbs/udostoverenie.jpg
 a10afaccf80188081077e45b771eab15b02b707b img/cards/thumbs/ugol.jpg
 a34163e123d02954464c65e88e3c30890406f8d2 img/cards/thumbs/umilenie.jpg
 c3cc09064908d30fb043f5727e78c87b6a648f99 img/cards/thumbs/verbovka.jpg
+1847ca66c2ac7fb5556989efe0aeeedaa4fea147 img/cards/thumbs/vzglyad.jpg
 f8dfae77d7dcdc0481212ad45f8595cef927d5b5 img/cards/thumbs/wife.jpg
 7458c4ecc929a9112eb1026b8bb31f3d0a52f619 img/cards/thumbs/yager.jpg
 93067fca5cad969c02e91e5588f68b53e3fd5a8d img/cards/tobi.jpg
@@ -139,6 +144,7 @@ f42947f6771200eb09525984558d70a91f643a49 img/cards/udostoverenie.jpg
 f5ee93ba520ac675539078d3c4b773f2266e601d img/cards/ugol.jpg
 d0cb66268dc447c7eb22ccd8f1fd3fc5590bdc5c img/cards/umilenie.jpg
 73ad8e0ec0cc70766dcaffc2abd8d0bfd3d3efff img/cards/verbovka.jpg
+e40a8a2efa975124278dab3d1d3cdcf4d79e40e5 img/cards/vzglyad.jpg
 7cdca6e1f1c956ad3481c56eea843886eb917220 img/cards/wife.jpg
 02d01b99ad2714152f6715e9c659b063d719673f img/cards/yager.jpg
 b05c52468e7dd422d80adabbe566a7061904203d img/icon.png

@@ -99,7 +99,7 @@ function minionHTML(s, m, o) {
   if (o.extra) cls.push(o.extra);
   const atk = getAtk(s, m);
   const icons = [];
-  ['poison', 'windfury', 'lifesteal', 'flying', 'charge'].forEach((k) => { if (hasKw(m, k)) icons.push(KEYWORDS[k].icon); });
+  ['untouchable', 'pierce', 'poison', 'windfury', 'lifesteal', 'flying', 'charge'].forEach((k) => { if (hasKw(m, k)) icons.push(KEYWORDS[k].icon); });
   if (m.dr) icons.push('⚰️');
   if (m.end) icons.push('🌙');
   if (m.aura) icons.push('✴️');
@@ -107,7 +107,7 @@ function minionHTML(s, m, o) {
   if (m.spellDiscount) icons.push('🏷️');
   if (m.cantAttack) icons.push('⛔');
   if (m.female) icons.push('♀');
-  const status = [m.spouse ? '💍' : '', m.preg ? '🤰' : '', m.debt ? '📜' : ''].join('');
+  const status = [m.spouse ? '💍' : '', m.preg ? '🤰' : '', m.debt ? '📜' : '', m.mark ? '🎯' : ''].join('');
   const sleepy = m.owner === s.current && m.sleeping && !m.cantAttack && s.phase === 'play';
   const def = defOf(m.id);
   const baseAtk = def ? def.atk : m.atk;
@@ -133,6 +133,7 @@ function heroHTML(s, i, extra) {
     <div class="h-soul" title="${esc(so.name)}">${so.icon}</div>
     ${P.armor ? `<div class="h-armor">${P.armor}</div>` : ''}
     <div class="h-hp ${P.hp < P.maxHp ? 'hurt' : ''}">${P.hp}</div>
+    ${P.mark ? `<div class="h-mark" title="На прицеле: ${P.mark.n} урона ещё ${P.mark.turns} хода">🎯${P.mark.turns}</div>` : ''}
     <div class="h-name">${heroName(i)}</div></div>`;
 }
 
@@ -180,6 +181,7 @@ function previewHTML(c, live) {
     if (live.frozen) parts.push('<div class="pv-ab"><b>💫 Оглушён.</b> Пропускает ближайшую атаку.</div>');
     if (live.spouse) parts.push('<div class="pv-ab"><b>💍 В браке.</b> Если супруг погибнет — получит 2 урона.</div>');
     if (live.preg) parts.push(`<div class="pv-ab"><b>🤰 Беременность.</b> Роды через ${live.preg.turns} хода — ребёнок достанется ${live.preg.by === 0 ? 'вам' : 'противнику'}.</div>`);
+    if (live.mark) parts.push(`<div class="pv-ab"><b>🎯 На прицеле.</b> Получает ${live.mark.n} урона в начале каждого хода ${live.mark.by === 0 ? 'вашего' : 'противника'}.</div>`);
     if (live.debt) parts.push(`<div class="pv-ab"><b>📜 Долг.</b> Теряет ${live.debt} атаки в начале каждого своего хода.</div>`);
     if (live.silenced) parts.push('<div class="pv-ab"><b>🤐 Без свойств.</b></div>');
   }
@@ -605,6 +607,7 @@ function playFx(events, snap, propHits) {
       case 'dodge': { const r = rectOf(e.id); if (r) { FX.float('💨 мимо!', r, 'icon'); } sounds.add('attack'); break; }
       case 'gold': { const r = rectOf('h' + e.pIdx); if (r) FX.float('🪙+' + e.n, r, 'up'); sounds.add('mana'); break; }
       case 'shop': sounds.add('draw'); break;
+      case 'mark': { const r = rectOf(e.id); if (r) { FX.float('🎯', r, 'icon'); FX.ring(r, '#ff4b3a'); } sounds.add('debuff'); break; }
       case 'saved': { const r = rectOf(e.id); if (r) { FX.float('🐏 Упрямство!', r, 'up'); FX.burstRect(r, 'spark', 40); } sounds.add('clear'); break; }
       case 'armor': { const r = rectOf(e.id); if (r) FX.float('🛡️+' + e.n, r, 'up'); sounds.add('absorb'); break; }
       case 'mana': sounds.add('mana'); break;
@@ -1096,11 +1099,10 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '3.6';
+const GAME_VERSION = '3.7';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Игра теперь обновляется сама при каждом запуске с интернетом — прямо с GitHub, без переустановки',
-  'Скачиваются только изменённые файлы, так что обновление быстрое',
+  'Новые карты: «Хтоя?» — неуязвим, пока не атакует; «Пространственный путник» — бьёт дважды кого угодно, пробивая любую защиту; «Взгляд убийцы» — цель каждый ход получает 2 урона',
 ];
 
 function showVersionBadge() {

@@ -22,6 +22,8 @@ const KEYWORDS = {
   dodge:     { name: 'Уворот',       icon: '💨', desc: 'Первая атака существа по нему проходит мимо.' },
   tough:     { name: 'Толстокожий',  icon: '🦏', desc: 'Получает на 1 урон меньше от любого источника.' },
   thorns:    { name: 'Шипы',         icon: '🌵', desc: 'Кто атакует это существо, получает 2 урона.' },
+  untouchable: { name: 'Нездешний', icon: '⏳', desc: 'Неуязвим к любому урону и эффектам, пока сам не атакует.' },
+  pierce:    { name: 'Пробой',       icon: '🌀', desc: 'Атакует кого угодно, не глядя на Провокацию и Скрытность; удары пробивают Щит, Уворот, Толстокожесть, Шипы и броню героя.' },
   rush:      { name: 'Спешка',       icon: '🏃', desc: 'Может сразу атаковать существ (но не героя).' },
 };
 
@@ -84,6 +86,14 @@ const SHARED_CARDS = [
   M('baba_snaryad', 'Баба-Снаряд', 8, 6, 5, { female: true, ...IMG('baba_snaryad'), rarity: 'legendary', icon: '🍺', kw: ['charge'],
     bc: [{ e: 'aoe', n: 2, who: 'enemyMinions' }, { e: 'stunRandomEnemy', n: 1 }], kill: [{ e: 'healSelf', n: 3 }],
     quote: '«Летит, орёт, давит — и ещё просит добавки!»' }),
+
+  // ---- путешественник между мирами ----
+  M('khtoya', 'Хтоя?', 4, 3, 4, { ...IMG('khtoya'), rarity: 'epic', icon: '❓', kw: ['untouchable'],
+    quote: '«Где я блять?»' }),
+  M('putnik', 'Пространственный путник', 6, 3, 6, { ...IMG('putnik'), rarity: 'epic', icon: '🌀', kw: ['windfury', 'pierce'],
+    quote: '«А я уже пришёл»' }),
+  Sp('vzglyad', 'Взгляд убийцы', 3, [{ e: 'mark', n: 2, t: 'enemy', turns: 4 }], { ...IMG('vzglyad'), rarity: 'epic', icon: '👉',
+    note: 'Существо получает урон, пока живо; вражеский герой — 4 хода подряд.', quote: '«Я тебя щас уничтожу»' }),
 
   // ---- экстра-легенда ----
   M('gigaslav_pro', 'GiGa$lav Pro+', 10, 7, 8, { ...IMG('gigaslav_pro'), rarity: 'legendary', icon: '🦅', kw: ['taunt', 'shield'], resist: true,
@@ -427,6 +437,7 @@ function effText(f) {
     case 'faceDmgHand': return 'Нанесите вражескому герою урон, равный числу карт в его руке.';
     case 'selfBuffIf': return 'Если у вас есть другой «Качок» — получает +2/+2.';
     case 'chance': return `С вероятностью ${Math.round(f.p * 100)}%: ${f.fx.map(effText).join(' ').replace(/^./, (c) => c.toLowerCase())}`;
+    case 'mark': return `Возьмите на прицел ${TGT_ACC[f.t]}: в начале каждого вашего хода он получает ${f.n} урона.`;
     case 'selfBuff': return `Получает +${f.a}/+${f.h}.`;
     case 'healSelf': return `Восстанавливает себе ${f.n} здоровья.`;
     case 'gold': return `Получите ${f.n} золота 🪙.`;
