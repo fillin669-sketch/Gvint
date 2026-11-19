@@ -36,8 +36,15 @@ const hasKw = (m, k) => !!(m && m.kw && m.kw.indexOf(k) !== -1);
 const immune = (m) => !!(m && (m.resist || hasKw(m, 'untouchable')));
 const heroId = (i) => 'h' + i;
 
+// поля только для показа: на копии карты их не тащим (ИИ копирует партию сотни раз за ход)
+const VIEW_ONLY = ['quote', 'img', 'thumb', 'note', 'optionalArt'];
+
 function inst(def, owner) {
-  const c = JSON.parse(JSON.stringify(def));
+  const view = {};
+  VIEW_ONLY.forEach((k) => { if (def[k] !== undefined) view[k] = def[k]; });
+  const c = JSON.parse(JSON.stringify(def, (k, v) => (VIEW_ONLY.indexOf(k) >= 0 ? undefined : v)));
+  // доступны интерфейсу, но не попадают в JSON-копии
+  for (const k in view) Object.defineProperty(c, k, { value: view[k], enumerable: false, writable: true, configurable: true });
   delete c.count;
   c.uid = UID_SEQ++;
   c.owner = owner;

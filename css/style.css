@@ -743,3 +743,7 @@ a.btn { text-decoration: none; display: inline-block; }
 .lowfx .hcard .hc-art::after, .lowfx .hero::before { box-shadow: none; }
 .lowfx .peek, .lowfx .mbox, .lowfx #tut { box-shadow: none; }
 .lowfx .modal { background: rgba(0,0,0,.82); }
+
+/* мерцание без смешивания цветов — тот же вид, но не нагружает видеочип */
+#light .l-flicker { mix-blend-mode: normal !important; background: radial-gradient(circle at 18% 47%, rgba(255,150,60,.08), transparent 16%), radial-gradient(circle at 82% 47%, rgba(255,150,60,.08), transparent 16%) !important; }
+.tex .field::after { mix-blend-mode: normal !important; opacity: .18 !important; }

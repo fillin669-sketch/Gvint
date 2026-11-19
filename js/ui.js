@@ -58,6 +58,7 @@ const artOf = (c, full) => {
 function fit() {
   const k = Math.min(window.innerWidth / 1280, window.innerHeight / 640);
   $('#stage').style.transform = `translate(-50%, -50%) scale(${k})`;
+  if (window.FX) FX.invalidate();
 }
 window.addEventListener('resize', fit);
 window.addEventListener('orientationchange', () => setTimeout(fit, 200));
@@ -341,10 +342,6 @@ function addLog(msg) {
   const cls = msg.startsWith('Вы') ? 'me' : msg.startsWith('Противник') ? 'op' : 'sys';
   App.logLines.push({ msg, cls });
   if (App.logLines.length > 80) App.logLines.shift();
-  const el = $('#log');
-  if (!el) return;
-  el.innerHTML = App.logLines.map((l) => `<div class="${l.cls}">${esc(l.msg)}</div>`).join('');
-  el.scrollTop = el.scrollHeight;
 }
 
 const CTX = {
@@ -483,9 +480,9 @@ function patchList(container, items) {
 
 /** Перезапускает CSS-анимацию на уже существующем элементе */
 function replay(el, cls) {
+  if (!el.classList.contains(cls)) { el.classList.add(cls); return; }
   el.classList.remove(cls);
-  void el.offsetWidth;
-  el.classList.add(cls);
+  requestAnimationFrame(() => el.classList.add(cls));
 }
 
 const SNAP_EVENTS = { kill: 1, bounce: 1, steal: 1, transform: 1 };
@@ -1222,7 +1219,7 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '4.0';
+const GAME_VERSION = '4.1';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
   'Оптимизация для слабых телефонов: стол перерисовывается в 2–3 раза быстрее, подвисаний в 4 раза меньше',

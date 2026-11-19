@@ -56,10 +56,16 @@ const FX = (() => {
       r: ember ? rand(1.2, 2.2) : rand(0.8, 1.6), col: ember ? pickRandom(['#ffb347', '#ff8a3d', '#ffd36b']) : 'rgba(255,240,210,.8)', wob: rand(0, 6), ember });
   }
 
+  // положение сцены меняется только при повороте/изменении окна — запоминаем
+  let stageCache = null;
   function stageScale() {
-    const sr = document.getElementById('stage').getBoundingClientRect();
-    return { sr, k: sr.width / 1280 || 1 };
+    if (!stageCache) {
+      const sr = document.getElementById('stage').getBoundingClientRect();
+      stageCache = { sr, k: sr.width / 1280 || 1 };
+    }
+    return stageCache;
   }
+  function invalidate() { stageCache = null; }
 
   function toStage(el, cache) {
     const { sr, k } = cache || stageScale();
@@ -200,6 +206,9 @@ const FX = (() => {
   }
 
   function frame(now) {
+    // экономный режим и одни лишь пылинки — 30 кадров/с вместо 60
+    const onlyAmbient = !parts.some((p) => p.kind !== 'mote') && !KINDS.some((r) => level[r] > 0.01 || target[r]);
+    if ((Q.name === 'low' || onlyAmbient) && now - last < 30) { raf = requestAnimationFrame(frame); return; }
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     t += dt;
@@ -393,5 +402,5 @@ const FX = (() => {
     dom('legend-intro', null, 1500, `<div class="li-rays"></div><div class="li-card">${img}</div><div class="li-name">${card.name}</div><div class="li-sub">Легендарная карта</div>`);
   }
 
-  return { setQuality, setAmbient, quality: () => Q.name, ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
+  return { invalidate, setQuality, setAmbient, quality: () => Q.name, ring, runeCircle, barrier, trail, legendIntro, init, setZones, storm, clearAll, burst, burstRect, ghost, float, flash, quake, sparkle, bolt, toStage };
 })();
