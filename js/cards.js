@@ -45,15 +45,25 @@ function Sp(id, name, cost, fx, o) {
 /* ---------------- жетоны (призываемые существа) ---------------- */
 const TOKENS = {
   recruit: { name: 'Новобранец', atk: 1, hp: 1, icon: '🪖' },
-  kitten:  { name: 'Котёнок-рыцарь', atk: 1, hp: 1, icon: '🐱', img: 'umilenie' },
+  kitten:  { name: 'Котёнок-рыцарь', atk: 1, hp: 1, icon: '🐱', img: 'umilenie' , tribe: 'beast' },
   boba:    { name: 'Боба', atk: 2, hp: 2, icon: '💪', img: 'biba_boba', kw: ['taunt'] },
-  teen:    { name: 'Малолетка', atk: 1, hp: 1, icon: '🍺', img: 'maloletki' },
-  muzhik:  { name: 'Мужик из гаража', atk: 2, hp: 2, icon: '🔧' },
+  teen:    { name: 'Малолетка', atk: 1, hp: 1, icon: '🍺', img: 'maloletki' , tribe: 'booze' },
+  muzhik:  { name: 'Мужик из гаража', atk: 2, hp: 2, icon: '🔧' , tribe: 'booze' },
   garage:  { name: 'Гараж', atk: 0, hp: 5, icon: '🏚️', kw: ['taunt'], cantAttack: true },
   bone:    { name: 'Костяк', atk: 1, hp: 1, icon: '💀' },
-  baby:    { name: 'Ребёнок', atk: 2, hp: 2, icon: '👶' },
-  dog:     { name: 'Пёс', atk: 1, hp: 1, icon: '🐕', img: 'vot_chto' },
+  baby:    { name: 'Ребёнок', atk: 2, hp: 2, icon: '👶' , tribe: 'family' },
+  dog:     { name: 'Пёс', atk: 1, hp: 1, icon: '🐕', img: 'vot_chto' , tribe: 'beast' },
   bugaichik: { name: 'Бугайчик', atk: 2, hp: 2, icon: '👹', img: 'bugai' },
+  shpana:  { name: 'Шпана', atk: 1, hp: 1, icon: '🧢', kw: ['rush'], tribe: 'gop' },
+};
+
+/* Группы существ: карты могут усиливать «своих» */
+const TRIBES = {
+  gop:    { name: 'Гопота', icon: '🧢' },
+  family: { name: 'Семья', icon: '👪' },
+  booze:  { name: 'Бухие', icon: '🍺' },
+  beast:  { name: 'Звери', icon: '🐾' },
+  female: { name: 'Женщины', icon: '♀' },
 };
 
 /* =====================================================================
@@ -375,13 +385,68 @@ const FIELDS = {
 };
 
 // «Медяк» — бонус второму игроку
+/* =====================================================================
+   КАРТЫ НАТУР — попадают в колоду только при своей натуре героя
+   ===================================================================== */
+const SOUL_CARDS = [
+  // 🐏 Упрямство — стойкость
+  M('n_baran', 'Баран-таран', 3, 2, 5, { ...ART('n_baran'), soul: 'stubborn', icon: '🐏', kw: ['taunt', 'tough'], tribe: 'beast', quote: '«Упёрся — и ни шагу назад.»' }),
+  Sp('n_stoyat', 'Стоять насмерть', 2, [{ e: 'buff', a: 0, h: 4, t: 'friendlyMinion', kw: 'taunt' }], { ...ART('n_stoyat'), soul: 'stubborn', rarity: 'rare', icon: '🧱', quote: '«Отступать некуда — позади гараж.»' }),
+  M('n_ded', 'Упёртый дед', 5, 3, 7, { ...ART('n_ded'), soul: 'stubborn', rarity: 'epic', icon: '👴', kw: ['taunt'], tribe: 'family', bc: [{ e: 'armor', n: 5 }], quote: '«В моё время такого не было!»' }),
+  // 🥧 Доброта — лечение
+  M('n_sestra', 'Сестра милосердия', 2, 1, 4, { ...ART('n_sestra'), soul: 'kind', icon: '👩‍⚕️', female: true, tribe: 'family', end: [{ e: 'healAll', n: 2 }], quote: '«Сейчас будет совсем не больно.»' }),
+  Sp('n_pirog', 'Бабушкин пирог', 3, [{ e: 'healAll', n: 5 }, { e: 'buffAll', a: 0, h: 1 }], { ...ART('n_pirog'), soul: 'kind', rarity: 'rare', icon: '🥧', quote: '«С капустой, как ты любишь.»' }),
+  M('n_sosed', 'Добрый сосед', 4, 3, 5, { ...ART('n_sosed'), soul: 'kind', rarity: 'epic', icon: '🙋', bc: [{ e: 'healHero', n: 6 }, { e: 'draw', n: 1 }], quote: '«Соль нужна? Заходи!»' }),
+  // 🍺 Наглость — напор
+  M('n_zalyotny', 'Залётный', 2, 3, 1, { ...ART('n_zalyotny'), soul: 'brave', icon: '🏃', kw: ['charge'], tribe: 'booze', quote: '«Я тут проездом.»' }),
+  Sp('n_kurazh', 'Пьяный кураж', 1, [{ e: 'buffTribe', tribe: 'booze', a: 2, h: 1 }], { ...ART('n_kurazh'), soul: 'brave', rarity: 'rare', icon: '🥴', quote: '«Держи моё пиво.»' }),
+  M('n_barmen', 'Бармен', 4, 3, 4, { ...ART('n_barmen'), soul: 'brave', rarity: 'epic', icon: '🍸', tribe: 'booze', aura: { atk: 2, tribe: 'booze' }, quote: '«Тебе уже хватит. Но ладно.»' }),
+  // 🎣 Терпение — выгода со временем
+  M('n_rybak', 'Рыбак-философ', 3, 2, 4, { ...ART('n_rybak'), soul: 'patient', icon: '🎣', end: [{ e: 'buffRandomFriendly', a: 1, h: 1 }], quote: '«Клюёт тот, кто ждёт.»' }),
+  Sp('n_trud', 'Терпение и труд', 2, [{ e: 'draw', n: 2 }], { ...ART('n_trud'), soul: 'patient', rarity: 'rare', icon: '⏳', quote: '«Всё перетрут.»' }),
+  M('n_pen', 'Старый пень', 6, 4, 8, { ...ART('n_pen'), soul: 'patient', rarity: 'epic', icon: '🪵', kw: ['taunt'], end: [{ e: 'healHero', n: 2 }], quote: '«Я тут ещё до вас стоял.»' }),
+  // 💰 Жадность — золото
+  M('n_rostovshik', 'Ростовщик', 2, 2, 3, { ...ART('n_rostovshik'), soul: 'greedy', icon: '🧮', bc: [{ e: 'gold', n: 1 }], kill: [{ e: 'gold', n: 2 }], quote: '«Под небольшой процент.»' }),
+  Sp('n_vzyatka', 'Взятка', 3, [{ e: 'steal', t: 'enemyMinion', maxAtk: 3 }], { ...ART('n_vzyatka'), soul: 'greedy', rarity: 'rare', icon: '💵', quote: '«Это не взятка, это благодарность.»' }),
+  M('n_meshok', 'Мешок с баблом', 4, 3, 5, { ...ART('n_meshok'), soul: 'greedy', rarity: 'epic', icon: '💰', kw: ['taunt'], dr: [{ e: 'gold', n: 3 }], quote: '«Тяжёлый, зараза.»' }),
+];
+
+/* Карты на группы — доступны всем */
+const TRIBE_CARDS = [
+  M('t_glavar', 'Главарь района', 4, 3, 4, { ...ART('t_glavar'), rarity: 'epic', icon: '😎', tribe: 'gop', aura: { atk: 1, tribe: 'gop' }, quote: '«На районе всё ровно.»' }),
+  Sp('t_uzhin', 'Семейный ужин', 3, [{ e: 'buffTribe', tribe: 'family', a: 2, h: 2 }], { ...ART('t_uzhin'), rarity: 'rare', icon: '🍲', quote: '«Все за стол, остынет!»' }),
+  M('t_zoo', 'Зоозащитница', 3, 2, 4, { ...ART('t_zoo'), rarity: 'rare', icon: '🐾', female: true, bc: [{ e: 'buffTribe', tribe: 'beast', a: 1, h: 1 }], quote: '«Не трогай пёсика!»' }),
+  Sp('t_kompaniya', 'Бухая компания', 2, [{ e: 'summon', token: 'teen', n: 2 }, { e: 'buffTribe', tribe: 'booze', a: 1, h: 0 }], { ...ART('t_kompaniya'), rarity: 'rare', icon: '🍻', quote: '«Мы на минутку!»' }),
+  Sp('t_kollektiv', 'Женский коллектив', 2, [{ e: 'buffTribe', tribe: 'female', a: 1, h: 2 }], { ...ART('t_kollektiv'), rarity: 'rare', icon: '💅', quote: '«Девочки, у нас тут проблема.»' }),
+];
+
+/* =====================================================================
+   НАГРАДЫ КАМПАНИИ — открываются только победой над боссом
+   ===================================================================== */
+const REWARD_CARDS = [
+  M('r_dacha', 'Ключи от тёщиной дачи', 5, 4, 6, { ...ART('r_dacha'), rarity: 'legendary', reward: true, icon: '🏡', kw: ['taunt'], tribe: 'family',
+    bc: [{ e: 'summon', token: 'garage', n: 1 }], quote: '«Картошку сам выкопаешь.»' }),
+  Sp('r_spisanie', 'Списание долгов', 3, [{ e: 'purify' }, { e: 'draw', n: 2 }, { e: 'armor', n: 4 }], { ...ART('r_spisanie'), rarity: 'legendary', reward: true, icon: '🧾',
+    quote: '«Банк прощает. Один раз.»' }),
+  M('r_korona', 'Корона района', 6, 5, 5, { ...ART('r_korona'), rarity: 'legendary', reward: true, icon: '👑', tribe: 'gop', aura: { atk: 2, tribe: 'gop' },
+    bc: [{ e: 'summon', token: 'shpana', n: 2 }], quote: '«Теперь район — твой.»' }),
+  M('r_yaytso', 'Яйцо дракона', 3, 0, 4, { ...ART('r_yaytso'), rarity: 'legendary', reward: true, icon: '🥚', kw: ['taunt'], cantAttack: true, tribe: 'beast',
+    dr: [{ e: 'summonCard', id: 'dragon_ass' }], quote: '«Не разбей. Пожалуйста.»' }),
+  M('r_tron', 'Трон', 9, 0, 12, { ...ART('r_tron'), rarity: 'legendary', reward: true, icon: '🪑', kw: ['taunt'], cantAttack: true, resist: true,
+    end: [{ e: 'buffAll', a: 1, h: 1, others: true }], quote: '«Сидеть на нём может только один.»' }),
+];
+
 const COIN = Sp('coin', 'Медяк', 0, [{ e: 'mana', n: 1 }], { icon: '🪙', rarity: 'common', quote: '«На удачу.»' });
 
 /* ---------------- служебное ---------------- */
+const TRIBE_OF = {"gop": ["gop_kolyan", "gop_tolyan", "gop_vovan", "kachok", "semki", "kent", "sborshik", "bychok", "okhrannik"], "family": ["wife", "realtor", "cheetah", "granny", "tescha", "svekrov", "babki", "w_svidetel", "g_vnuk", "para", "c_aist"], "booze": ["baba_snaryad", "poilo", "garazh_muzhiki", "mantikora", "tamada", "garmonist", "vyshibala", "magaslav"], "beast": ["enot", "gus", "dragon_ass", "dvorovy_pes", "kot_vasya", "kreditor", "bugai"]};
+
 (function () {
-  SHARED_CARDS.push(...HEROINE_CARDS);
+  SHARED_CARDS.push(...HEROINE_CARDS, ...SOUL_CARDS, ...TRIBE_CARDS, ...REWARD_CARDS);
   SHARED_CARDS.forEach((c) => { c.cls = 'shared'; });
   EXTRA_CARDS.forEach((c) => { c.cls = 'extra'; });
+  const all = [...SHARED_CARDS, ...EXTRA_CARDS];
+  Object.keys(TRIBE_OF).forEach((t) => TRIBE_OF[t].forEach((id) => { const d = all.find((x) => x.id === id); if (d && !d.tribe) d.tribe = t; }));
   COIN.cls = 'shared';
 })();
 
@@ -453,6 +518,9 @@ function effText(f) {
     case 'charmRandom': return `Очаруйте ${f.n} случайных вражеских существ: они не могут атаковать, пока это существо на столе.`;
     case 'transform': return 'Превратите вражеское существо (не легенду) в более слабое существо из колоды противника.';
     case 'summonCopy': return 'Возвращается на стол с вдвое меньшими атакой и здоровьем (один раз).';
+    case 'buffTribe': return `Ваши ${TRIBES[f.tribe].name} ${TRIBES[f.tribe].icon} получают +${f.a}/+${f.h}.`;
+    case 'summonCard': return `Призовите «${(SHARED_CARDS.find((x) => x.id === f.id) || {}).name}».`;
+    case 'debuffRandomEnemy': return `Случайное вражеское существо получает −${f.a} атаки.`;
     case 'mark': return `Возьмите на прицел ${TGT_ACC[f.t]}: в начале каждого вашего хода он получает ${f.n} урона.`;
     case 'selfBuff': return `Получает +${f.a}/+${f.h}.`;
     case 'healSelf': return `Восстанавливает себе ${f.n} здоровья.`;
@@ -476,6 +544,9 @@ function cardTextParts(c) {
   (c.kw || []).forEach((k) => out.push({ name: `${KEYWORDS[k].icon} ${KEYWORDS[k].name}`, text: KEYWORDS[k].desc }));
   if (c.cantAttack) out.push({ name: '⛔ Орудие', text: 'Не может атаковать.' });
   if (c.noSteal) out.push({ name: '🔒 Неподкупный', text: 'Его нельзя переманить.' });
+  if (c.soul) out.push({ name: `${SOULS[c.soul].icon} Карта натуры`, text: `Попадает в колоду только при натуре «${SOULS[c.soul].name}».` });
+  if (c.reward) out.push({ name: '🏆 Награда кампании', text: 'Открывается победой над боссом.' });
+  if (c.tribe) out.push({ name: `${TRIBES[c.tribe].icon} ${TRIBES[c.tribe].name}`, text: 'Группа существ.' });
   if (c.female) out.push({ name: '♀ Женщина', text: 'Женское существо.' });
   if (c.resist) out.push({ name: '🚫 Барьер целомудрия', text: 'Иммунитет к манипуляциям: его нельзя переманить, оглушить, ослабить, лишить свойств, женить или сделать «беременным».' });
   if (c.bc) out.push({ name: '📣 Клич', text: c.bc.map(effText).join(' ') });
@@ -483,7 +554,7 @@ function cardTextParts(c) {
   if (c.dr) out.push({ name: '⚰️ Предсмертный хрип', text: c.dr.map(effText).join(' ') });
   if (c.kill) out.push({ name: '🗡️ Добивание', text: 'Когда это существо убивает врага в атаке: ' + c.kill.map(effText).join(' ').replace(/^./, (x) => x.toLowerCase()) });
   if (c.end) out.push({ name: '🌙 В конце вашего хода', text: c.end.map(effText).join(' ') });
-  if (c.aura) out.push({ name: '✴️ Аура', text: `Ваши другие существа имеют +${c.aura.atk} к атаке.` });
+  if (c.aura) out.push({ name: '✴️ Аура', text: c.aura.tribe ? `Ваши другие ${TRIBES[c.aura.tribe].name} имеют +${c.aura.atk} к атаке.` : `Ваши другие существа имеют +${c.aura.atk} к атаке.` });
   if (c.enrage) out.push({ name: '💢 Ярость', text: `Каждый раз, получив урон и выжив, получает +${c.enrage.atk} к атаке.` });
   if (c.spellDiscount) out.push({ name: '🏷️ Скидка', text: `Ваши заклинания стоят на ${c.spellDiscount} меньше.` });
   if (c.note) out.push({ name: '❗ Особо', text: c.note });
@@ -500,7 +571,7 @@ function cardShortText(c) {
   if (c.dr) parts.push('Хрип: ' + c.dr.map(effText).join(' '));
   if (c.kill) parts.push('Добивание: ' + c.kill.map(effText).join(' '));
   if (c.end) parts.push('Конец хода: ' + c.end.map(effText).join(' '));
-  if (c.aura) parts.push(`Другие ваши +${c.aura.atk} атаки.`);
+  if (c.aura) parts.push(c.aura.tribe ? `Ваши ${TRIBES[c.aura.tribe].name} +${c.aura.atk} атаки.` : `Другие ваши +${c.aura.atk} атаки.`);
   if (c.enrage) parts.push(`Ранен — +${c.enrage.atk} атаки.`);
   if (c.spellDiscount) parts.push('Заклинания дешевле на 1.');
   if (c.cantAttack) parts.push('Не атакует.');

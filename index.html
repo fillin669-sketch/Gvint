@@ -28,7 +28,8 @@
         <div id="artifact-list" class="pick-list"></div>
         <div id="art-desc" class="pick-desc"></div>
         <div class="opp-pick">
-          <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок в колоде</label>
+          <label class="gfx-pick">Колода: <select id="deck-select"></select></label>
+          <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок</label>
           <label class="gfx-pick">Противник:
             <select id="ai-select"><option value="easy">Лёгкий</option><option value="medium">Средний</option><option value="hard">Сложный</option></select></label>
           <label class="gfx-pick">Графика:
@@ -36,9 +37,11 @@
         </div>
         <div class="menu-buttons">
           <button class="btn btn-gold" id="btn-start">⚔ В бой</button>
-          <button class="btn" id="btn-tutorial">🎓 Обучение</button>
-          <button class="btn" id="btn-gallery">🃏 Коллекция</button>
-          <button class="btn" id="btn-rules">📜 Правила</button>
+          <button class="btn" id="btn-campaign">🏰 Кампания</button>
+          <button class="btn" id="btn-decks">🃏 Колоды</button>
+          <button class="btn" id="btn-gallery">📖 Коллекция</button>
+          <button class="btn" id="btn-tutorial" title="Обучение">🎓</button>
+          <button class="btn" id="btn-rules" title="Правила">📜</button>
           <button class="btn btn-sound" title="Звук">🔊</button>
           <button class="btn btn-settings" title="Настройки звука">⚙️</button>
         </div>
@@ -86,6 +89,31 @@
       <div id="fx-layer"></div>
     </section>
 
+    <!-- ================= КОЛОДЫ ================= -->
+    <section id="decks" class="screen hidden">
+      <div class="deck-head">
+        <button class="btn btn-small" id="btn-deck-back">← Готово</button>
+        <div id="deck-slots" class="deck-slots"></div>
+        <input id="deck-name" class="deck-name" maxlength="24">
+        <div id="deck-souls" class="deck-souls"></div>
+      </div>
+      <div id="deck-filters" class="deck-filters"></div>
+      <div id="deck-pool" class="deck-pool"></div>
+      <div class="deck-side">
+        <div id="deck-count" class="deck-count"></div>
+        <div id="deck-curve" class="deck-curve"></div>
+        <div id="deck-list" class="deck-list"></div>
+        <div class="deck-btns"><button class="btn btn-gold" id="btn-deck-auto">✨ Дополнить</button><button class="btn" id="btn-deck-clear">🗑 Очистить</button></div>
+      </div>
+      <div id="deck-toast" class="deck-toast"></div>
+    </section>
+
+    <!-- ================= КАМПАНИЯ ================= -->
+    <section id="campaign" class="screen hidden">
+      <div class="camp-head"><button class="btn btn-small" id="btn-camp-back">← Назад</button><h2>🏰 Кампания: путь к Трону</h2><div id="camp-progress"></div></div>
+      <div id="camp-list" class="camp-list"></div>
+    </section>
+
     <!-- ================= КОЛЛЕКЦИЯ ================= -->
     <section id="gallery" class="screen hidden">
       <div class="gal-head">
@@ -112,6 +140,8 @@
 <script src="js/audio.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/campaign.js"></script>
+<script src="js/decks.js"></script>
 <script src="js/ui.js"></script>
 </body>
 </html>

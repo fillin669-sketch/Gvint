@@ -64,7 +64,7 @@ window.addEventListener('resize', fit);
 window.addEventListener('orientationchange', () => setTimeout(fit, 200));
 
 function show(id) {
-  ['menu', 'game', 'gallery'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
+  ['menu', 'game', 'gallery', 'decks', 'campaign'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
 }
 
 /* ---------------------- HTML карт ---------------------- */
@@ -82,10 +82,11 @@ function hcardHTML(c, o) {
   o = o || {};
   const cost = o.cost != null ? o.cost : c.cost;
   const cls = ['hcard', 'r-' + (c.rarity || 'common'), c.type];
+  if (c.shiny) cls.push('shiny');
   if (o.cls) cls.push(o.cls);
   const data = c.uid ? `data-h="${c.uid}"` : `data-gid="${esc(c.id)}"`;
   const stats = c.type === 'minion' ? `<div class="hc-atk">${c.atk}</div><div class="hc-hp">${c.hp}</div>` : '';
-  const kws = (c.kw || []).map((k) => KEYWORDS[k].icon).join('');
+  const kws = (c.kw || []).map((k) => KEYWORDS[k].icon).join('') + (c.tribe ? TRIBES[c.tribe].icon : '') + (c.soul ? SOULS[c.soul].icon : '');
   const fit = App.fit && App.fit[c.id];
   return `<div class="${cls.join(' ')}" ${data} ${o.style ? `style="${o.style}"` : ''}>
     <div class="hc-art">${artHTML(c)}</div>${c.rarity && c.rarity !== 'common' ? `<div class="gem g-${c.rarity} hc-gem"></div>` : ''}
@@ -138,6 +139,7 @@ function effectChips(s, m) {
 
 function minionHTML(s, m, o) {
   const cls = ['minion'];
+  if (m.shiny) cls.push('shiny');
   if (m.rarity === 'legendary' || m.rarity === 'epic' || m.rarity === 'rare') cls.push(m.rarity);
   KW_VISUAL.forEach((k) => { if (hasKw(m, k)) cls.push(k === 'taunt' || k === 'shield' || k === 'stealth' ? k : 'kw-' + k); });
   if (m.frozen) cls.push('frozen');
@@ -151,6 +153,7 @@ function minionHTML(s, m, o) {
   if (m.enrage) icons.push('💢');
   if (m.spellDiscount) icons.push('🏷️');
   if (m.cantAttack) icons.push('⛔');
+  if (m.tribe) icons.push(TRIBES[m.tribe].icon);
   const chips = effectChips(s, m);
   const sleepy = m.owner === s.current && m.sleeping && !m.cantAttack && s.phase === 'play';
   const def = defOf(m.id);
@@ -173,13 +176,15 @@ const heroInfo = (i) => ({ isHero: true, idx: i });
 function heroHTML(s, i, extra) {
   const P = s.players[i];
   const so = SOULS[P.soul];
-  return `<div class="hero side${i} ${extra || ''}" data-t="h${i}" style="--soul:${so.color}">
-    <div class="h-art"><img src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${so.hue}deg)"></div>
+  const B = Campaign.bossOf(P);
+  const art = B ? Campaign.portraitHTML(B, 'boss-art') : `<img src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${so.hue}deg)">`;
+  return `<div class="hero side${i} ${B ? 'is-boss' : ''} ${extra || ''}" data-t="h${i}" style="--soul:${so.color}">
+    <div class="h-art">${art}</div>
     <div class="h-soul" title="${esc(so.name)}">${so.icon}</div>
     ${P.armor ? `<div class="h-armor">${P.armor}</div>` : ''}
     <div class="h-hp ${P.hp < P.maxHp ? 'hurt' : ''}">${P.hp}</div>
     ${P.mark ? `<div class="h-mark" title="На прицеле: ${P.mark.n} урона ещё ${P.mark.turns} хода">🎯${P.mark.turns}</div>` : ''}
-    <div class="h-name">${heroName(i)}</div></div>`;
+    <div class="h-name">${B ? esc(B.name) : heroName(i)}</div></div>`;
 }
 
 function powerHTML(s, i, extra) {
@@ -196,7 +201,12 @@ function powerHTML(s, i, extra) {
 function heroText(i) {
   const s = App.s;
   const P = s.players[i];
-  const so = SOULS[P.soul], pw = so.power, ar = ARTIFACTS[P.artifact];
+  const so = SOULS[P.soul], pw = powerOf(s, i), ar = ARTIFACTS[P.artifact];
+  const B = Campaign.bossOf(P);
+  if (B) {
+    return { name: `Босс: ${B.name}`, meta: `${P.hp}/${P.maxHp} здоровья${P.armor ? ' · ' + P.armor + ' брони' : ''}`,
+      parts: B.rules.map((r) => ['⚠️', r]).concat([[`${pw.icon} Сила «${pw.name}» (${pw.cost} маны)`, pw.desc]]) };
+  }
   return { name: i === 0 ? 'Вы — Претендент на Трон' : 'Противник — Претендент на Трон',
     meta: `Герой · ${P.hp}/${P.maxHp} здоровья${P.armor ? ' · ' + P.armor + ' брони' : ''} · 🪙 ${P.gold} золота`,
     parts: [
@@ -942,6 +952,7 @@ function modal(html, onClick, boxCls) {
     const close = (v) => { m.classList.add('hidden'); m.innerHTML = ''; m.onclick = null; res(v); };
     m.innerHTML = `<div class="mbox ${boxCls || ''}">${html}</div>`;
     m.classList.remove('hidden');
+    fitCardTexts(m);
     m.onclick = (e) => {
       const b = e.target.closest('[data-v]');
       if (b) { close(b.dataset.v); return; }
@@ -1009,12 +1020,20 @@ function resetView(s) {
   FX.clearAll();
 }
 
-async function startGame() {
+async function startGame(bossIdx) {
   Tut.stop();
-  const opp = pickRandom(Object.keys(FIELDS).filter((k) => k !== App.myField));
+  const boss = typeof bossIdx === 'number' ? bossIdx : null;
+  App.bossIdx = boss;
+  const oppField = pickRandom(Object.keys(FIELDS).filter((k) => k !== App.myField));
   const first = rnd(2);
-  const s = createGame({ field: App.myField, soul: App.mySoul, artifact: App.myArtifact },
-    { field: opp, soul: pickRandom(Object.keys(SOULS)), artifact: pickRandom(Object.keys(ARTIFACTS)) }, App.extra, first);
+  const deck = App.deckSlot != null ? Decks.get(App.deckSlot) : null;
+  const me = { field: App.myField, soul: App.mySoul, artifact: App.myArtifact, unlocked: Campaign.unlocked(),
+    deckIds: deck && deck.ids.length === DECK_SIZE ? deck.ids : null };
+  const opp = boss != null ? Campaign.opponent(boss)
+    : { field: oppField, soul: pickRandom(Object.keys(SOULS)), artifact: pickRandom(Object.keys(ARTIFACTS)) };
+  if (App.aiBefore) { AI.setLevel(App.aiBefore); App.aiBefore = null; }
+  if (boss != null) { App.aiBefore = AI.level; AI.setLevel(BOSSES[boss].level); }
+  const s = createGame(me, opp, App.extra, first);
   App.s = s;
   App.sel = null;
   App.busy = true;
@@ -1028,13 +1047,14 @@ async function startGame() {
   FX.clearAll();
   Sound.setLocation(App.myField);
   show('game');
-  addLog(`Битва за Трон. Поле: ${FIELDS[App.myField].name}`);
+  addLog(boss != null ? `Босс: ${BOSSES[boss].name}` : `Битва за Трон. Поле: ${FIELDS[App.myField].name}`);
   render();
   FX.setZones([$('#field-op'), $('#field-me')]);
   FX.setAmbient(true);
   watchFps();
   showPreview(null);
-  await banner('Битва за Трон', `Поле: ${FIELDS[App.myField].name}`, 1600);
+  if (boss != null) await banner(`Босс ${boss + 1}: ${BOSSES[boss].name}`, BOSSES[boss].intro, 2200);
+  else await banner('Битва за Трон', `Поле: ${FIELDS[App.myField].name}`, 1600);
   if (s !== App.s) return;
   await mulliganModal();
   if (s !== App.s) return;
@@ -1056,8 +1076,23 @@ function gameOver() {
   }
   Sound.play(s.winner === 0 ? 'win' : 'lose');
   const title = s.winner === 0 ? '🏆 Победа!' : s.winner === 1 ? 'Поражение' : 'Ничья';
+  const boss = App.bossIdx;
+  const reward = boss != null ? Campaign.finish(s.winner === 0) : null;
+  if (App.aiBefore) { AI.setLevel(App.aiBefore); App.aiBefore = null; }
   setTimeout(() => {
     if (s !== App.s) return;
+    if (boss != null) {
+      const B = BOSSES[boss], rw = reward ? defOf(reward) : null;
+      const next = s.winner === 0 && boss + 1 < BOSSES.length;
+      modal(`<h2>${s.winner === 0 ? `🏆 Победа над боссом: ${esc(B.name)}!` : `Босс «${esc(B.name)}» не сдаётся — попробуйте ещё`}</h2>
+        ${rw ? `<p>Награда — новая легендарная карта! Она уже в вашей коллекции и может попасть в колоду.</p><div class="mcards">${hcardHTML(rw)}</div>` : ''}
+        ${s.winner === 0 && boss + 1 >= BOSSES.length ? '<p>👑 Кампания пройдена — Трон ваш!</p>' : ''}
+        <div class="mbtns">${next ? '<button class="btn btn-gold" data-v="next">Следующий босс</button>' : ''}
+        <button class="btn ${next ? '' : 'btn-gold'}" data-v="again">${s.winner === 0 ? 'Сразиться ещё раз' : 'Реванш'}</button>
+        <button class="btn" data-v="camp">К кампании</button></div>`)
+        .then((v) => { if (v === 'next') startGame(boss + 1); else if (v === 'again') startGame(boss); else { goMenu(); Campaign.open(); } });
+      return;
+    }
     modal(`<h2>${title}</h2><img class="result-hero ${s.winner === 1 ? 'side1' : ''}" src="${esc(HERO_IMG)}" alt="">
       <p>${s.winner === 0 ? 'Трон ваш.' : s.winner === 1 ? 'Трон достаётся противнику.' : 'Оба претендента пали.'} Ходов сыграно: ${s.turn}.</p>
       <div class="mbtns"><button class="btn btn-gold" data-v="again">Ещё партию</button><button class="btn" data-v="menu">В меню</button></div>`)
@@ -1099,6 +1134,13 @@ function renderMenu() {
   $('#field-desc').textContent = FIELDS[App.myField].desc;
   $('#soul-desc').innerHTML = `${so.power.icon} <b>${esc(so.power.name)}</b> (${so.power.cost} маны): ${esc(so.power.desc)} · ${esc(so.passive)}`;
   $('#art-desc').textContent = ar.desc;
+  const ready = Decks.ready();
+  if (App.deckSlot != null && !ready.some((x) => x.i === App.deckSlot)) App.deckSlot = null;
+  $('#deck-select').innerHTML = '<option value="">Случайная колода</option>' + ready.map(({ i, d }) => `<option value="${i}" ${App.deckSlot === i ? 'selected' : ''}>${esc(d.name)} ${SOULS[d.soul].icon}</option>`).join('');
+  const deck = App.deckSlot != null ? Decks.get(App.deckSlot) : null;
+  if (deck && deck.soul !== App.mySoul) {
+    $('#soul-desc').innerHTML += ` <span class="warn">⚠ Колода собрана под «${esc(SOULS[deck.soul].name)}» — карты другой натуры будут заменены случайными.</span>`;
+  }
 }
 
 function showRules() {
@@ -1124,6 +1166,9 @@ function showRules() {
       <li><b>🤰 Беременность</b> — −2 атаки; через 2 хода «Ребёнок» 2/2 достаётся тому, кто это устроил.</li>
       <li><b>📜 Долг</b> — существо теряет атаку в начале каждого своего хода.</li>
       <li><b>🗡️ Добивание</b> — срабатывает, когда существо убивает врага в атаке.</li>
+      <li><b>Группы</b> — 🧢 Гопота, 👪 Семья, 🍺 Бухие, 🐾 Звери, ♀ Женщины. Некоторые карты усиливают всю свою группу.</li>
+      <li><b>Карты натур</b> (значок натуры на карте) попадают только в колоду своей натуры.</li>
+      <li><b>✨ Блестящие карты</b> — редкие красивые версии обычных карт, сила та же.</li>
     </ul>
     <h3>Управление</h3><p><b>🔍 Долгое нажатие на любую карту</b> (или правая кнопка мыши) открывает её крупно — с оригинальной картинкой и описанием. Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
     <h3>Авторы</h3><p>Музыка сочиняется игрой на ходу. Записи инструментов: FluidR3_GM SoundFont (Frank Wen),
@@ -1140,6 +1185,7 @@ function renderGallery() {
     $('#gal-grid').innerHTML = defs.slice().sort((a, b) => a.cost - b.cost).map((d) =>
       `<div class="gcard">${hcardHTML(d)}<div class="gid">${esc(d.id)}${d.count > 1 && d.rarity !== 'legendary' ? ' ×' + d.count : ''}</div></div>`).join('');
   }
+  fitCardTexts($('#gal-grid'));
   $('#gal-preview').innerHTML = '<div class="pv-empty">Нажмите на карту, чтобы рассмотреть её.<br><br>Под каждой картой — её id (имя файла картинки).</div>';
 }
 
@@ -1219,11 +1265,14 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '4.2';
+const GAME_VERSION = '4.3';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Ещё оптимизация: противник думает быстрее, при этом экран не замирает',
-  'Стол перерисовывается почти вдвое быстрее, чем в 3.9; самые тяжёлые кадры — в 2,3 раза короче',
+  '🃏 Сборка своей колоды: три слота, фильтры, кривая маны, кнопка «Дополнить»',
+  '🏰 Кампания: 5 боссов со своими правилами, за победу — легендарная карта, которой больше нигде нет',
+  '🐏🥧🍺🎣💰 По 3 карты для каждой натуры — попадают только в колоду своей натуры',
+  '🧢👪🍺🐾♀ Группы существ: Гопота, Семья, Бухие, Звери, Женщины — и карты, которые их усиливают',
+  '✨ Блестящие версии карт: изредка карта в колоде оказывается переливающейся',
 ];
 
 function showVersionBadge() {
@@ -1395,6 +1444,15 @@ function init() {
   });
 
   setupLongPress();
+  Decks.init();
+  Campaign.init();
+  $('#btn-decks').addEventListener('click', () => Decks.open());
+  $('#btn-campaign').addEventListener('click', () => Campaign.open());
+  $('#deck-select').addEventListener('change', (e) => {
+    App.deckSlot = e.target.value === '' ? null : +e.target.value;
+    if (App.deckSlot != null) App.mySoul = Decks.get(App.deckSlot).soul;
+    renderMenu();
+  });
 
   $('#gal-preview').addEventListener('click', () => { if (App.galPv) openZoom(App.galPv); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeZoom(); if (App.sel) clearSel(); } });

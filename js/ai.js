@@ -121,6 +121,7 @@ const AI = (() => {
      lethal  — всегда ли замечает добивание */
   const LEVELS = {
     easy:   { noise: 5,   blunder: 0.3,  lazy: 0.2,  look: false, lethal: 0.4 },
+    boss:   { noise: 3.2, blunder: 0.18, lazy: 0.1,  look: true,  lethal: 0.7 },   // для боссов кампании
     medium: { noise: 1.8, blunder: 0.1,  lazy: 0.06, look: true,  lethal: 0.85 },
     hard:   { noise: 0.3, blunder: 0,    lazy: 0,    look: true,  lethal: 1 },
   };

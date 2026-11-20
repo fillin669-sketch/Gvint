@@ -31,6 +31,7 @@ function defOf(id) {
   return DEFS[id];
 }
 
+const inTribe = (m, t) => !!m && (t === 'female' ? !!m.female : m.tribe === t);
 const hasKw = (m, k) => !!(m && m.kw && m.kw.indexOf(k) !== -1);
 /** Не поддаётся эффектам: Барьер целомудрия или «Нездешний» (пока не атаковал) */
 const immune = (m) => !!(m && (m.resist || hasKw(m, 'untouchable')));
@@ -55,16 +56,41 @@ function inst(def, owner) {
 function tokenDef(key) {
   const t = TOKENS[key];
   return M('tok_' + key, t.name, 0, t.atk, t.hp, Object.assign(
-    { kw: t.kw ? t.kw.slice() : [], icon: t.icon, cantAttack: !!t.cantAttack, token: true, cls: 'shared' },
+    { kw: t.kw ? t.kw.slice() : [], icon: t.icon, cantAttack: !!t.cantAttack, token: true, cls: 'shared', tribe: t.tribe },
     t.img ? IMG(t.img) : {}));
 }
 
 /* ---------------------- колода ---------------------- */
-function buildDeck(owner, extra) {
+const SHINY_CHANCE = 0.06;
+
+/** Можно ли положить карту в колоду: натура совпадает, награда открыта */
+function cardAllowed(d, soul, unlocked) {
+  if (d.soul && d.soul !== soul) return false;
+  if (d.reward && !(unlocked && unlocked.indexOf(d.id) >= 0)) return false;
+  return true;
+}
+
+/** Колода из списка id (своя колода игрока). Недопустимые карты заменяются, недостающие добираются случайно */
+function deckFromIds(ids, owner, opts) {
+  const defs = ids.map((id) => defOf(id)).filter((d) => d && cardAllowed(d, opts.soul, opts.unlocked)).slice(0, DECK_SIZE);
+  if (defs.length < DECK_SIZE) {
+    const filler = buildDeck(owner, opts.extra, opts.soul, opts.unlocked, true);
+    const cnt = (id) => defs.filter((d) => d.id === id).length;
+    for (const d of filler) {
+      if (defs.length >= DECK_SIZE) break;
+      if (cnt(d.id) < (d.rarity === 'legendary' ? 1 : 2)) defs.push(d);
+    }
+  }
+  return shuffle(defs.map((d) => inst(d, owner)));
+}
+
+function buildDeck(owner, extra, soul, unlocked, defsOnly) {
   const pool = [];
   [...SHARED_CARDS, ...(extra ? EXTRA_CARDS : [])].forEach((d) => {
+    if (!cardAllowed(d, soul, unlocked)) return;
     const n = d.rarity === 'legendary' ? 1 : (d.count || 1);
-    for (let i = 0; i < n; i++) pool.push({ d, k: Math.random() + (d.optionalArt ? 0 : 0.35) });
+    // карты своей натуры попадаются чаще
+    for (let i = 0; i < n; i++) pool.push({ d, k: Math.random() + (d.optionalArt ? 0 : 0.35) + (d.soul ? 0.5 : 0) });
   });
   pool.sort((a, b) => b.k - a.k);
   const bucket = (c) => Math.min(7, Math.max(1, c));
@@ -90,19 +116,26 @@ function buildDeck(owner, extra) {
     if (!swap) break;
     deck[swap.i] = add;
   }
+  if (defsOnly) return deck;
   return shuffle(deck.map((d) => inst(d, owner)));
 }
 
 /** o = {field, soul, artifact} */
 function newPlayer(idx, o, isAI, extra) {
-  const hp = o.soul === 'kind' ? 35 : HERO_HP;
+  const hp = o.hp || (o.soul === 'kind' ? 35 : HERO_HP);
+  const soul = o.soul || 'brave';
+  const deck = o.deckIds ? deckFromIds(o.deckIds, idx, { soul, unlocked: o.unlocked, extra })
+    : buildDeck(idx, extra, soul, o.unlocked);
+  // блестящие версии: та же карта, только красивее
+  deck.forEach((c) => { if (Math.random() < SHINY_CHANCE) c.shiny = true; });
   return {
+    boss: o.boss || null, onTurn: o.onTurn || null, powerOverride: o.power || null,
     idx, field: o.field, soul: o.soul || 'brave', artifact: o.artifact || null, isAI,
     name: isAI ? 'Противник' : 'Вы',
-    hp, maxHp: hp, armor: (o.artifact === 'mug' ? 5 : 0) + (o.soul === 'stubborn' ? 3 : 0),
+    hp, maxHp: hp, armor: (o.armor || 0) + (o.artifact === 'mug' ? 5 : 0) + (o.soul === 'stubborn' ? 3 : 0),
     mana: 0, maxMana: 0, powerUsed: false,
     gold: o.artifact === 'piggy' ? 3 : 0, shopUsed: false, keyUsed: false, savedOnce: false,
-    deck: buildDeck(idx, extra), hand: [], board: [], dead: [], fatigue: 0,
+    deck, hand: [], board: [], dead: [], fatigue: 0,
   };
 }
 
@@ -175,7 +208,7 @@ function soulBonus(s, m) {
 function auraOf(s, m) {
   const P = s.players[m.owner];
   if (!P || P.board.indexOf(m) < 0) return 0;
-  return P.board.reduce((a, o) => a + (o !== m && o.aura ? o.aura.atk : 0), 0);
+  return P.board.reduce((a, o) => a + (o !== m && o.aura && (!o.aura.tribe || inTribe(m, o.aura.tribe)) ? o.aura.atk : 0), 0);
 }
 
 function getAtk(s, m) {
@@ -243,7 +276,7 @@ function canPlay(s, pIdx, c) {
   return !t || t.length > 0;
 }
 
-function powerOf(s, pIdx) { return SOULS[s.players[pIdx].soul].power; }
+function powerOf(s, pIdx) { const P = s.players[pIdx]; return P.powerOverride || SOULS[P.soul].power; }
 
 function powerTargets(s, pIdx) {
   const f = powerOf(s, pIdx).fx.find((x) => x.t);
@@ -665,6 +698,15 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       if (m) ctx.log(`${q(m)} возвращается слабее: ${m.atk}/${m.hp}`);
       break;
     }
+    case 'buffTribe':
+      P.board.filter((m) => inTribe(m, f.tribe)).forEach((m) => { m.atk += f.a; m.hp += f.h; m.maxHp += f.h; fx(ctx, 'buff', { id: m.uid }); });
+      break;
+    case 'summonCard': { const d = defOf(f.id); if (d) summonDef(s, pIdx, d, ctx, pos); break; }
+    case 'debuffRandomEnemy': {
+      const pool = E.board.filter((m) => m.hp > 0 && !immune(m));
+      if (pool.length) { const m = pickRandom(pool); m.atk = Math.max(0, m.atk - f.a); fx(ctx, 'debuff', { id: m.uid }); }
+      break;
+    }
     case 'mark':
       if (!T) break;
       if (tm) tm.mark = { by: pIdx, n: f.n };
@@ -748,6 +790,12 @@ async function startTurn(s, ctx) {
   if (E.mark && E.mark.by === P.idx) {
     damage(s, heroId(E.idx), E.mark.n, ctx, null);
     if (--E.mark.turns <= 0) delete E.mark;
+  }
+  if (P.onTurn) {   // особое правило босса — в начале каждого его хода
+    fx(ctx, 'bossTurn', { pIdx: P.idx });
+    await runFx(s, P.idx, P.onTurn, null, ctx, null);
+    await resolveDeaths(s, ctx);
+    if (s.phase === 'over') return;
   }
   fx(ctx, 'turn', { pIdx: P.idx });
   if (s.turn > 1) draw(s, P.idx, 1, ctx);   // первый ход партии — без добора (сглаживает преимущество первого хода)

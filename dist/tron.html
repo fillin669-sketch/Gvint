@@ -757,6 +757,79 @@ a.btn { text-decoration: none; display: inline-block; }
 #light .l-flicker { mix-blend-mode: normal !important; background: radial-gradient(circle at 18% 47%, rgba(255,150,60,.08), transparent 16%), radial-gradient(circle at 82% 47%, rgba(255,150,60,.08), transparent 16%) !important; }
 .tex .field::after { mix-blend-mode: normal !important; opacity: .18 !important; }
 
+/* =====================================================================
+   КОЛОДЫ, КАМПАНИЯ, БЛЕСТЯЩИЕ КАРТЫ
+   ===================================================================== */
+.menu-buttons .btn { padding: 12px 18px !important; }
+.pick-desc .warn { color: #ffb36b; }
+/* --- сборка колоды --- */
+#decks { padding: 8px 10px; }
+.deck-head { display: flex; gap: 8px; align-items: center; height: 48px; }
+.deck-slots { display: flex; gap: 6px; }
+.deck-slots .btn, .deck-filters .btn { font-size: 16px; padding: 8px 10px; }
+.deck-slots .btn.sel, .deck-filters .btn.sel { border-color: var(--gold); background: linear-gradient(180deg, #6a4c1c, #3a2a10); }
+.deck-name { width: 190px; font: inherit; font-size: 18px; padding: 7px 10px; border-radius: 8px; background: #22180d; color: var(--ink); border: 1px solid var(--gold-soft); }
+.deck-souls { display: flex; gap: 4px; margin-left: auto; }
+.pick.sm { height: 42px; padding: 0 8px; font-size: 24px; }
+.deck-filters { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0; width: 900px; }
+.deck-filters .btn { padding: 6px 9px; font-size: 15px; }
+.deck-pool { position: absolute; left: 10px; top: 102px; width: 900px; height: 530px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+.dp { position: relative; zoom: .7; cursor: pointer; margin: 4px; }
+.dp.locked { filter: grayscale(.8) brightness(.55); }
+.dp.in .hcard { box-shadow: 0 0 0 4px var(--gold), 0 0 16px rgba(217,180,90,.7); }
+.dp-n { position: absolute; right: -6px; bottom: -6px; z-index: 5; background: var(--gold); color: #1a1205; font-weight: 700; font-size: 26px; border-radius: 16px; padding: 0 10px; }
+.dp-lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 60px; z-index: 5; }
+.deck-side { position: absolute; left: 920px; top: 54px; width: 350px; height: 580px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 8px; }
+.deck-count { font-size: 18px; text-align: center; }
+.deck-count b { font-size: 24px; color: #ffb36b; } .deck-count b.ok { color: #7dff8a; }
+.deck-curve { display: flex; gap: 4px; height: 70px; align-items: flex-end; }
+.cv { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; font-size: 13px; color: var(--ink-dim); }
+.cv i { display: block; width: 100%; background: linear-gradient(180deg, #6fb6ff, #2f7fe0); border-radius: 3px 3px 0 0; min-height: 2px; }
+.cv b { color: var(--ink); font-size: 12px; }
+.deck-list { flex: 1; overflow-y: auto; }
+.dl { display: flex; align-items: center; gap: 8px; padding: 5px 6px; margin: 2px 0; border-radius: 8px; cursor: pointer; background: rgba(0,0,0,.35); border-left: 4px solid #7d6440; font-size: 16px; }
+.dl.r-legendary { border-left-color: #f0c75a; } .dl.r-epic { border-left-color: #b16cff; } .dl.r-rare { border-left-color: #5aa0f0; }
+.dl.bad { background: rgba(140,22,16,.6); }
+.dl-cost { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: radial-gradient(circle at 35% 30%, #bfe3ff, #2f7fe0 60%, #174a99); flex: none; }
+.dl-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dl-n { color: var(--gold); font-weight: 700; }
+.deck-btns { display: flex; gap: 6px; }
+.deck-btns .btn { flex: 1; font-size: 17px; padding: 10px 6px; }
+.deck-toast { position: absolute; left: 50%; top: 300px; transform: translateX(-50%); padding: 12px 22px; border-radius: 14px; background: rgba(20,13,7,.96); border: 2px solid var(--gold); font-size: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 60; }
+.deck-toast.show { opacity: 1; }
+/* --- кампания --- */
+#campaign { padding: 10px 14px; }
+.camp-head { display: flex; align-items: center; gap: 16px; height: 50px; }
+.camp-head h2 { margin: 0; color: var(--gold); font-size: 28px; }
+#camp-progress { margin-left: auto; font-size: 18px; color: var(--ink-dim); }
+.camp-list { display: flex; gap: 10px; margin-top: 10px; }
+.camp-list .boss { position: relative; flex: 1; height: 556px; border-radius: 14px; padding: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+  background: linear-gradient(180deg, rgba(60,30,14,.95), rgba(20,12,6,.95)); border: 2px solid #8a6d3b; }
+.camp-list .boss.open { border-color: var(--gold); box-shadow: 0 0 24px rgba(217,180,90,.55); }
+.camp-list .boss.locked { filter: grayscale(.85) brightness(.55); cursor: default; }
+.camp-list .boss.done { border-color: #7dff8a; }
+.b-num { position: absolute; left: 8px; top: 6px; font-size: 22px; font-weight: 700; color: var(--gold); z-index: 2; }
+.b-portrait { width: 100%; height: 190px; object-fit: cover; object-position: 50% 20%; border-radius: 10px; }
+.glyph-portrait { display: flex; align-items: center; justify-content: center; font-size: 110px; background: radial-gradient(circle, #5a3a1c, #1d130a); }
+.b-name { font-size: 22px; font-weight: 700; color: var(--gold); text-align: center; }
+.b-rules { font-size: 14.5px; line-height: 1.3; color: var(--ink); flex: 1; }
+.b-reward { font-size: 15px; color: #ffe39a; text-align: center; }
+.b-state { text-align: center; font-size: 18px; font-weight: 700; padding: 6px; border-radius: 10px; background: rgba(0,0,0,.4); }
+.camp-list .boss.open .b-state { background: linear-gradient(180deg, #8a6420, #4d3510); }
+.hero.is-boss .h-art { border-color: #ff4b3a !important; box-shadow: 0 0 0 3px #4a0a06, 0 0 22px rgba(255,75,58,.7) !important; }
+.hero .boss-art { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.hero .boss-art.glyph-portrait { font-size: 70px; }
+/* --- блестящие карты --- */
+.hcard.shiny::after, .minion.shiny .m-frame::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3; mix-blend-mode: overlay;
+  background: linear-gradient(115deg, rgba(255,0,128,.35), rgba(255,200,0,.35), rgba(0,255,170,.35), rgba(0,140,255,.35), rgba(200,0,255,.35)) 0 0 / 300% 300%;
+  animation: holo 4s linear infinite; }
+@keyframes holo { to { background-position: 300% 300%; } }
+.hcard.shiny { border-color: #fff3c4 !important; }
+.hcard.shiny .hc-name::before { content: '✨ '; }
+.minion.shiny .m-frame { border-color: #fff3c4 !important; }
+.lowfx .hcard.shiny::after, .lowfx .minion.shiny .m-frame::after { animation: none; mix-blend-mode: normal; opacity: .5; }
+
 </style>
 </head>
 <body>
@@ -779,7 +852,8 @@ a.btn { text-decoration: none; display: inline-block; }
         <div id="artifact-list" class="pick-list"></div>
         <div id="art-desc" class="pick-desc"></div>
         <div class="opp-pick">
-          <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок в колоде</label>
+          <label class="gfx-pick">Колода: <select id="deck-select"></select></label>
+          <label class="extra-pick"><input type="checkbox" id="extra-toggle" checked> Карты без картинок</label>
           <label class="gfx-pick">Противник:
             <select id="ai-select"><option value="easy">Лёгкий</option><option value="medium">Средний</option><option value="hard">Сложный</option></select></label>
           <label class="gfx-pick">Графика:
@@ -787,9 +861,11 @@ a.btn { text-decoration: none; display: inline-block; }
         </div>
         <div class="menu-buttons">
           <button class="btn btn-gold" id="btn-start">⚔ В бой</button>
-          <button class="btn" id="btn-tutorial">🎓 Обучение</button>
-          <button class="btn" id="btn-gallery">🃏 Коллекция</button>
-          <button class="btn" id="btn-rules">📜 Правила</button>
+          <button class="btn" id="btn-campaign">🏰 Кампания</button>
+          <button class="btn" id="btn-decks">🃏 Колоды</button>
+          <button class="btn" id="btn-gallery">📖 Коллекция</button>
+          <button class="btn" id="btn-tutorial" title="Обучение">🎓</button>
+          <button class="btn" id="btn-rules" title="Правила">📜</button>
           <button class="btn btn-sound" title="Звук">🔊</button>
           <button class="btn btn-settings" title="Настройки звука">⚙️</button>
         </div>
@@ -835,6 +911,31 @@ a.btn { text-decoration: none; display: inline-block; }
       <div id="light"><div class="l-me"></div><div class="l-op"></div><div class="l-flicker"></div></div>
       <canvas id="fx-canvas" width="1280" height="640"></canvas>
       <div id="fx-layer"></div>
+    </section>
+
+    <!-- ================= КОЛОДЫ ================= -->
+    <section id="decks" class="screen hidden">
+      <div class="deck-head">
+        <button class="btn btn-small" id="btn-deck-back">← Готово</button>
+        <div id="deck-slots" class="deck-slots"></div>
+        <input id="deck-name" class="deck-name" maxlength="24">
+        <div id="deck-souls" class="deck-souls"></div>
+      </div>
+      <div id="deck-filters" class="deck-filters"></div>
+      <div id="deck-pool" class="deck-pool"></div>
+      <div class="deck-side">
+        <div id="deck-count" class="deck-count"></div>
+        <div id="deck-curve" class="deck-curve"></div>
+        <div id="deck-list" class="deck-list"></div>
+        <div class="deck-btns"><button class="btn btn-gold" id="btn-deck-auto">✨ Дополнить</button><button class="btn" id="btn-deck-clear">🗑 Очистить</button></div>
+      </div>
+      <div id="deck-toast" class="deck-toast"></div>
+    </section>
+
+    <!-- ================= КАМПАНИЯ ================= -->
+    <section id="campaign" class="screen hidden">
+      <div class="camp-head"><button class="btn btn-small" id="btn-camp-back">← Назад</button><h2>🏰 Кампания: путь к Трону</h2><div id="camp-progress"></div></div>
+      <div id="camp-list" class="camp-list"></div>
     </section>
 
     <!-- ================= КОЛЛЕКЦИЯ ================= -->
@@ -912,15 +1013,25 @@ function Sp(id, name, cost, fx, o) {
 /* ---------------- жетоны (призываемые существа) ---------------- */
 const TOKENS = {
   recruit: { name: 'Новобранец', atk: 1, hp: 1, icon: '🪖' },
-  kitten:  { name: 'Котёнок-рыцарь', atk: 1, hp: 1, icon: '🐱', img: 'umilenie' },
+  kitten:  { name: 'Котёнок-рыцарь', atk: 1, hp: 1, icon: '🐱', img: 'umilenie' , tribe: 'beast' },
   boba:    { name: 'Боба', atk: 2, hp: 2, icon: '💪', img: 'biba_boba', kw: ['taunt'] },
-  teen:    { name: 'Малолетка', atk: 1, hp: 1, icon: '🍺', img: 'maloletki' },
-  muzhik:  { name: 'Мужик из гаража', atk: 2, hp: 2, icon: '🔧' },
+  teen:    { name: 'Малолетка', atk: 1, hp: 1, icon: '🍺', img: 'maloletki' , tribe: 'booze' },
+  muzhik:  { name: 'Мужик из гаража', atk: 2, hp: 2, icon: '🔧' , tribe: 'booze' },
   garage:  { name: 'Гараж', atk: 0, hp: 5, icon: '🏚️', kw: ['taunt'], cantAttack: true },
   bone:    { name: 'Костяк', atk: 1, hp: 1, icon: '💀' },
-  baby:    { name: 'Ребёнок', atk: 2, hp: 2, icon: '👶' },
-  dog:     { name: 'Пёс', atk: 1, hp: 1, icon: '🐕', img: 'vot_chto' },
+  baby:    { name: 'Ребёнок', atk: 2, hp: 2, icon: '👶' , tribe: 'family' },
+  dog:     { name: 'Пёс', atk: 1, hp: 1, icon: '🐕', img: 'vot_chto' , tribe: 'beast' },
   bugaichik: { name: 'Бугайчик', atk: 2, hp: 2, icon: '👹', img: 'bugai' },
+  shpana:  { name: 'Шпана', atk: 1, hp: 1, icon: '🧢', kw: ['rush'], tribe: 'gop' },
+};
+
+/* Группы существ: карты могут усиливать «своих» */
+const TRIBES = {
+  gop:    { name: 'Гопота', icon: '🧢' },
+  family: { name: 'Семья', icon: '👪' },
+  booze:  { name: 'Бухие', icon: '🍺' },
+  beast:  { name: 'Звери', icon: '🐾' },
+  female: { name: 'Женщины', icon: '♀' },
 };
 
 /* =====================================================================
@@ -1242,13 +1353,68 @@ const FIELDS = {
 };
 
 // «Медяк» — бонус второму игроку
+/* =====================================================================
+   КАРТЫ НАТУР — попадают в колоду только при своей натуре героя
+   ===================================================================== */
+const SOUL_CARDS = [
+  // 🐏 Упрямство — стойкость
+  M('n_baran', 'Баран-таран', 3, 2, 5, { ...ART('n_baran'), soul: 'stubborn', icon: '🐏', kw: ['taunt', 'tough'], tribe: 'beast', quote: '«Упёрся — и ни шагу назад.»' }),
+  Sp('n_stoyat', 'Стоять насмерть', 2, [{ e: 'buff', a: 0, h: 4, t: 'friendlyMinion', kw: 'taunt' }], { ...ART('n_stoyat'), soul: 'stubborn', rarity: 'rare', icon: '🧱', quote: '«Отступать некуда — позади гараж.»' }),
+  M('n_ded', 'Упёртый дед', 5, 3, 7, { ...ART('n_ded'), soul: 'stubborn', rarity: 'epic', icon: '👴', kw: ['taunt'], tribe: 'family', bc: [{ e: 'armor', n: 5 }], quote: '«В моё время такого не было!»' }),
+  // 🥧 Доброта — лечение
+  M('n_sestra', 'Сестра милосердия', 2, 1, 4, { ...ART('n_sestra'), soul: 'kind', icon: '👩‍⚕️', female: true, tribe: 'family', end: [{ e: 'healAll', n: 2 }], quote: '«Сейчас будет совсем не больно.»' }),
+  Sp('n_pirog', 'Бабушкин пирог', 3, [{ e: 'healAll', n: 5 }, { e: 'buffAll', a: 0, h: 1 }], { ...ART('n_pirog'), soul: 'kind', rarity: 'rare', icon: '🥧', quote: '«С капустой, как ты любишь.»' }),
+  M('n_sosed', 'Добрый сосед', 4, 3, 5, { ...ART('n_sosed'), soul: 'kind', rarity: 'epic', icon: '🙋', bc: [{ e: 'healHero', n: 6 }, { e: 'draw', n: 1 }], quote: '«Соль нужна? Заходи!»' }),
+  // 🍺 Наглость — напор
+  M('n_zalyotny', 'Залётный', 2, 3, 1, { ...ART('n_zalyotny'), soul: 'brave', icon: '🏃', kw: ['charge'], tribe: 'booze', quote: '«Я тут проездом.»' }),
+  Sp('n_kurazh', 'Пьяный кураж', 1, [{ e: 'buffTribe', tribe: 'booze', a: 2, h: 1 }], { ...ART('n_kurazh'), soul: 'brave', rarity: 'rare', icon: '🥴', quote: '«Держи моё пиво.»' }),
+  M('n_barmen', 'Бармен', 4, 3, 4, { ...ART('n_barmen'), soul: 'brave', rarity: 'epic', icon: '🍸', tribe: 'booze', aura: { atk: 2, tribe: 'booze' }, quote: '«Тебе уже хватит. Но ладно.»' }),
+  // 🎣 Терпение — выгода со временем
+  M('n_rybak', 'Рыбак-философ', 3, 2, 4, { ...ART('n_rybak'), soul: 'patient', icon: '🎣', end: [{ e: 'buffRandomFriendly', a: 1, h: 1 }], quote: '«Клюёт тот, кто ждёт.»' }),
+  Sp('n_trud', 'Терпение и труд', 2, [{ e: 'draw', n: 2 }], { ...ART('n_trud'), soul: 'patient', rarity: 'rare', icon: '⏳', quote: '«Всё перетрут.»' }),
+  M('n_pen', 'Старый пень', 6, 4, 8, { ...ART('n_pen'), soul: 'patient', rarity: 'epic', icon: '🪵', kw: ['taunt'], end: [{ e: 'healHero', n: 2 }], quote: '«Я тут ещё до вас стоял.»' }),
+  // 💰 Жадность — золото
+  M('n_rostovshik', 'Ростовщик', 2, 2, 3, { ...ART('n_rostovshik'), soul: 'greedy', icon: '🧮', bc: [{ e: 'gold', n: 1 }], kill: [{ e: 'gold', n: 2 }], quote: '«Под небольшой процент.»' }),
+  Sp('n_vzyatka', 'Взятка', 3, [{ e: 'steal', t: 'enemyMinion', maxAtk: 3 }], { ...ART('n_vzyatka'), soul: 'greedy', rarity: 'rare', icon: '💵', quote: '«Это не взятка, это благодарность.»' }),
+  M('n_meshok', 'Мешок с баблом', 4, 3, 5, { ...ART('n_meshok'), soul: 'greedy', rarity: 'epic', icon: '💰', kw: ['taunt'], dr: [{ e: 'gold', n: 3 }], quote: '«Тяжёлый, зараза.»' }),
+];
+
+/* Карты на группы — доступны всем */
+const TRIBE_CARDS = [
+  M('t_glavar', 'Главарь района', 4, 3, 4, { ...ART('t_glavar'), rarity: 'epic', icon: '😎', tribe: 'gop', aura: { atk: 1, tribe: 'gop' }, quote: '«На районе всё ровно.»' }),
+  Sp('t_uzhin', 'Семейный ужин', 3, [{ e: 'buffTribe', tribe: 'family', a: 2, h: 2 }], { ...ART('t_uzhin'), rarity: 'rare', icon: '🍲', quote: '«Все за стол, остынет!»' }),
+  M('t_zoo', 'Зоозащитница', 3, 2, 4, { ...ART('t_zoo'), rarity: 'rare', icon: '🐾', female: true, bc: [{ e: 'buffTribe', tribe: 'beast', a: 1, h: 1 }], quote: '«Не трогай пёсика!»' }),
+  Sp('t_kompaniya', 'Бухая компания', 2, [{ e: 'summon', token: 'teen', n: 2 }, { e: 'buffTribe', tribe: 'booze', a: 1, h: 0 }], { ...ART('t_kompaniya'), rarity: 'rare', icon: '🍻', quote: '«Мы на минутку!»' }),
+  Sp('t_kollektiv', 'Женский коллектив', 2, [{ e: 'buffTribe', tribe: 'female', a: 1, h: 2 }], { ...ART('t_kollektiv'), rarity: 'rare', icon: '💅', quote: '«Девочки, у нас тут проблема.»' }),
+];
+
+/* =====================================================================
+   НАГРАДЫ КАМПАНИИ — открываются только победой над боссом
+   ===================================================================== */
+const REWARD_CARDS = [
+  M('r_dacha', 'Ключи от тёщиной дачи', 5, 4, 6, { ...ART('r_dacha'), rarity: 'legendary', reward: true, icon: '🏡', kw: ['taunt'], tribe: 'family',
+    bc: [{ e: 'summon', token: 'garage', n: 1 }], quote: '«Картошку сам выкопаешь.»' }),
+  Sp('r_spisanie', 'Списание долгов', 3, [{ e: 'purify' }, { e: 'draw', n: 2 }, { e: 'armor', n: 4 }], { ...ART('r_spisanie'), rarity: 'legendary', reward: true, icon: '🧾',
+    quote: '«Банк прощает. Один раз.»' }),
+  M('r_korona', 'Корона района', 6, 5, 5, { ...ART('r_korona'), rarity: 'legendary', reward: true, icon: '👑', tribe: 'gop', aura: { atk: 2, tribe: 'gop' },
+    bc: [{ e: 'summon', token: 'shpana', n: 2 }], quote: '«Теперь район — твой.»' }),
+  M('r_yaytso', 'Яйцо дракона', 3, 0, 4, { ...ART('r_yaytso'), rarity: 'legendary', reward: true, icon: '🥚', kw: ['taunt'], cantAttack: true, tribe: 'beast',
+    dr: [{ e: 'summonCard', id: 'dragon_ass' }], quote: '«Не разбей. Пожалуйста.»' }),
+  M('r_tron', 'Трон', 9, 0, 12, { ...ART('r_tron'), rarity: 'legendary', reward: true, icon: '🪑', kw: ['taunt'], cantAttack: true, resist: true,
+    end: [{ e: 'buffAll', a: 1, h: 1, others: true }], quote: '«Сидеть на нём может только один.»' }),
+];
+
 const COIN = Sp('coin', 'Медяк', 0, [{ e: 'mana', n: 1 }], { icon: '🪙', rarity: 'common', quote: '«На удачу.»' });
 
 /* ---------------- служебное ---------------- */
+const TRIBE_OF = {"gop": ["gop_kolyan", "gop_tolyan", "gop_vovan", "kachok", "semki", "kent", "sborshik", "bychok", "okhrannik"], "family": ["wife", "realtor", "cheetah", "granny", "tescha", "svekrov", "babki", "w_svidetel", "g_vnuk", "para", "c_aist"], "booze": ["baba_snaryad", "poilo", "garazh_muzhiki", "mantikora", "tamada", "garmonist", "vyshibala", "magaslav"], "beast": ["enot", "gus", "dragon_ass", "dvorovy_pes", "kot_vasya", "kreditor", "bugai"]};
+
 (function () {
-  SHARED_CARDS.push(...HEROINE_CARDS);
+  SHARED_CARDS.push(...HEROINE_CARDS, ...SOUL_CARDS, ...TRIBE_CARDS, ...REWARD_CARDS);
   SHARED_CARDS.forEach((c) => { c.cls = 'shared'; });
   EXTRA_CARDS.forEach((c) => { c.cls = 'extra'; });
+  const all = [...SHARED_CARDS, ...EXTRA_CARDS];
+  Object.keys(TRIBE_OF).forEach((t) => TRIBE_OF[t].forEach((id) => { const d = all.find((x) => x.id === id); if (d && !d.tribe) d.tribe = t; }));
   COIN.cls = 'shared';
 })();
 
@@ -1320,6 +1486,9 @@ function effText(f) {
     case 'charmRandom': return `Очаруйте ${f.n} случайных вражеских существ: они не могут атаковать, пока это существо на столе.`;
     case 'transform': return 'Превратите вражеское существо (не легенду) в более слабое существо из колоды противника.';
     case 'summonCopy': return 'Возвращается на стол с вдвое меньшими атакой и здоровьем (один раз).';
+    case 'buffTribe': return `Ваши ${TRIBES[f.tribe].name} ${TRIBES[f.tribe].icon} получают +${f.a}/+${f.h}.`;
+    case 'summonCard': return `Призовите «${(SHARED_CARDS.find((x) => x.id === f.id) || {}).name}».`;
+    case 'debuffRandomEnemy': return `Случайное вражеское существо получает −${f.a} атаки.`;
     case 'mark': return `Возьмите на прицел ${TGT_ACC[f.t]}: в начале каждого вашего хода он получает ${f.n} урона.`;
     case 'selfBuff': return `Получает +${f.a}/+${f.h}.`;
     case 'healSelf': return `Восстанавливает себе ${f.n} здоровья.`;
@@ -1343,6 +1512,9 @@ function cardTextParts(c) {
   (c.kw || []).forEach((k) => out.push({ name: `${KEYWORDS[k].icon} ${KEYWORDS[k].name}`, text: KEYWORDS[k].desc }));
   if (c.cantAttack) out.push({ name: '⛔ Орудие', text: 'Не может атаковать.' });
   if (c.noSteal) out.push({ name: '🔒 Неподкупный', text: 'Его нельзя переманить.' });
+  if (c.soul) out.push({ name: `${SOULS[c.soul].icon} Карта натуры`, text: `Попадает в колоду только при натуре «${SOULS[c.soul].name}».` });
+  if (c.reward) out.push({ name: '🏆 Награда кампании', text: 'Открывается победой над боссом.' });
+  if (c.tribe) out.push({ name: `${TRIBES[c.tribe].icon} ${TRIBES[c.tribe].name}`, text: 'Группа существ.' });
   if (c.female) out.push({ name: '♀ Женщина', text: 'Женское существо.' });
   if (c.resist) out.push({ name: '🚫 Барьер целомудрия', text: 'Иммунитет к манипуляциям: его нельзя переманить, оглушить, ослабить, лишить свойств, женить или сделать «беременным».' });
   if (c.bc) out.push({ name: '📣 Клич', text: c.bc.map(effText).join(' ') });
@@ -1350,7 +1522,7 @@ function cardTextParts(c) {
   if (c.dr) out.push({ name: '⚰️ Предсмертный хрип', text: c.dr.map(effText).join(' ') });
   if (c.kill) out.push({ name: '🗡️ Добивание', text: 'Когда это существо убивает врага в атаке: ' + c.kill.map(effText).join(' ').replace(/^./, (x) => x.toLowerCase()) });
   if (c.end) out.push({ name: '🌙 В конце вашего хода', text: c.end.map(effText).join(' ') });
-  if (c.aura) out.push({ name: '✴️ Аура', text: `Ваши другие существа имеют +${c.aura.atk} к атаке.` });
+  if (c.aura) out.push({ name: '✴️ Аура', text: c.aura.tribe ? `Ваши другие ${TRIBES[c.aura.tribe].name} имеют +${c.aura.atk} к атаке.` : `Ваши другие существа имеют +${c.aura.atk} к атаке.` });
   if (c.enrage) out.push({ name: '💢 Ярость', text: `Каждый раз, получив урон и выжив, получает +${c.enrage.atk} к атаке.` });
   if (c.spellDiscount) out.push({ name: '🏷️ Скидка', text: `Ваши заклинания стоят на ${c.spellDiscount} меньше.` });
   if (c.note) out.push({ name: '❗ Особо', text: c.note });
@@ -1367,7 +1539,7 @@ function cardShortText(c) {
   if (c.dr) parts.push('Хрип: ' + c.dr.map(effText).join(' '));
   if (c.kill) parts.push('Добивание: ' + c.kill.map(effText).join(' '));
   if (c.end) parts.push('Конец хода: ' + c.end.map(effText).join(' '));
-  if (c.aura) parts.push(`Другие ваши +${c.aura.atk} атаки.`);
+  if (c.aura) parts.push(c.aura.tribe ? `Ваши ${TRIBES[c.aura.tribe].name} +${c.aura.atk} атаки.` : `Другие ваши +${c.aura.atk} атаки.`);
   if (c.enrage) parts.push(`Ранен — +${c.enrage.atk} атаки.`);
   if (c.spellDiscount) parts.push('Заклинания дешевле на 1.');
   if (c.cantAttack) parts.push('Не атакует.');
@@ -1410,6 +1582,7 @@ function defOf(id) {
   return DEFS[id];
 }
 
+const inTribe = (m, t) => !!m && (t === 'female' ? !!m.female : m.tribe === t);
 const hasKw = (m, k) => !!(m && m.kw && m.kw.indexOf(k) !== -1);
 /** Не поддаётся эффектам: Барьер целомудрия или «Нездешний» (пока не атаковал) */
 const immune = (m) => !!(m && (m.resist || hasKw(m, 'untouchable')));
@@ -1434,16 +1607,41 @@ function inst(def, owner) {
 function tokenDef(key) {
   const t = TOKENS[key];
   return M('tok_' + key, t.name, 0, t.atk, t.hp, Object.assign(
-    { kw: t.kw ? t.kw.slice() : [], icon: t.icon, cantAttack: !!t.cantAttack, token: true, cls: 'shared' },
+    { kw: t.kw ? t.kw.slice() : [], icon: t.icon, cantAttack: !!t.cantAttack, token: true, cls: 'shared', tribe: t.tribe },
     t.img ? IMG(t.img) : {}));
 }
 
 /* ---------------------- колода ---------------------- */
-function buildDeck(owner, extra) {
+const SHINY_CHANCE = 0.06;
+
+/** Можно ли положить карту в колоду: натура совпадает, награда открыта */
+function cardAllowed(d, soul, unlocked) {
+  if (d.soul && d.soul !== soul) return false;
+  if (d.reward && !(unlocked && unlocked.indexOf(d.id) >= 0)) return false;
+  return true;
+}
+
+/** Колода из списка id (своя колода игрока). Недопустимые карты заменяются, недостающие добираются случайно */
+function deckFromIds(ids, owner, opts) {
+  const defs = ids.map((id) => defOf(id)).filter((d) => d && cardAllowed(d, opts.soul, opts.unlocked)).slice(0, DECK_SIZE);
+  if (defs.length < DECK_SIZE) {
+    const filler = buildDeck(owner, opts.extra, opts.soul, opts.unlocked, true);
+    const cnt = (id) => defs.filter((d) => d.id === id).length;
+    for (const d of filler) {
+      if (defs.length >= DECK_SIZE) break;
+      if (cnt(d.id) < (d.rarity === 'legendary' ? 1 : 2)) defs.push(d);
+    }
+  }
+  return shuffle(defs.map((d) => inst(d, owner)));
+}
+
+function buildDeck(owner, extra, soul, unlocked, defsOnly) {
   const pool = [];
   [...SHARED_CARDS, ...(extra ? EXTRA_CARDS : [])].forEach((d) => {
+    if (!cardAllowed(d, soul, unlocked)) return;
     const n = d.rarity === 'legendary' ? 1 : (d.count || 1);
-    for (let i = 0; i < n; i++) pool.push({ d, k: Math.random() + (d.optionalArt ? 0 : 0.35) });
+    // карты своей натуры попадаются чаще
+    for (let i = 0; i < n; i++) pool.push({ d, k: Math.random() + (d.optionalArt ? 0 : 0.35) + (d.soul ? 0.5 : 0) });
   });
   pool.sort((a, b) => b.k - a.k);
   const bucket = (c) => Math.min(7, Math.max(1, c));
@@ -1469,19 +1667,26 @@ function buildDeck(owner, extra) {
     if (!swap) break;
     deck[swap.i] = add;
   }
+  if (defsOnly) return deck;
   return shuffle(deck.map((d) => inst(d, owner)));
 }
 
 /** o = {field, soul, artifact} */
 function newPlayer(idx, o, isAI, extra) {
-  const hp = o.soul === 'kind' ? 35 : HERO_HP;
+  const hp = o.hp || (o.soul === 'kind' ? 35 : HERO_HP);
+  const soul = o.soul || 'brave';
+  const deck = o.deckIds ? deckFromIds(o.deckIds, idx, { soul, unlocked: o.unlocked, extra })
+    : buildDeck(idx, extra, soul, o.unlocked);
+  // блестящие версии: та же карта, только красивее
+  deck.forEach((c) => { if (Math.random() < SHINY_CHANCE) c.shiny = true; });
   return {
+    boss: o.boss || null, onTurn: o.onTurn || null, powerOverride: o.power || null,
     idx, field: o.field, soul: o.soul || 'brave', artifact: o.artifact || null, isAI,
     name: isAI ? 'Противник' : 'Вы',
-    hp, maxHp: hp, armor: (o.artifact === 'mug' ? 5 : 0) + (o.soul === 'stubborn' ? 3 : 0),
+    hp, maxHp: hp, armor: (o.armor || 0) + (o.artifact === 'mug' ? 5 : 0) + (o.soul === 'stubborn' ? 3 : 0),
     mana: 0, maxMana: 0, powerUsed: false,
     gold: o.artifact === 'piggy' ? 3 : 0, shopUsed: false, keyUsed: false, savedOnce: false,
-    deck: buildDeck(idx, extra), hand: [], board: [], dead: [], fatigue: 0,
+    deck, hand: [], board: [], dead: [], fatigue: 0,
   };
 }
 
@@ -1554,7 +1759,7 @@ function soulBonus(s, m) {
 function auraOf(s, m) {
   const P = s.players[m.owner];
   if (!P || P.board.indexOf(m) < 0) return 0;
-  return P.board.reduce((a, o) => a + (o !== m && o.aura ? o.aura.atk : 0), 0);
+  return P.board.reduce((a, o) => a + (o !== m && o.aura && (!o.aura.tribe || inTribe(m, o.aura.tribe)) ? o.aura.atk : 0), 0);
 }
 
 function getAtk(s, m) {
@@ -1622,7 +1827,7 @@ function canPlay(s, pIdx, c) {
   return !t || t.length > 0;
 }
 
-function powerOf(s, pIdx) { return SOULS[s.players[pIdx].soul].power; }
+function powerOf(s, pIdx) { const P = s.players[pIdx]; return P.powerOverride || SOULS[P.soul].power; }
 
 function powerTargets(s, pIdx) {
   const f = powerOf(s, pIdx).fx.find((x) => x.t);
@@ -2044,6 +2249,15 @@ async function applyFx(s, pIdx, f, target, ctx, src, pos) {
       if (m) ctx.log(`${q(m)} возвращается слабее: ${m.atk}/${m.hp}`);
       break;
     }
+    case 'buffTribe':
+      P.board.filter((m) => inTribe(m, f.tribe)).forEach((m) => { m.atk += f.a; m.hp += f.h; m.maxHp += f.h; fx(ctx, 'buff', { id: m.uid }); });
+      break;
+    case 'summonCard': { const d = defOf(f.id); if (d) summonDef(s, pIdx, d, ctx, pos); break; }
+    case 'debuffRandomEnemy': {
+      const pool = E.board.filter((m) => m.hp > 0 && !immune(m));
+      if (pool.length) { const m = pickRandom(pool); m.atk = Math.max(0, m.atk - f.a); fx(ctx, 'debuff', { id: m.uid }); }
+      break;
+    }
     case 'mark':
       if (!T) break;
       if (tm) tm.mark = { by: pIdx, n: f.n };
@@ -2127,6 +2341,12 @@ async function startTurn(s, ctx) {
   if (E.mark && E.mark.by === P.idx) {
     damage(s, heroId(E.idx), E.mark.n, ctx, null);
     if (--E.mark.turns <= 0) delete E.mark;
+  }
+  if (P.onTurn) {   // особое правило босса — в начале каждого его хода
+    fx(ctx, 'bossTurn', { pIdx: P.idx });
+    await runFx(s, P.idx, P.onTurn, null, ctx, null);
+    await resolveDeaths(s, ctx);
+    if (s.phase === 'over') return;
   }
   fx(ctx, 'turn', { pIdx: P.idx });
   if (s.turn > 1) draw(s, P.idx, 1, ctx);   // первый ход партии — без добора (сглаживает преимущество первого хода)
@@ -2376,6 +2596,7 @@ const AI = (() => {
      lethal  — всегда ли замечает добивание */
   const LEVELS = {
     easy:   { noise: 5,   blunder: 0.3,  lazy: 0.2,  look: false, lethal: 0.4 },
+    boss:   { noise: 3.2, blunder: 0.18, lazy: 0.1,  look: true,  lethal: 0.7 },   // для боссов кампании
     medium: { noise: 1.8, blunder: 0.1,  lazy: 0.06, look: true,  lethal: 0.85 },
     hard:   { noise: 0.3, blunder: 0,    lazy: 0,    look: true,  lethal: 1 },
   };
@@ -3610,6 +3831,261 @@ const Tut = (() => {
 <script>
 'use strict';
 /* =====================================================================
+   КАМПАНИЯ — пять боссов подряд. У каждого свои правила, колода и награда:
+   особая легендарная карта, которую больше нигде не получить.
+   ===================================================================== */
+
+const x2 = (...ids) => ids.flatMap((id) => [id, id]);
+
+const BOSSES = [
+  { key: 'tescha', name: 'Тёща', icon: '👵', field: 'nursery', soul: 'stubborn', hp: 30, armor: 0, level: 'boss',
+    intro: '«Я же говорила, что он тебе не пара!»',
+    rules: ['30 здоровья', 'Ворчит: в начале каждого её хода случайное ваше существо получает −1 атаки', 'Сила «Нотация»: оглушает ваше существо'],
+    power: { name: 'Нотация', cost: 2, icon: '☝️', fx: [{ e: 'stun', t: 'enemyMinion' }], desc: 'Оглушите вражеское существо.' },
+    onTurn: [{ e: 'debuffRandomEnemy', a: 1 }],
+    deck: ['tescha', 'svekrov', 'granny', 'wife', ...x2('babki', 'kent', 'okhrannik', 'shkaf', 'g_vnuk', 'pirozhki', 'mama_zvonit'), 'ochered', 'kompot', 'banya', 'n_ded', 'n_stoyat'],
+    reward: 'r_dacha' },
+  { key: 'kollektor', name: 'Коллектор', icon: '📇', field: 'office', soul: 'greedy', hp: 35, armor: 0, level: 'boss',
+    intro: '«Мы просто поговорим.»',
+    rules: ['35 здоровья', 'Звонок в 3 ночи: в начале каждого его хода вы получаете 1 урон', 'Сила «Опись имущества»: 2 урона любому персонажу'],
+    power: { name: 'Опись имущества', cost: 2, icon: '📋', fx: [{ e: 'dmg', n: 2, t: 'any' }], desc: 'Нанесите 2 урона любому персонажу.' },
+    onTurn: [{ e: 'dmgHero', n: 1 }],
+    deck: ['kreditor', 'realtor', 'wife', 'magnat', 'verbovka', 'w_dogovor', ...x2('r_kollektor', 'nalog', 'n_rostovshik', 'n_meshok', 'r_klyuchi', 'lombard', 'baryga'), 'n_vzyatka'],
+    reward: 'r_spisanie' },
+  { key: 'avtoritet', name: 'Авторитет района', icon: '🧢', field: 'night', soul: 'brave', hp: 30, armor: 0, level: 'boss',
+    intro: '«Ты с какого района, братишка?»',
+    rules: ['30 здоровья', 'Уважение: в начале каждого его хода вся его Гопота 🧢 получает +0/+1', 'Сила «Позвать пацанов»: призывает «Шпану» 1/1 со Спешкой'],
+    power: { name: 'Позвать пацанов', cost: 2, icon: '📱', fx: [{ e: 'summon', token: 'shpana', n: 1 }], desc: 'Призовите «Шпану» 1/1 со Спешкой.' },
+    onTurn: [{ e: 'buffTribe', tribe: 'gop', a: 0, h: 1 }],
+    deck: [...x2('gop_kolyan', 'gop_tolyan', 'gop_vovan', 't_glavar', 'kachok', 'semki', 'kent', 'bychok', 'okhrannik', 'podzatylnik', 'kirpich', 'tapok'), 'obrez', 'sborshik'],
+    reward: 'r_korona' },
+  { key: 'dragon', name: 'Жопный Дракон', img: 'dragon_ass', icon: '🐉', field: 'zags', soul: 'greedy', hp: 30, armor: 0, level: 'boss',
+    intro: '«Садись ближе, пидор, щас дам дыхнуть могуществом!»',
+    rules: ['30 здоровья', 'Огненная отрыжка: в начале каждого его хода 1 урон случайному врагу', 'Сила «Дыхание»: 1 урон всем вашим существам (3 маны)'],
+    power: { name: 'Дыхание', cost: 3, icon: '🔥', fx: [{ e: 'aoe', n: 1, who: 'enemyMinions' }], desc: 'Нанесите 1 урон всем вражеским существам.' },
+    onTurn: [{ e: 'dmgRandomEnemy', n: 1 }],
+    deck: ['dragon_ass', 'gus', 'enot', 'kreditor', 'kaka', 'spid', 'srachka', ...x2('dvorovy_pes', 'kot_vasya', 'bugai', 't_zoo', 'umilenie', 'ohota', 'zabor')],
+    reward: 'r_yaytso' },
+  { key: 'giga', name: 'GiGa$lav Pro+', img: 'gigaslav_pro', icon: '🦅', field: 'zags', soul: 'stubborn', hp: 45, armor: 5, level: 'boss',
+    intro: '«Бывшие не возвращаются. Они стираются.»',
+    rules: ['45 здоровья и 5 брони', 'Божественное спокойствие: в начале каждого его хода восстанавливает 2 здоровья', 'Сила «Отшив»: +4 брони'],
+    power: { name: 'Отшив', cost: 2, icon: '🛡️', fx: [{ e: 'armor', n: 4 }], desc: 'Получите 4 брони.' },
+    onTurn: [{ e: 'healHero', n: 2 }],
+    deck: ['gigaslav_pro', 'gigaslav', 'boroda', 'bolno', 'pisyunchik_zol', 'batya', 'putnik', 'khtoya', 'gibel', 'tobi', 'n_ded',
+      ...x2('bychok', 'shkaf', 'udostoverenie', 'n_stoyat', 'n_baran', 'kent')],
+    reward: 'r_tron' },
+];
+
+const Campaign = (() => {
+  const KEY = 'tron-campaign';
+  let current = null;   // босс текущей партии
+
+  function progress() {
+    try { return Math.min(BOSSES.length, +(localStorage.getItem(KEY) || 0)); } catch (e) { return 0; }
+  }
+  function setProgress(n) {
+    try { localStorage.setItem(KEY, String(Math.max(progress(), n))); } catch (e) { /* ignore */ }
+  }
+  /** Открытые наградные карты */
+  function unlocked() { return BOSSES.slice(0, progress()).map((b) => b.reward); }
+
+  function portraitHTML(b, cls) {
+    return b.img ? `<img class="${cls}" src="${esc(ARTPATH(`img/cards/thumbs/${b.img}.jpg`))}" alt="">` : `<div class="${cls} glyph-portrait">${b.icon}</div>`;
+  }
+
+  function render() {
+    const done = progress();
+    $('#camp-list').innerHTML = BOSSES.map((b, i) => {
+      const state = i < done ? 'done' : i === done ? 'open' : 'locked';
+      const rw = defOf(b.reward);
+      return `<div class="boss ${state}" data-boss="${i}">
+        <div class="b-num">${i + 1}</div>${portraitHTML(b, 'b-portrait')}
+        <div class="b-name">${esc(b.name)}</div>
+        <div class="b-rules">${b.rules.map((r) => `<div>• ${esc(r)}</div>`).join('')}</div>
+        <div class="b-reward">🏆 ${esc(rw.name)}</div>
+        <div class="b-state">${state === 'done' ? '✅ Побеждён' : state === 'open' ? '⚔ В бой' : '🔒 Победите предыдущего'}</div></div>`;
+    }).join('');
+    $('#camp-progress').textContent = done >= BOSSES.length ? '👑 Кампания пройдена! Все награды открыты.' : `Побеждено боссов: ${done} из ${BOSSES.length}`;
+  }
+
+  function open() { show('campaign'); render(); Sound.setLocation('tavern'); }
+
+  /** Параметры противника-босса для createGame */
+  function opponent(i) {
+    const b = BOSSES[i];
+    current = i;
+    return { field: b.field, soul: b.soul, artifact: null, hp: b.hp, armor: b.armor, deckIds: b.deck,
+      power: b.power, onTurn: b.onTurn, boss: b.key };
+  }
+
+  function bossOf(P) { return P && P.boss ? BOSSES.find((b) => b.key === P.boss) : null; }
+
+  /** Итог боя с боссом: при победе — награда */
+  function finish(won) {
+    const i = current;
+    current = null;
+    if (i == null || !won) return null;
+    const first = progress() <= i;
+    setProgress(i + 1);
+    return first ? BOSSES[i].reward : null;
+  }
+
+  function init() {
+    $('#camp-list').addEventListener('click', (e) => {
+      const el = e.target.closest('[data-boss]');
+      if (!el || el.classList.contains('locked')) return;
+      startGame(+el.dataset.boss);
+    });
+    $('#btn-camp-back').addEventListener('click', () => show('menu'));
+  }
+
+  return { open, render, opponent, finish, unlocked, progress, bossOf, init, portraitHTML, get current() { return current; } };
+})();
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   СБОРКА КОЛОДЫ — три слота, 30 карт, не больше 2 копий и 1 легенды.
+   Карты натур кладутся только в колоду своей натуры, награды кампании —
+   только после победы над боссом.
+   ===================================================================== */
+
+const Decks = (() => {
+  const KEY = 'tron-decks';
+  const SLOTS = 3;
+  let decks = null;
+  let slot = 0;
+  let filter = 'all';
+
+  function load() {
+    if (decks) return decks;
+    try { decks = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { decks = null; }
+    if (!Array.isArray(decks)) decks = [];
+    for (let i = 0; i < SLOTS; i++) if (!decks[i]) decks[i] = { name: `Колода ${i + 1}`, soul: 'brave', ids: [] };
+    return decks;
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(decks)); } catch (e) { /* ignore */ } }
+
+  const pool = () => [...SHARED_CARDS, ...EXTRA_CARDS].filter((d) => d.id !== 'coin');
+  const limit = (d) => (d.rarity === 'legendary' ? 1 : 2);
+  const count = (deck, id) => deck.ids.filter((x) => x === id).length;
+
+  /** Почему карту нельзя положить (или пустая строка) */
+  function whyNot(deck, d) {
+    if (d.reward && Campaign.unlocked().indexOf(d.id) < 0) return 'Награда кампании — победите босса';
+    if (d.soul && d.soul !== deck.soul) return `Только для натуры «${SOULS[d.soul].name}»`;
+    if (count(deck, d.id) >= limit(d)) return d.rarity === 'legendary' ? 'Легенда — не больше 1 копии' : 'Не больше 2 копий';
+    if (deck.ids.length >= DECK_SIZE) return 'В колоде уже 30 карт';
+    return '';
+  }
+
+  const FILTERS = [['all', 'Все'], ['minion', 'Существа'], ['spell', 'Заклинания'], ['c1', '0–1'], ['c2', '2'], ['c3', '3'], ['c4', '4'], ['c5', '5'], ['c6', '6'], ['c7', '7+'],
+    ['soul', 'Натура'], ['tribe', 'Группы'], ['reward', 'Награды']];
+  function passes(d) {
+    if (filter === 'all') return true;
+    if (filter === 'minion' || filter === 'spell') return d.type === filter;
+    if (filter === 'soul') return !!d.soul;
+    if (filter === 'tribe') return !!d.tribe || !!d.female;
+    if (filter === 'reward') return !!d.reward;
+    const c = +filter.slice(1);
+    return c === 1 ? d.cost <= 1 : c === 7 ? d.cost >= 7 : d.cost === c;
+  }
+
+  function render() {
+    load();
+    const deck = decks[slot];
+    $('#deck-slots').innerHTML = decks.map((d, i) => `<button class="btn ${i === slot ? 'sel' : ''}" data-slot="${i}">${esc(d.name)} · ${d.ids.length}/30</button>`).join('');
+    $('#deck-souls').innerHTML = Object.keys(SOULS).map((k) => `<span class="pick sm ${deck.soul === k ? 'sel' : ''}" data-dsoul="${k}" style="--c:${SOULS[k].color}" title="${esc(SOULS[k].name)}">${SOULS[k].icon}</span>`).join('');
+    $('#deck-filters').innerHTML = FILTERS.map(([k, n]) => `<button class="btn ${filter === k ? 'sel' : ''}" data-filter="${k}">${n}</button>`).join('');
+    const cards = pool().filter(passes).sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
+    $('#deck-pool').innerHTML = cards.map((d) => {
+      const n = count(deck, d.id), why = whyNot(deck, d);
+      const locked = (d.reward && Campaign.unlocked().indexOf(d.id) < 0) || (d.soul && d.soul !== deck.soul);
+      return `<div class="dp ${locked ? 'locked' : ''} ${n ? 'in' : ''}" data-add="${esc(d.id)}" title="${esc(why)}">${hcardHTML(d)}
+        ${n ? `<div class="dp-n">×${n}</div>` : ''}${locked ? `<div class="dp-lock">🔒</div>` : ''}</div>`;
+    }).join('') || '<div class="pv-empty">Нет карт под этот фильтр</div>';
+    // список колоды
+    const grouped = {};
+    deck.ids.forEach((id) => { grouped[id] = (grouped[id] || 0) + 1; });
+    const rows = Object.keys(grouped).map((id) => defOf(id)).filter(Boolean).sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
+    $('#deck-list').innerHTML = rows.map((d) => `<div class="dl r-${d.rarity || 'common'} ${whyNot({ ...deck, ids: [] }, d) ? 'bad' : ''}" data-remove="${esc(d.id)}">
+      <span class="dl-cost">${d.cost}</span><span class="dl-name">${esc(d.name)}</span><span class="dl-n">${grouped[d.id] > 1 ? '×' + grouped[d.id] : ''}</span></div>`).join('')
+      || '<div class="pv-empty">Нажимайте на карты слева,<br>чтобы добавить их в колоду</div>';
+    const curve = [0, 0, 0, 0, 0, 0, 0, 0];
+    deck.ids.forEach((id) => { const d = defOf(id); if (d) curve[Math.min(7, d.cost)]++; });
+    const mx = Math.max(1, ...curve);
+    $('#deck-curve').innerHTML = curve.map((n, c) => `<div class="cv"><i style="height:${n / mx * 100}%"></i><b>${n || ''}</b><span>${c === 7 ? '7+' : c}</span></div>`).join('');
+    const minions = deck.ids.filter((id) => (defOf(id) || {}).type === 'minion').length;
+    $('#deck-count').innerHTML = `<b class="${deck.ids.length === DECK_SIZE ? 'ok' : ''}">${deck.ids.length}/30</b> · существ ${minions} · заклинаний ${deck.ids.length - minions}`;
+    $('#deck-name').value = deck.name;
+    fitCardTexts($('#deck-pool'));
+  }
+
+  let toastT = 0;
+  function toast(t) {
+    const el = $('#deck-toast');
+    el.textContent = t; el.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+
+  function add(id) {
+    const deck = decks[slot], d = defOf(id);
+    const why = whyNot(deck, d);
+    if (why) { toast(why); Sound.play('debuff'); return; }
+    deck.ids.push(id); save(); render(); Sound.play('draw');
+  }
+  function remove(id) {
+    const deck = decks[slot];
+    const i = deck.ids.lastIndexOf(id);
+    if (i >= 0) { deck.ids.splice(i, 1); save(); render(); }
+  }
+
+  /** Дополняет колоду до 30 подходящими картами по кривой маны */
+  function autofill() {
+    const deck = decks[slot];
+    deck.ids = deck.ids.filter((id) => { const d = defOf(id); return d && !whyNot({ ...deck, ids: [] }, d); });
+    const gen = buildDeck(0, true, deck.soul, Campaign.unlocked(), true);
+    for (const d of gen) {
+      if (deck.ids.length >= DECK_SIZE) break;
+      if (!whyNot(deck, d)) deck.ids.push(d.id);
+    }
+    save(); render(); toast('Колода дополнена до 30 карт');
+  }
+
+  function open() { load(); show('decks'); render(); }
+
+  /** Колоды, готовые к игре (30 карт) — для меню */
+  function ready() { load(); return decks.map((d, i) => ({ i, d })).filter((x) => x.d.ids.length === DECK_SIZE); }
+  function get(i) { load(); return decks[i]; }
+
+  function init() {
+    $('#deck-slots').addEventListener('click', (e) => { const b = e.target.closest('[data-slot]'); if (b) { slot = +b.dataset.slot; render(); } });
+    $('#deck-souls').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dsoul]');
+      if (!b) return;
+      decks[slot].soul = b.dataset.dsoul; save(); render();
+      const bad = decks[slot].ids.filter((id) => (defOf(id) || {}).soul && defOf(id).soul !== decks[slot].soul).length;
+      if (bad) toast(`${bad} карт другой натуры подсвечены красным — замените их`);
+    });
+    $('#deck-filters').addEventListener('click', (e) => { const b = e.target.closest('[data-filter]'); if (b) { filter = b.dataset.filter; render(); } });
+    $('#deck-pool').addEventListener('click', (e) => { const el = e.target.closest('[data-add]'); if (el) add(el.dataset.add); });
+    $('#deck-list').addEventListener('click', (e) => { const el = e.target.closest('[data-remove]'); if (el) remove(el.dataset.remove); });
+    $('#deck-name').addEventListener('change', (e) => { decks[slot].name = e.target.value.trim().slice(0, 24) || `Колода ${slot + 1}`; save(); render(); });
+    $('#btn-deck-auto').addEventListener('click', autofill);
+    $('#btn-deck-clear').addEventListener('click', async () => {
+      if (await confirmModal('Очистить колоду?', 'Все карты будут убраны из этого слота.', 'Очистить')) { decks[slot].ids = []; save(); render(); }
+    });
+    $('#btn-deck-back').addEventListener('click', () => { show('menu'); renderMenu(); });
+  }
+
+  return { open, init, ready, get, load };
+})();
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
    ТРОН — интерфейс и игровой цикл
    ===================================================================== */
 
@@ -3674,7 +4150,7 @@ window.addEventListener('resize', fit);
 window.addEventListener('orientationchange', () => setTimeout(fit, 200));
 
 function show(id) {
-  ['menu', 'game', 'gallery'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
+  ['menu', 'game', 'gallery', 'decks', 'campaign'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
 }
 
 /* ---------------------- HTML карт ---------------------- */
@@ -3692,10 +4168,11 @@ function hcardHTML(c, o) {
   o = o || {};
   const cost = o.cost != null ? o.cost : c.cost;
   const cls = ['hcard', 'r-' + (c.rarity || 'common'), c.type];
+  if (c.shiny) cls.push('shiny');
   if (o.cls) cls.push(o.cls);
   const data = c.uid ? `data-h="${c.uid}"` : `data-gid="${esc(c.id)}"`;
   const stats = c.type === 'minion' ? `<div class="hc-atk">${c.atk}</div><div class="hc-hp">${c.hp}</div>` : '';
-  const kws = (c.kw || []).map((k) => KEYWORDS[k].icon).join('');
+  const kws = (c.kw || []).map((k) => KEYWORDS[k].icon).join('') + (c.tribe ? TRIBES[c.tribe].icon : '') + (c.soul ? SOULS[c.soul].icon : '');
   const fit = App.fit && App.fit[c.id];
   return `<div class="${cls.join(' ')}" ${data} ${o.style ? `style="${o.style}"` : ''}>
     <div class="hc-art">${artHTML(c)}</div>${c.rarity && c.rarity !== 'common' ? `<div class="gem g-${c.rarity} hc-gem"></div>` : ''}
@@ -3748,6 +4225,7 @@ function effectChips(s, m) {
 
 function minionHTML(s, m, o) {
   const cls = ['minion'];
+  if (m.shiny) cls.push('shiny');
   if (m.rarity === 'legendary' || m.rarity === 'epic' || m.rarity === 'rare') cls.push(m.rarity);
   KW_VISUAL.forEach((k) => { if (hasKw(m, k)) cls.push(k === 'taunt' || k === 'shield' || k === 'stealth' ? k : 'kw-' + k); });
   if (m.frozen) cls.push('frozen');
@@ -3761,6 +4239,7 @@ function minionHTML(s, m, o) {
   if (m.enrage) icons.push('💢');
   if (m.spellDiscount) icons.push('🏷️');
   if (m.cantAttack) icons.push('⛔');
+  if (m.tribe) icons.push(TRIBES[m.tribe].icon);
   const chips = effectChips(s, m);
   const sleepy = m.owner === s.current && m.sleeping && !m.cantAttack && s.phase === 'play';
   const def = defOf(m.id);
@@ -3783,13 +4262,15 @@ const heroInfo = (i) => ({ isHero: true, idx: i });
 function heroHTML(s, i, extra) {
   const P = s.players[i];
   const so = SOULS[P.soul];
-  return `<div class="hero side${i} ${extra || ''}" data-t="h${i}" style="--soul:${so.color}">
-    <div class="h-art"><img src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${so.hue}deg)"></div>
+  const B = Campaign.bossOf(P);
+  const art = B ? Campaign.portraitHTML(B, 'boss-art') : `<img src="${esc(HERO_IMG)}" alt="" style="filter:hue-rotate(${so.hue}deg)">`;
+  return `<div class="hero side${i} ${B ? 'is-boss' : ''} ${extra || ''}" data-t="h${i}" style="--soul:${so.color}">
+    <div class="h-art">${art}</div>
     <div class="h-soul" title="${esc(so.name)}">${so.icon}</div>
     ${P.armor ? `<div class="h-armor">${P.armor}</div>` : ''}
     <div class="h-hp ${P.hp < P.maxHp ? 'hurt' : ''}">${P.hp}</div>
     ${P.mark ? `<div class="h-mark" title="На прицеле: ${P.mark.n} урона ещё ${P.mark.turns} хода">🎯${P.mark.turns}</div>` : ''}
-    <div class="h-name">${heroName(i)}</div></div>`;
+    <div class="h-name">${B ? esc(B.name) : heroName(i)}</div></div>`;
 }
 
 function powerHTML(s, i, extra) {
@@ -3806,7 +4287,12 @@ function powerHTML(s, i, extra) {
 function heroText(i) {
   const s = App.s;
   const P = s.players[i];
-  const so = SOULS[P.soul], pw = so.power, ar = ARTIFACTS[P.artifact];
+  const so = SOULS[P.soul], pw = powerOf(s, i), ar = ARTIFACTS[P.artifact];
+  const B = Campaign.bossOf(P);
+  if (B) {
+    return { name: `Босс: ${B.name}`, meta: `${P.hp}/${P.maxHp} здоровья${P.armor ? ' · ' + P.armor + ' брони' : ''}`,
+      parts: B.rules.map((r) => ['⚠️', r]).concat([[`${pw.icon} Сила «${pw.name}» (${pw.cost} маны)`, pw.desc]]) };
+  }
   return { name: i === 0 ? 'Вы — Претендент на Трон' : 'Противник — Претендент на Трон',
     meta: `Герой · ${P.hp}/${P.maxHp} здоровья${P.armor ? ' · ' + P.armor + ' брони' : ''} · 🪙 ${P.gold} золота`,
     parts: [
@@ -4552,6 +5038,7 @@ function modal(html, onClick, boxCls) {
     const close = (v) => { m.classList.add('hidden'); m.innerHTML = ''; m.onclick = null; res(v); };
     m.innerHTML = `<div class="mbox ${boxCls || ''}">${html}</div>`;
     m.classList.remove('hidden');
+    fitCardTexts(m);
     m.onclick = (e) => {
       const b = e.target.closest('[data-v]');
       if (b) { close(b.dataset.v); return; }
@@ -4619,12 +5106,20 @@ function resetView(s) {
   FX.clearAll();
 }
 
-async function startGame() {
+async function startGame(bossIdx) {
   Tut.stop();
-  const opp = pickRandom(Object.keys(FIELDS).filter((k) => k !== App.myField));
+  const boss = typeof bossIdx === 'number' ? bossIdx : null;
+  App.bossIdx = boss;
+  const oppField = pickRandom(Object.keys(FIELDS).filter((k) => k !== App.myField));
   const first = rnd(2);
-  const s = createGame({ field: App.myField, soul: App.mySoul, artifact: App.myArtifact },
-    { field: opp, soul: pickRandom(Object.keys(SOULS)), artifact: pickRandom(Object.keys(ARTIFACTS)) }, App.extra, first);
+  const deck = App.deckSlot != null ? Decks.get(App.deckSlot) : null;
+  const me = { field: App.myField, soul: App.mySoul, artifact: App.myArtifact, unlocked: Campaign.unlocked(),
+    deckIds: deck && deck.ids.length === DECK_SIZE ? deck.ids : null };
+  const opp = boss != null ? Campaign.opponent(boss)
+    : { field: oppField, soul: pickRandom(Object.keys(SOULS)), artifact: pickRandom(Object.keys(ARTIFACTS)) };
+  if (App.aiBefore) { AI.setLevel(App.aiBefore); App.aiBefore = null; }
+  if (boss != null) { App.aiBefore = AI.level; AI.setLevel(BOSSES[boss].level); }
+  const s = createGame(me, opp, App.extra, first);
   App.s = s;
   App.sel = null;
   App.busy = true;
@@ -4638,13 +5133,14 @@ async function startGame() {
   FX.clearAll();
   Sound.setLocation(App.myField);
   show('game');
-  addLog(`Битва за Трон. Поле: ${FIELDS[App.myField].name}`);
+  addLog(boss != null ? `Босс: ${BOSSES[boss].name}` : `Битва за Трон. Поле: ${FIELDS[App.myField].name}`);
   render();
   FX.setZones([$('#field-op'), $('#field-me')]);
   FX.setAmbient(true);
   watchFps();
   showPreview(null);
-  await banner('Битва за Трон', `Поле: ${FIELDS[App.myField].name}`, 1600);
+  if (boss != null) await banner(`Босс ${boss + 1}: ${BOSSES[boss].name}`, BOSSES[boss].intro, 2200);
+  else await banner('Битва за Трон', `Поле: ${FIELDS[App.myField].name}`, 1600);
   if (s !== App.s) return;
   await mulliganModal();
   if (s !== App.s) return;
@@ -4666,8 +5162,23 @@ function gameOver() {
   }
   Sound.play(s.winner === 0 ? 'win' : 'lose');
   const title = s.winner === 0 ? '🏆 Победа!' : s.winner === 1 ? 'Поражение' : 'Ничья';
+  const boss = App.bossIdx;
+  const reward = boss != null ? Campaign.finish(s.winner === 0) : null;
+  if (App.aiBefore) { AI.setLevel(App.aiBefore); App.aiBefore = null; }
   setTimeout(() => {
     if (s !== App.s) return;
+    if (boss != null) {
+      const B = BOSSES[boss], rw = reward ? defOf(reward) : null;
+      const next = s.winner === 0 && boss + 1 < BOSSES.length;
+      modal(`<h2>${s.winner === 0 ? `🏆 Победа над боссом: ${esc(B.name)}!` : `Босс «${esc(B.name)}» не сдаётся — попробуйте ещё`}</h2>
+        ${rw ? `<p>Награда — новая легендарная карта! Она уже в вашей коллекции и может попасть в колоду.</p><div class="mcards">${hcardHTML(rw)}</div>` : ''}
+        ${s.winner === 0 && boss + 1 >= BOSSES.length ? '<p>👑 Кампания пройдена — Трон ваш!</p>' : ''}
+        <div class="mbtns">${next ? '<button class="btn btn-gold" data-v="next">Следующий босс</button>' : ''}
+        <button class="btn ${next ? '' : 'btn-gold'}" data-v="again">${s.winner === 0 ? 'Сразиться ещё раз' : 'Реванш'}</button>
+        <button class="btn" data-v="camp">К кампании</button></div>`)
+        .then((v) => { if (v === 'next') startGame(boss + 1); else if (v === 'again') startGame(boss); else { goMenu(); Campaign.open(); } });
+      return;
+    }
     modal(`<h2>${title}</h2><img class="result-hero ${s.winner === 1 ? 'side1' : ''}" src="${esc(HERO_IMG)}" alt="">
       <p>${s.winner === 0 ? 'Трон ваш.' : s.winner === 1 ? 'Трон достаётся противнику.' : 'Оба претендента пали.'} Ходов сыграно: ${s.turn}.</p>
       <div class="mbtns"><button class="btn btn-gold" data-v="again">Ещё партию</button><button class="btn" data-v="menu">В меню</button></div>`)
@@ -4709,6 +5220,13 @@ function renderMenu() {
   $('#field-desc').textContent = FIELDS[App.myField].desc;
   $('#soul-desc').innerHTML = `${so.power.icon} <b>${esc(so.power.name)}</b> (${so.power.cost} маны): ${esc(so.power.desc)} · ${esc(so.passive)}`;
   $('#art-desc').textContent = ar.desc;
+  const ready = Decks.ready();
+  if (App.deckSlot != null && !ready.some((x) => x.i === App.deckSlot)) App.deckSlot = null;
+  $('#deck-select').innerHTML = '<option value="">Случайная колода</option>' + ready.map(({ i, d }) => `<option value="${i}" ${App.deckSlot === i ? 'selected' : ''}>${esc(d.name)} ${SOULS[d.soul].icon}</option>`).join('');
+  const deck = App.deckSlot != null ? Decks.get(App.deckSlot) : null;
+  if (deck && deck.soul !== App.mySoul) {
+    $('#soul-desc').innerHTML += ` <span class="warn">⚠ Колода собрана под «${esc(SOULS[deck.soul].name)}» — карты другой натуры будут заменены случайными.</span>`;
+  }
 }
 
 function showRules() {
@@ -4734,6 +5252,9 @@ function showRules() {
       <li><b>🤰 Беременность</b> — −2 атаки; через 2 хода «Ребёнок» 2/2 достаётся тому, кто это устроил.</li>
       <li><b>📜 Долг</b> — существо теряет атаку в начале каждого своего хода.</li>
       <li><b>🗡️ Добивание</b> — срабатывает, когда существо убивает врага в атаке.</li>
+      <li><b>Группы</b> — 🧢 Гопота, 👪 Семья, 🍺 Бухие, 🐾 Звери, ♀ Женщины. Некоторые карты усиливают всю свою группу.</li>
+      <li><b>Карты натур</b> (значок натуры на карте) попадают только в колоду своей натуры.</li>
+      <li><b>✨ Блестящие карты</b> — редкие красивые версии обычных карт, сила та же.</li>
     </ul>
     <h3>Управление</h3><p><b>🔍 Долгое нажатие на любую карту</b> (или правая кнопка мыши) открывает её крупно — с оригинальной картинкой и описанием. Нажмите карту в руке, затем место на поле или подсвеченную цель. Нажмите своё существо с зелёной рамкой, затем врага. Предметы по краям поля можно ломать — просто нажимайте на них.</p>
     <h3>Авторы</h3><p>Музыка сочиняется игрой на ходу. Записи инструментов: FluidR3_GM SoundFont (Frank Wen),
@@ -4750,6 +5271,7 @@ function renderGallery() {
     $('#gal-grid').innerHTML = defs.slice().sort((a, b) => a.cost - b.cost).map((d) =>
       `<div class="gcard">${hcardHTML(d)}<div class="gid">${esc(d.id)}${d.count > 1 && d.rarity !== 'legendary' ? ' ×' + d.count : ''}</div></div>`).join('');
   }
+  fitCardTexts($('#gal-grid'));
   $('#gal-preview').innerHTML = '<div class="pv-empty">Нажмите на карту, чтобы рассмотреть её.<br><br>Под каждой картой — её id (имя файла картинки).</div>';
 }
 
@@ -4829,11 +5351,14 @@ function makeTextures() {
 }
 
 /* ---------------------- версия и обновления ---------------------- */
-const GAME_VERSION = '4.2';
+const GAME_VERSION = '4.3';
 const SITE_URL = 'https://raw.githubusercontent.com/fillin669-sketch/Gvint/ccr-ed511808-3mdvrp/';
 const CHANGELOG = [
-  'Ещё оптимизация: противник думает быстрее, при этом экран не замирает',
-  'Стол перерисовывается почти вдвое быстрее, чем в 3.9; самые тяжёлые кадры — в 2,3 раза короче',
+  '🃏 Сборка своей колоды: три слота, фильтры, кривая маны, кнопка «Дополнить»',
+  '🏰 Кампания: 5 боссов со своими правилами, за победу — легендарная карта, которой больше нигде нет',
+  '🐏🥧🍺🎣💰 По 3 карты для каждой натуры — попадают только в колоду своей натуры',
+  '🧢👪🍺🐾♀ Группы существ: Гопота, Семья, Бухие, Звери, Женщины — и карты, которые их усиливают',
+  '✨ Блестящие версии карт: изредка карта в колоде оказывается переливающейся',
 ];
 
 function showVersionBadge() {
@@ -5005,6 +5530,15 @@ function init() {
   });
 
   setupLongPress();
+  Decks.init();
+  Campaign.init();
+  $('#btn-decks').addEventListener('click', () => Decks.open());
+  $('#btn-campaign').addEventListener('click', () => Campaign.open());
+  $('#deck-select').addEventListener('change', (e) => {
+    App.deckSlot = e.target.value === '' ? null : +e.target.value;
+    if (App.deckSlot != null) App.mySoul = Decks.get(App.deckSlot).soul;
+    renderMenu();
+  });
 
   $('#gal-preview').addEventListener('click', () => { if (App.galPv) openZoom(App.galPv); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeZoom(); if (App.sel) clearSel(); } });

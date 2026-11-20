@@ -1,8 +1,8 @@
 {
-  "content": "4.2",
-  "apk": 20,
+  "content": "4.3",
+  "apk": 21,
   "apkUrl": "https://github.com/fillin669-sketch/Gvint/raw/ccr-ed511808-3mdvrp/dist/tron.apk",
   "notes": [
-    "Ещё оптимизация для слабых телефонов"
+    "Свои колоды, кампания с боссами, карты натур, группы существ, блестящие карты"
   ]
 }
